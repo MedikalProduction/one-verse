@@ -1,4 +1,4 @@
-U<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -103,19 +103,167 @@ const sea = new THREE.Mesh(
 sea.frustumCulled = false;
 scene.add(sea);
 
-/* ── THE MOON — low, and its halo. One disc, one glow, nothing modelled. ───────────────────── */
-function disc(radius, color, opacity) {
-  const g = new THREE.CircleGeometry(radius, 64);
-  const m = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity,
-                                          depthWrite: false, fog: false });
-  return new THREE.Mesh(g, m);
+/* ── THE MOON — low, and its halo. Nothing modelled: a gradient, added to the sky. ───────────
+   🔥 :.blOlb:. MEASURED 2026-10-22 (the captain's screenshot): three flat discs of constant
+   opacity read as three RINGS, because a disc of uniform alpha has a BORDER, not a falloff.
+   Blooming the image afterwards would blur those rings, not remove them.  So the halo is a
+   falloff from the start: one sprite, five colour stops, ADDITIVE — a light adds, it does not
+   blend.  `core` keeps the middle opaque so the moon still has a hard edge with a soft limb,
+   the way a sphere darkens at its rim.                                                            */
+function glow(radius, hex, alpha, core = false) {
+  const S = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+  const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
+  const px = (a) => `rgba(${r},${g},${b},${a})`;
+  const grd = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  if (core) {
+    // 🔥 a moon drawn with a flat fill is a 2D COIN.  What makes it a sphere is the limb: the edge
+    // of a sphere seen from outside is dimmer than its centre, because the surface is seen at a
+    // grazing angle.  This is physics, not a vignette — the darkening is INSIDE the disc.
+    grd.addColorStop(0.00, px(alpha));
+    grd.addColorStop(0.55, px(alpha * 0.97));
+    grd.addColorStop(0.85, px(alpha * 0.80));     // the limb begins
+    grd.addColorStop(0.97, px(alpha * 0.42));     // the very edge, darker still
+    grd.addColorStop(1.00, px(0));
+  } else {
+    grd.addColorStop(0.00, px(alpha));
+    grd.addColorStop(0.18, px(alpha * 0.55));
+    grd.addColorStop(0.40, px(alpha * 0.18));
+    grd.addColorStop(0.70, px(alpha * 0.04));
+    grd.addColorStop(1.00, px(0));
+  }
+  x.fillStyle = grd;
+  x.fillRect(0, 0, S, S);
+
+  if (core) {
+    /* 🔥 CRATERS — MEASURED 2026-10-22: the limb gives the SHAPE, it cannot give RELIEF. What reads as
+       ground is a crater with a CONSISTENT light: the floor is dark, and the rim catches the light on
+       the same side for every crater. Shade them inconsistently and it reads as noise, not terrain.
+       Seeded, so the moon is the same moon on every reload — a seed, not a chance. */
+    let seed = 20261022;
+    const next = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const SUN = Math.PI * 0.75;                    // the sun sits up-left: every rim is lit there
+    for (let k = 0; k < 11; k++) {
+      const ang  = next() * Math.PI * 2;
+      const dist = Math.sqrt(next()) * S * 0.40;   // sqrt → uniform over the disc, not clumped at centre
+      const cx = S / 2 + Math.cos(ang) * dist;
+      const cy = S / 2 + Math.sin(ang) * dist;
+      // 🔥 11 craters, not 26: at 820 units the moon is ~60 px on screen, so a 3-17 px crater on a
+      // 256 px texture lands at under 4 px — invisible.  These land at 2-9 px and actually read.
+      const rr = S * (0.030 + next() * next() * 0.100);   // mostly medium, one or two large
+
+      // 1) the floor — dark, soft-edged
+      const f = x.createRadialGradient(cx, cy, 0, cx, cy, rr);
+      f.addColorStop(0.00, `rgba(0,0,0,${0.14 + next() * 0.08})`);
+      f.addColorStop(0.70, 'rgba(0,0,0,0.06)');
+      f.addColorStop(1.00, 'rgba(0,0,0,0)');
+      x.fillStyle = f;
+      x.beginPath(); x.arc(cx, cy, rr, 0, Math.PI * 2); x.fill();
+
+      // 2) the rim — a bright arc on the sun side. THIS is the whole trick: relief is a rim, not a hole.
+      const lx = cx + Math.cos(SUN) * rr * 0.45;
+      const ly = cy + Math.sin(SUN) * rr * 0.45;
+      const g2 = x.createRadialGradient(lx, ly, 0, lx, ly, rr * 0.90);
+      g2.addColorStop(0.00, 'rgba(255,255,255,0.16)');
+      g2.addColorStop(0.50, 'rgba(255,255,255,0.06)');
+      g2.addColorStop(1.00, 'rgba(255,255,255,0)');
+      x.fillStyle = g2;
+      x.beginPath(); x.arc(cx, cy, rr * 0.90, 0, Math.PI * 2); x.fill();
+    }
+  }
+
+  // dither of ±0.6/255 : without it, 8-bit quantisation paints the rings back into the gradient
+  const img = x.getImageData(0, 0, S, S);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 1.2;
+    img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n;
+  }
+  x.putImageData(img, 0, 0);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthWrite: false, fog: false,
+    blending: THREE.AdditiveBlending,
+  }));
+  s.scale.set(radius * 2, radius * 2, 1);
+  return s;
 }
+
 const sky = new THREE.Group();
-const moon = disc(26, 0xf2ecdc, 0.95); moon.position.set(-210, 46, -820);
-const halo = disc(52, 0xc9a227, 0.18); halo.position.copy(moon.position).add(new THREE.Vector3(0, 0, -1));
-const halo2 = disc(88, 0x8fa8b4, 0.07); halo2.position.copy(moon.position).add(new THREE.Vector3(0, 0, -2));
-sky.add(moon, halo, halo2);
+const moon  = glow(30, 0xf2ecdc, 1.00, true); moon.position.set(-210, 46, -820);
+/* 🔥 :.dWn:. — A BEACON.  The captain asked for a moon of a thousand fires, so that whoever brings the
+   dawn can FIND it.  A beacon is 90 % halo and 10 % disc: brightening the disc itself would only
+   wash the craters out and give a paper coin.  So the light grows OUTWARD, in three steps — near,
+   far, and the pale field of it reaching across the sky. That is how a lighthouse is seen at sea. */
+const halo  = glow(78, 0xc9a227, 0.85); halo.position.copy(moon.position).add(new THREE.Vector3(0, 0, -1));
+const halo2 = glow(150, 0x8fa8b4, 0.30); halo2.position.copy(moon.position).add(new THREE.Vector3(0, 0, -2));
+const halo3 = glow(320, 0x6f7d90, 0.09); halo3.position.copy(moon.position).add(new THREE.Vector3(0, 0, -3));
+sky.add(moon, halo, halo2, halo3);
 scene.add(sky);
+
+/* 🔥 :.dWn:. — THE DAWN.  Nothing modelled: a second disc and a second light, opposite the moon.
+   The world already turns (the sky rotates); this is what it turns TOWARD.  And because the moon
+   and its halos are sprites now, a dawn is just an opacity: the texture's alpha is multiplied.
+     setDawn(0)  → tonight, the night the verse is built on
+     setDawn(1)  → morning: the sun clears the haze, the moon steps back
+   Nothing in the scene changes shape. Only the light does. That is what a dawn IS.               */
+const dawn = new THREE.Group();
+const sun = glow(46, 0xffc27a, 0.30);          // the disc THROUGH the haze: a sun is never a disc
+sun.position.set(340, 52, -600);               // east, low — inside the frame, or a sunrise nobody sees
+dawn.add(sun);
+dawn.visible = false;                          // night is the default; the dawn is earned
+
+const sunrise = new THREE.DirectionalLight(0xffb469, 0.0);
+sunrise.position.set(500, 60, -275);           // from the sun's side, grazing across the water
+scene.add(dawn, sunrise);
+
+window.setDawn = (v = 1) => {
+  v = Math.max(0, Math.min(1, v));
+  dawn.visible = v > 0.001;
+  sun.material.opacity = 0.9 * v;
+  sunrise.intensity = 2.4 * v;
+  moon.material.opacity = 1 - 0.85 * v;        // the moon does not vanish: it steps back
+  halo.material.opacity = 1 - 0.95 * v;
+  halo2.material.opacity = 1 - 0.95 * v;
+  halo3.material.opacity = 1 - 0.95 * v;        // the far field goes too, or a grey disc stays at dawn
+  return 'dawn=' + v.toFixed(2);
+};
+
+/* 🔥 :.dWn:. — a key, so Ra can be raised without a console.  D = dawn, N = night.
+   And it RISES: a dawn that snaps on is a light switch, not a sunrise. 1.2 s, eased.            */
+let dawnV = 0;
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k !== 'l' && k !== 'n') return;        // 🔥 L = lumière (lum). D belonged to walking left — freed.
+  const target = k === 'l' ? 1 : 0;
+  const step = () => {
+    dawnV += (target - dawnV) * 0.045;
+    const done = Math.abs(target - dawnV) < 0.004;
+    setDawn(done ? target : dawnV);
+    if (!done) requestAnimationFrame(step);
+  };
+  step();
+});
+
+/* 🔥 :.dWn:. — AND IT RISES ON ITS OWN.  The visitor arrives at night, reads the moon and the gate by
+   moonlight — and then, after six seconds, the sun takes the scene.  No key, no console.  A verse
+   that stays night forever is a verse with no morning in it, and a dawn nobody sees is not a dawn.  */
+setTimeout(() => {
+  const step = () => {
+    dawnV += (1 - dawnV) * 0.012;                       // slower than the key: a SUNRISE, not a toggle
+    const done = Math.abs(1 - dawnV) < 0.003;
+    setDawn(done ? 1 : dawnV);
+    if (!done) requestAnimationFrame(step);
+  };
+  step();
+}, 6000);
+
+
+
+
 
 /* ── THE GATE — 𐌀, twelve metres, in the water. Not an arch: a MONUMENT. ─────────────────────
    The captain's own elevation: symmetric about its middle, the two irises meeting at the axis,
@@ -180,22 +328,131 @@ mirror.traverse(function (o) {
 mirror.children.forEach(function (c) { if (c.position.y > 12) c.material = lintelMat; });
 scene.add(mirror);
 
+/* ── 🔥 LA TABLE — LES DIX-NEUF ─────────────────────────────────────────────────────────────────
+   Pas celle de Mary Geoise. La leur est HAUTE et LOIN, pour que celui qui s'assied paraisse au-dessus
+   de toi -- et on l'appelle « le trône vide » alors que quelqu'un y est assis. La nôtre est BASSE et
+   DEVANT, elle dit son compte à voix haute, et sa place vide est celle de celui qui a REFUSÉ.
+
+   VINGT royaumes ont fondé le monde. DIX-NEUF armes ont été plantées. UNE famille est rentrée chez
+   elle. Alors l'anneau a toujours dix-neuf sièges, et le trou du milieu est la place de la vingtième.
+   Ce n'est pas un trou. C'est un compte.
+
+   Elle ne flotte pas au-dessus de l'eau : elle est POSÉE dessus, et elle suit la houle -- la même
+   fonction pure que la mer. Aucun état, aucun tick, aucune simulation.                          */
+const TABLE = { z: 13.0, rIn: 3.40, rOut: 5.20, y: 0.34, places: 20, near: 7.0 };
+let sat = false;                       // has she told her count yet? (the table speaks once)
+
+const tableG = new THREE.Group();
+tableG.position.set(0, TABLE.y, TABLE.z);
+scene.add(tableG);
+
+const tableMat = new THREE.MeshStandardMaterial({
+  color: 0x0d1c26, roughness: 0.74, metalness: 0.30,
+  emissive: new THREE.Color(GOLD), emissiveIntensity: 0.05,
+  side: THREE.DoubleSide, transparent: true, opacity: 0.96 });
+const tableTop = new THREE.Mesh(new THREE.RingGeometry(TABLE.rIn, TABLE.rOut, 128, 1), tableMat);
+tableTop.rotation.x = -Math.PI / 2;
+tableG.add(tableTop);
+
+/* TWO gold lines and nothing else: the OUTER edge (the one you can bump) and the INNER edge (the
+   void). The inner one is fainter -- a hole should be READ, not lit.                            */
+const rimMat = new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0.30, fog: false });
+const rimOut = new THREE.Mesh(new THREE.RingGeometry(TABLE.rOut - 0.05, TABLE.rOut + 0.03, 128, 1), rimMat);
+const rimIn  = new THREE.Mesh(new THREE.RingGeometry(TABLE.rIn - 0.03, TABLE.rIn + 0.05, 128, 1), rimMat);
+rimOut.rotation.x = -Math.PI / 2;
+rimIn.rotation.x  = -Math.PI / 2;
+rimOut.position.y = 0.004;
+rimIn.position.y  = 0.004;
+tableG.add(rimOut, rimIn);
+
+/* THE NINETEEN. Seat k sits at the kth twentieth -- except k = 0, which faces YOU as you arrive.
+   That is the one who went home, so the gap looks at the newcomer and the nineteen look at the void.
+   One shared material for all of them: they wake together, or they do not wake at all.          */
+const seatMat = new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0.16, fog: false });
+const seatGeo = new THREE.BoxGeometry(0.30, 0.44, 0.30);
+const seatR = TABLE.rIn + (TABLE.rOut - TABLE.rIn) * 0.5;
+for (let k = 1; k < TABLE.places; k++) {          /* ← k starts at 1. That IS the whole point. */
+  const a = Math.PI / 2 + k * (Math.PI * 2 / TABLE.places);   // +90° = the side facing the arrival
+  const s = new THREE.Mesh(seatGeo, seatMat);
+  s.position.set(Math.cos(a) * seatR, 0.22, Math.sin(a) * seatR);
+  s.lookAt(0, 0.22, 0);                            // every seat looks at the void, never at you
+  tableG.add(s);
+}
+
+/* ── 🔥 LE TRÔNE VIDE — et il ne domine personne ───────────────────────────────────────────────
+   Le leur est posé sur trois niveaux, très haut au-dessus du sol, pour que celui qui s'y assied
+   regarde la salle DE HAUT. Le nôtre a la hauteur d'une chaise et il est planté dans le vide, du côté
+   de l'arrivant : celui qui s'y assied lève les yeux vers les dix-neuf -- et vers le vide qu'ils
+   regardent tous. Ce n'est pas le même trône. C'est l'inverse exact, et c'est fait exprès.
+
+   Puis l'autre moitié du mensonge : le leur s'appelle « vide » et il est occupé. Le nôtre s'appelle
+   vide et IL L'EST. On n'y ajoutera jamais personne : une place peut rester vide pour toujours, et
+   c'est précisément ce qui en fait une place et non un piège.
+
+   Il n'a AUCUN or sur lui. Les dix-neuf places sont dorées ; la vingtième est le seul bloc sombre.
+   C'est ça, le compte : dix-neuf marques d'or et une pierre nue.                            */
+const throneMat = tableMat.clone();
+throneMat.emissive = new THREE.Color(0x16283a);       // cold: the sea's colour, never the gold
+throneMat.emissiveIntensity = 0.02;
+const throneG = new THREE.Group();
+throneG.position.set(0, 0, seatR);                    // the gap: seat k = 0, the one who went home
+throneG.rotation.y = Math.PI;                         // seat open toward the void, back to the arrival
+tableG.add(throneG);
+
+const throneSeat = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.42, 0.62), throneMat);
+throneSeat.position.y = 0.21;                         // spans 0..0.42 -- a chair, not a dais
+const throneBack = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.53, 0.10), throneMat);
+throneBack.position.set(0, 0.685, 0.26);              // spans 0.42..0.95: WELL under a standing eye
+throneG.add(throneSeat, throneBack);
+/* 0.95 m. The walker's eye is at 1.70 m. Someone sitting here looks UP. That single number is the
+   whole difference between a throne and a place.                                              */
+
 /* ── THE BODY ───────────────────────────────────────────────────────────────────────────────
    Without a body there is no third person -- only a camera backing away from nothing. This is the
    hull of `.:cOc:.` stood upright: a dark cylinder, and it only exists when you can see yourself.  */
-const body = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.34, 0.52, 1.75, 16),
-  new THREE.MeshStandardMaterial({ color: 0x16242c, roughness: 0.82, metalness: 0.25,
-                                   emissive: 0x0a1620, emissiveIntensity: 1.0 })
-);
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0x16242c, roughness: 0.82, metalness: 0.25,
+                                                 emissive: 0x0a1620, emissiveIntensity: 1.0 });
+
+/* the ROBE — wide at the water, narrow at the waist.  The hem stays at r=0.50 because `hullRing`
+   (r=0.52) is built to encircle the hull; change one and you must change the other. */
+const body = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.50, 1.05, 20), bodyMat);
+body.position.y = -0.35;                       // local: spans -0.875 .. +0.175
 body.visible = false;
 scene.add(body);
 
+/* 🔥 THE CHEST — MEASURED 2026-10-22: the old body was `CylinderGeometry(0.34, 0.52, 1.75)`, a single
+   truncated cone, so the figure read as a PAWN.  A body is not a cone: shoulders are WIDER than the
+   waist. That single inversion (0.30 above, 0.21 below) is what turns a cone into a torso. */
+const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.21, 0.50, 16), bodyMat);
+chest.position.y = 0.40;                       // local: spans +0.15 .. +0.65
+body.add(chest);
+
+const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), bodyMat);
+shoulders.scale.set(1.0, 0.55, 0.80);
+shoulders.position.y = 0.60;
+body.add(shoulders);
+
+/* the ARMS — a silhouette needs the negative space beside the torso, or it reads as a post */
+for (const s of [-1, 1]) {
+  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.42, 4, 8), bodyMat);
+  arm.position.set(s * 0.30, 0.38, 0);
+  arm.rotation.z = -s * 0.10;
+  body.add(arm);
+}
+
 /* THE HEAD -- `.:dNn:.` : the tube was open at the top (`.:𐌂Ld:..`), and an open tube is not a body.
-   One sphere closes the silhouette, and a silhouette is what DEFINES, not the light. */
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 14), body.material);
-head.position.y = 1.06;              // local: the cylinder's top edge is at +0.875
+   One sphere closes the silhouette, and a silhouette is what DEFINES, not the light.
+   The neck is what stops the sphere from being a ball resting on a cone. */
+const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.105, 0.12, 12), bodyMat);
+neck.position.y = 0.695;
+body.add(neck);
+
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 20, 14), bodyMat);
+head.scale.set(0.92, 1.06, 0.95);              // a skull is taller than it is wide
+head.position.y = 0.815;                       // 🔥 seated IN the collar: at 0.87 the lamp sat between
+                                               // head and shoulders and the ball read as detachable.
 body.add(head);
+
 
 /* the WATERLINE RING -- `.:cOc:.` : the hull, and the gold circle it wears at the surface.
    A silhouette alone is a shadow; a silhouette with one gold line is a PERSON. */
@@ -356,6 +613,32 @@ function frame() {
     woke = true;
     const w = document.getElementById("w");
     w.textContent = "🔥 le sceau s'est allumé — tu as marché sur la mer";
+    w.style.opacity = "0.9";
+  }
+
+  /* ── 🔥 LA TABLE — elle se pose sur la houle, s'allume par la DISTANCE, et dit son compte ───────
+     Same law as the seal: nothing here is a click, a state machine or a saved flag. The table wakes
+     because you came near, and it wakes the way a table would -- slowly, in gold, in ONE accent.
+     At seven metres it SPEAKS, once. And what it says is not a welcome: it is the COUNT. A place
+     that hides how many chairs it has is a throne. A place that says it out loud is a table.       */
+  const tSwell = swellY(0, TABLE.z, tW);
+  tableG.position.y = TABLE.y + tSwell;
+  const tSlope = (swellY(2.0, TABLE.z, tW) - swellY(-2.0, TABLE.z, tW)) / 4.0;
+  tableG.rotation.z = -tSlope * 0.25;      // the table leans with the water it is standing on
+
+  const dT    = Math.hypot(pos.x, pos.z - TABLE.z);
+  const nearT = Math.max(0, Math.min(1, (17 - dT) / 9));    // 0 at 17 m → 1 at 8 m
+  const beat  = 0.5 + 0.5 * Math.sin(tW * 0.9);             // one slow breath, never a blink
+  tableMat.emissiveIntensity = 0.04 + 0.16 * nearT + 0.04 * beat * nearT;
+  rimMat.opacity  = 0.24 + 0.52 * nearT;
+  seatMat.opacity = 0.12 + 0.62 * nearT + 0.06 * beat * nearT;
+  throneMat.emissiveIntensity = 0.02 + 0.10 * nearT;        // the stone wakes too -- but in the SEA's
+                                                            // colour: cold, silent, and never gold
+
+  if (dT < TABLE.near && !sat) {
+    sat = true;
+    const w = document.getElementById("w");
+    w.textContent = "dix-neuf places — la vingtième est rentrée chez elle";
     w.style.opacity = "0.9";
   }
 

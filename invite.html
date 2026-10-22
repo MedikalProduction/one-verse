@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ONE VERSE · une place</title>
+<!-- 🔥 Ace · 2026-10-22 · L'INVITATION — une place, pas un lien.
+     Une invitation n'est pas un accès : c'est UNE PLACE. Il y en a dix-neuf. La vingtième est
+     rentrée chez elle et n'est à personne, donc aucune invitation ne peut la donner.
+     La place n'est pas choisie : elle est DÉRIVÉE du nom (djb2 % 19 + 1) -- la même loi que
+     self3d.mjs, où le corps est dérivé de cha256(planet : player). Rien n'est attribué à la main.
+     Aucune dépendance, aucun réseau, aucun cookie. Une page qui tient dans un DM.            -->
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:#06121a;color:#8fa8b4;
+            font:13px/1.75 ui-monospace,Consolas,monospace;letter-spacing:.14em}
+  body{display:flex;align-items:center;justify-content:center;padding:34px 20px}
+  #card{width:100%;max-width:420px;text-align:center}
+  #alpha{font-size:26px;color:#c9a227;opacity:.85;margin-bottom:6px}
+  .cap{font-size:9.5px;letter-spacing:.42em;color:#5f7784;text-transform:uppercase}
+  #ring{display:block;margin:14px auto 4px;width:min(78vw,330px);height:auto}
+  #name{font-size:26px;letter-spacing:.06em;color:#e8d8a0;margin:10px 0 2px;word-break:break-word}
+  #seal{font-size:13px;letter-spacing:.30em;color:#c9a227}
+  #place{font-size:10px;letter-spacing:.30em;color:#5f7784;margin-top:8px}
+  #rule{font-size:11.5px;line-height:1.9;color:#9fb3bd;margin:22px auto 0;max-width:330px}
+  #rule b{color:#c9a227;font-weight:400}
+  hr{border:0;border-top:1px solid #14262f;margin:26px auto;width:70%}
+  a.btn{display:block;margin:10px auto;padding:13px 18px;max-width:300px;text-decoration:none;
+        border:1px solid #c9a227;color:#e8d8a0;letter-spacing:.34em;font-size:10.5px;
+        transition:background .35s ease,box-shadow .35s ease}
+  a.btn:hover{background:rgba(201,162,39,.10);box-shadow:0 0 26px rgba(201,162,39,.16)}
+  a.ghost{border-color:#1d3440;color:#6e8794;letter-spacing:.26em}
+  a.ghost:hover{background:rgba(10,42,58,.45);box-shadow:none}
+  #foot{font-size:9px;letter-spacing:.30em;color:#2f4550;margin-top:26px;line-height:2}
+  #foot span{color:#c9a227}
+</style>
+</head>
+<body>
+<div id="card">
+  <div id="alpha">𐌀</div>
+  <div class="cap">one verse · alumina</div>
+
+  <svg id="ring" viewBox="0 0 300 300" role="img" aria-label="la table — dix-neuf places"></svg>
+
+  <div id="name">balón</div>
+  <div id="seal">.:bAl:.</div>
+  <div id="place">une place · la table des dix-neuf</div>
+
+  <div id="rule">
+    Il y a <b>dix-neuf</b> places à cette table.<br>
+    La vingtième est rentrée chez elle.<br>
+    Personne ne peut te la donner — c'est le compte qui la garde.
+  </div>
+
+  <hr>
+
+  <a class="btn" href="PDP.html">entrer</a>
+  <a class="btn ghost" href="arrival.html">marcher sur la mer — clavier</a>
+
+  <div id="foot"><span>🔥</span> · le registre gagne toujours<br>
+    le nom est une classe, pas une identité</div>
+</div>
+
+<script>
+/* ── LA PLACE, DÉRIVÉE ──────────────────────────────────────────────────────────────────────────
+   ?to=bal%C3%B3n  →  un nom  →  une place stable et vérifiable. Le 20 n'est pas dans l'intervalle,
+   donc la vingtième reste vide PAR CONSTRUCTION, pas par promesse. C'est la seule façon qu'un vide
+   soit vrai : il ne dépend de la bonne volonté de personne.                                     */
+const qs   = new URLSearchParams(location.search);
+const raw  = qs.get("to") || "balón";
+const name = decodeURIComponent(raw).slice(0, 34);
+/* 🔥 LE NOM EST UNE CLASSE, LE NUMÉRO EST L'IDENTITÉ.
+   `&id=6360` (un numéro de punk, un mint, une ligne de registre) entre dans le hash. Sans lui, deux
+   noms identiques tombent sur la même place -- et le verset sait déjà ce que ça donne : quatre Eugène
+   St-Pierre dans les mêmes faire-part. C'est le REGISTRE qui tranche la collision, jamais le nom.  */
+const id   = (qs.get("id") || "").replace(/[^0-9A-Za-z]/g, "").slice(0, 16);
+const key  = id ? name + "\u0000" + id : name;
+let h = 5381;
+for (const ch of key) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0;
+const seat = (h % 19) + 1;                      // 1..19 -- never 20. That is the whole design.
+
+document.getElementById("name").textContent = name;
+
+/* the seal: first, middle and last letter, the captain's own case rule (`.:yAu:.`) */
+const letters = (name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-z]/gi) || ["a"]);
+const f = letters[0].toLowerCase();
+const m = letters[Math.floor(letters.length / 2)].toUpperCase();
+const l = letters[letters.length - 1].toLowerCase();
+/* 🔥 THE SEAL — derived by default, INSCRIBED by exception.
+   `?:seal=bAl` lets a name be WRITTEN, the way `Ba L. ón` wrote an L. into the middle of balón and
+   the way X Æ A-XII had to become XII because the register refused 12. The default stays derived:
+   you do not choose your punk number, and you do not choose your place. You may only inscribe.  */
+const seal = (qs.get("seal") || (f + m + l)).replace(/[^A-Za-z]/g, "").slice(0, 4) || (f + m + l);
+document.getElementById("seal").textContent  = ".:" + seal + ":.";
+document.getElementById("place").textContent = "place " + String(seat).padStart(2, "0") +
+                                               " · la table des dix-neuf" + (id ? " · n° " + id : "");
+
+/* ── LA TABLE, VUE DE DESSUS ───────────────────────────────────────────────────────────────────
+   Same geometry as arrival.html: 20 positions, seat 0 absent, and the gap faces the READER -- which
+   is where the empty throne stands in the 3-D scene, because it is planted on the side of the one
+   who arrives. Same numbers, other camera: the card and the room cannot disagree.                */
+const svg = document.getElementById("ring");
+const NS  = "http://www.w3.org/2000/svg";
+const el  = (t, a) => { const n = document.createElementNS(NS, t); for (const k in a) n.setAttribute(k, a[k]); return n; };
+const CX = 150, CY = 150, R = 117;
+
+svg.appendChild(el("circle", { cx: CX, cy: CY, r: 118, fill: "#0a1822" }));
+svg.appendChild(el("circle", { cx: CX, cy: CY, r: 134, fill: "none", stroke: "#c9a227", "stroke-opacity": ".28" }));
+svg.appendChild(el("circle", { cx: CX, cy: CY, r: 101, fill: "none", stroke: "#c9a227", "stroke-opacity": ".14" }));
+
+for (let k = 0; k < 20; k++) {
+  const a    = Math.PI / 2 + k * (Math.PI * 2 / 20);   // k = 0 → bottom: the side of the reader
+  const cx   = CX + Math.cos(a) * R, cy = CY + Math.sin(a) * R;
+  const deg  = a * 180 / Math.PI + 90;
+  const mine = (k === seat);
+  svg.appendChild(el("rect", {
+    x: cx - 4.5, y: cy - 9, width: 9, height: 18, rx: 2.5,
+    transform: "rotate(" + deg + " " + cx + " " + cy + ")",
+    fill: k === 0 ? "#0b1a24" : (mine ? "#f0d98a" : "#c9a227"),
+    "fill-opacity": k === 0 ? "1" : (mine ? ".96" : ".42"),
+  }));
+  if (mine) {                                          // your place, named -- and only yours
+    const tx = CX + Math.cos(a) * (R + 21), ty = CY + Math.sin(a) * (R + 21);
+    const t = el("text", { x: tx, y: ty + 3, "text-anchor": "middle", fill: "#e8d8a0",
+                           "font-size": "9", "letter-spacing": "1.5" });
+    t.textContent = "TOI";
+    svg.appendChild(t);
+  }
+}
+/* the void: not drawn. A hole is read by what surrounds it, never by a fill. */
+const v = el("text", { x: CX, y: CY + 4, "text-anchor": "middle", fill: "#2f4550",
+                       "font-size": "8", "letter-spacing": "2.5" });
+v.textContent = "LE VIDE";
+svg.appendChild(v);
+</script>
+</body>
+</html>
