@@ -33,6 +33,8 @@
   a.ghost:hover{background:rgba(10,42,58,.45);box-shadow:none}
   #foot{font-size:9px;letter-spacing:.30em;color:#2f4550;margin-top:26px;line-height:2}
   #foot span{color:#c9a227}
+  #foot a{color:#6e8794;text-decoration:none;border-bottom:1px solid #1d3440}
+  #foot a:hover{color:#c9a227;border-bottom-color:#c9a227}
 </style>
 </head>
 <body>
@@ -58,7 +60,8 @@
   <a class="btn ghost" href="arrival.html">marcher sur la mer — clavier</a>
 
   <div id="foot"><span>🔥</span> · le registre gagne toujours<br>
-    le nom est une classe, pas une identité</div>
+    le nom est une classe, pas une identité<br>
+    <a href="CHARTE.html">la charte des dix-neuf</a></div>
 </div>
 
 <script>
@@ -89,9 +92,17 @@ const l = letters[letters.length - 1].toLowerCase();
 /* 🔥 THE SEAL — derived by default, INSCRIBED by exception.
    `?:seal=bAl` lets a name be WRITTEN, the way `Ba L. ón` wrote an L. into the middle of balón and
    the way X Æ A-XII had to become XII because the register refused 12. The default stays derived:
-   you do not choose your punk number, and you do not choose your place. You may only inscribe.  */
-const seal = (qs.get("seal") || (f + m + l)).replace(/[^A-Za-z]/g, "").slice(0, 4) || (f + m + l);
-document.getElementById("seal").textContent  = ".:" + seal + ":.";
+   you do not choose your punk number, and you do not choose your place. You may only inscribe.
+
+   AND A TWO-WORD NAME GETS TWO SEALS -- `?:seal=vOn.mIz` -> `.:vOn:.:mIz:.` -- the same
+   construction the captain read in `cRYPTo cYo pU N K s` -> `.:cYo:.:uNk:.`. Any run of
+   non-letters is the cut. And `mIz`, NOT `mIs`: « Mises » is said /mizɛs/, so this is the first
+   seal that transcribes the SOUND instead of the spelling. A seal is what you HEAR.            */
+const sealParts = (qs.get("seal") || (f + m + l)).split(/[^A-Za-z]+/).filter(Boolean).slice(0, 3);
+document.getElementById("seal").textContent =
+  ".:" + (sealParts.length ? sealParts : [f + m + l]).map(p => p.slice(0, 4)).join(":.:") + ":.";
+/* 🔥 the JOIN is `:.:`, not `:..:` -- chaining `.:cYo:` with `.:uNk:.` prints a DOUBLE STOP otherwise.
+   The captain's own chained form is `.:cYo:.:uNk:.`, i.e. `.:` + parts.join(":.:") + `:.`          */
 document.getElementById("place").textContent = "place " + String(seat).padStart(2, "0") +
                                                " · la table des dix-neuf" + (id ? " · n° " + id : "");
 
