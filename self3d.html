@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>0z Â· SELF â€” the body in volume</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #05070c; color: #dfe9f3;
+               font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
+  #c { display: block; width: 100vw; height: 100vh; }
+  .panel { position: fixed; background: rgba(6,10,18,.82); border: 1px solid #16233a;
+           border-radius: 10px; padding: 12px 14px; backdrop-filter: blur(6px); }
+  #hud { left: 18px; top: 18px; width: 268px; }
+  #hud h1 { margin: 0 0 4px; font-size: 15px; letter-spacing: .12em; font-weight: 600; }
+  #hud .sub { color: #6c8099; font-size: 11px; margin-bottom: 10px; word-break: break-all; }
+  .row { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+  .row b { color: #9fd8ff; font-weight: 500; }
+  #foot { right: 18px; bottom: 18px; max-width: 300px; color: #6c8099; font-size: 11px; }
+  #foot code { color: #9fd8ff; }
+  .hi { position: fixed; left: 50%; transform: translateX(-50%); bottom: 22px; color: #6c8099;
+        font-size: 11px; pointer-events: none; }
+  input { width: 100%; box-sizing: border-box; background: #0d1626; color: #dfe9f3;
+          border: 1px solid #22334d; border-radius: 6px; padding: 6px 8px; font: inherit; margin-top: 8px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="panel">
+  <h1>THE BODY, IN VOLUME</h1>
+  <div class="sub" id="urn">urn:0z:self:â€¦</div>
+  <div id="traits"></div>
+  <input id="name" value="" spellcheck="false" placeholder="type a name â€” the body changes" />
+</div>
+
+<div class="hi">drag to turn Â· scroll to come closer Â· <b>d</b> to meet the twin</div>
+
+<div id="foot" class="panel">
+  Nothing here was modelled or drawn. Every proportion is read out of
+  <code>sha256(planet : player : name)</code>, the halo is <code>Ï†</code> (golden angle
+  <code>2.399963</code>), and the palette is the hue itself.
+  <br /><br />The picture is a <b>claim</b>; the chain is the proof.
+</div>
+
+<script type="module" src="./self3d.mjs"></script>
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-21 -->

@@ -1,0 +1,10 @@
+{
+ "ts": "2026-10-21T19:47:16",
+ "ledger": "claims.jsonl",
+ "rows": 9,
+ "legacy": 4,
+ "genesis": "a8d5a2973a4ad4749a42b970a9b205e5aa5264bd961b8ba5d83867d28986f52b",
+ "head": "77a38a7d13fa9a83ef822d3cfe7bd2c247d1bd8ffb1d552fee6153c813395df1",
+ "file_sha256": "131d66d68df1a81023859f3809049fbba9f69109e618b9fda3902d088455f354",
+ "law": "the hash is taken over the CANONICAL row body (world_chain.canon); a manifest proves CONTENT, never honesty, and never consensus between two writers"
+}

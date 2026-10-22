@@ -1,0 +1,378 @@
+U<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ONE VERSE · arrival</title>
+<!-- 🔥 Ace · 2026-10-22 · W1 + W2 + W3 — THE ARRIVAL.
+     Night on black water. No UI. A low moon, its reflection broken by the swell. And standing in the
+     waves, the Old Italic A -- twelve metres, gold, barely lit. Nothing else. You can walk toward it.
+     The swell is ANALYTIC (a vertex shader, zero simulation, zero network): the sea does not need the
+     20 Hz tick. The palette is world.json's own: sea #0a2a3a, gold #c9a227. One accent, never two.
+     The world turns: the sky rotates slowly, the moon does not care how fast your screen is. -->
+<style>
+  html,body{margin:0;height:100%;background:#06121a;overflow:hidden}
+  canvas{display:block;width:100%;height:100%}
+  #veil{position:fixed;inset:0;background:#06121a;opacity:1;transition:opacity 3.2s ease;
+        pointer-events:none}
+  #w{position:fixed;left:0;right:0;bottom:22px;text-align:center;color:#8fa8b4;font:11px/1.6
+     ui-monospace,Consolas,monospace;letter-spacing:.22em;opacity:.55;transition:opacity 1.2s ease}
+</style>
+</head>
+<body>
+<div id="veil"></div>
+<div id="w">drag to look &nbsp;·&nbsp; scroll to come closer &nbsp;·&nbsp; the world turns</div>
+<script type="module">
+import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+
+const SEA = 0x0a2a3a, GOLD = 0xc9a227, NIGHT = 0x06121a;
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(NIGHT, 0.006);
+
+const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, 0.1, 3000);
+const eye = new THREE.Vector3(0, 2.4, 26);
+camera.position.copy(eye);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(NIGHT, 1);
+document.body.appendChild(renderer.domElement);
+
+/* ── THE SEA ────────────────────────────────────────────────────────────────────────────────
+   Analytic swell: no accumulator, no tick, no state. What you see is a pure function of time.   */
+const WAVE = {
+  uTime:  { value: 0 },
+  uMoonX: { value: -210 },     // the moon's meridian: the trail is anchored to it, not to a constant
+  uSea:   { value: new THREE.Color(SEA) },
+  uGold:  { value: new THREE.Color(GOLD) },
+  uFog:   { value: new THREE.Color(NIGHT) }
+};
+const sea = new THREE.Mesh(
+  new THREE.PlaneGeometry(1600, 1600, 240, 240).rotateX(-Math.PI / 2),
+  new THREE.ShaderMaterial({
+    uniforms: WAVE, fog: false,
+    vertexShader: `
+      uniform float uTime; varying vec3 vW; varying vec3 vN; varying float vH;
+      /* The swell AND its exact gradient: three directional sines, differentiated by hand.
+         The normal is analytic, so the water has real shading with zero textures and zero sim. */
+      vec3 swell(vec2 p, float t){
+        vec3 k1 = vec3(0.33, 0.00, 0.55), k2 = vec3(0.00, 0.21, 0.40), k3 = vec3(0.57, 0.57, 0.15);
+        float f1 = dot(k1.xy, p) + t*0.90, f2 = dot(k2.xy, p) - t*0.62, f3 = dot(k3.xy, p) + t*1.70;
+        float h  = k1.z*sin(f1) + k2.z*sin(f2) + k3.z*sin(f3);
+        vec2  g  = k1.xy*k1.z*cos(f1) + k2.xy*k2.z*cos(f2) + k3.xy*k3.z*cos(f3);
+        return vec3(h, g.x, g.y);
+      }
+      void main(){
+        vec3 p = position;
+        vec3 s = swell(p.xz, uTime);
+        p.y += s.x;
+        vH = s.x;
+        vW = p;
+        vN = normalize(vec3(-s.y, 1.0, -s.z));
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uSea, uGold, uFog; uniform float uMoonX;
+      varying vec3 vW; varying vec3 vN; varying float vH;
+      void main(){
+        vec3 N = normalize(vN);
+        vec3 V = normalize(cameraPosition - vW);
+        float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+
+        vec3 deep = uSea * 2.4;
+        vec3 sky  = mix(vec3(0.020,0.055,0.085), vec3(0.090,0.180,0.240),
+                        clamp(N.y*0.5 + 0.5, 0.0, 1.0));
+        vec3 c    = mix(deep, sky, 0.30 + 0.50*fres);          // grazing angles see the sky
+
+        vec3 L  = normalize(vec3(uMoonX - vW.x, 70.0, -820.0)); // the moon, as a direction
+        vec3 Hv = normalize(L + V);
+        c += uGold * pow(max(dot(N, Hv), 0.0), 180.0) * 3.4;    // sharp glitter
+
+        float dx = (vW.x - uMoonX) / 90.0;                      // THE TRAIL, quadratic: 1/(1+dx²)
+        c += uGold * (1.0 / (1.0 + dx*dx)) * smoothstep(0.45, 1.10, vH) * 1.8;
+
+        c = mix(c, vec3(0.80,0.85,0.88), smoothstep(0.98, 1.14, vH) * 0.30);  // foam on the tops
+
+        float d = length(cameraPosition - vW);
+        c = mix(c, uFog, clamp(1.0 - exp(-pow(d*0.006, 2.0)), 0.0, 1.0));
+        gl_FragColor = vec4(c, 1.0);
+      }`
+  })
+);
+sea.frustumCulled = false;
+scene.add(sea);
+
+/* ── THE MOON — low, and its halo. One disc, one glow, nothing modelled. ───────────────────── */
+function disc(radius, color, opacity) {
+  const g = new THREE.CircleGeometry(radius, 64);
+  const m = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity,
+                                          depthWrite: false, fog: false });
+  return new THREE.Mesh(g, m);
+}
+const sky = new THREE.Group();
+const moon = disc(26, 0xf2ecdc, 0.95); moon.position.set(-210, 46, -820);
+const halo = disc(52, 0xc9a227, 0.18); halo.position.copy(moon.position).add(new THREE.Vector3(0, 0, -1));
+const halo2 = disc(88, 0x8fa8b4, 0.07); halo2.position.copy(moon.position).add(new THREE.Vector3(0, 0, -2));
+sky.add(moon, halo, halo2);
+scene.add(sky);
+
+/* ── THE GATE — 𐌀, twelve metres, in the water. Not an arch: a MONUMENT. ─────────────────────
+   The captain's own elevation: symmetric about its middle, the two irises meeting at the axis,
+   the trident at the foot. Here: two pillars, a lintel, and the letter drawn with strokes.       */
+const gate = new THREE.Group();
+gate.position.set(0, 0, -34);
+
+const stone = new THREE.MeshStandardMaterial({ color: 0x101c24, roughness: 0.92, metalness: 0.10 });
+const bar = (w, h, d, x, y, z) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), stone);
+  m.position.set(x, y, z); gate.add(m); return m;
+};
+bar(1.6, 12.0, 1.6, -4.2, 6.0, 0);      // left pillar
+bar(1.6, 12.0, 1.6,  4.2, 6.0, 0);      // right pillar
+const lintelMat = new THREE.MeshStandardMaterial({ color: 0x16242c, roughness: 0.85, metalness: 0.15,
+                                                   emissive: 0x000000, emissiveIntensity: 1.0 });
+const lintel = bar(9.6, 1.2, 1.6,   0.0, 12.4, 0);     // lintel -- the shared letter `e`
+lintel.material = lintelMat;
+
+/* the letter A, in gold, drawn as strokes -- no font, so it cannot fall back to a wrong glyph */
+const cv = document.createElement("canvas");
+cv.width = cv.height = 512;
+const c2 = cv.getContext("2d");
+c2.strokeStyle = "#e8d8a0"; c2.lineWidth = 22; c2.lineCap = "round"; c2.lineJoin = "round";
+c2.shadowColor = "#c9a227"; c2.shadowBlur = 34;
+c2.beginPath(); c2.moveTo(256, 96); c2.lineTo(112, 416); c2.stroke();      // left leg
+c2.beginPath(); c2.moveTo(256, 96); c2.lineTo(400, 416); c2.stroke();      // right leg
+c2.beginPath(); c2.moveTo(172, 330); c2.lineTo(340, 330); c2.stroke();     // the bar
+const tex = new THREE.CanvasTexture(cv);
+const letter = new THREE.Mesh(
+  new THREE.PlaneGeometry(9.0, 9.0),
+  new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, fog: false })
+);
+letter.position.set(0, 6.6, 0.9);
+gate.add(letter);
+scene.add(gate);
+
+/* ── THE REFLECTION ──────────────────────────────────────────────────────────────────────────
+   Every seal the captain drew is a palindrome standing in water: `.:cOc:.`, `.:OWΦ:.`/`.:ΦMO:.`,
+   `.:mHr:.`. The half that was missing is not built -- it is RETURNED. One clone, flipped on Y
+   about the waterline, fainter, and left to the fog. NARCISSE: the only one who ever fell for it. */
+const mirror = gate.clone(true);
+mirror.scale.y = -1;                     // the gate's origin is y = 0 = the waterline. Nothing else.
+let mirrorLetter = null;
+mirror.traverse(function (o) {
+  if (!o.material) return;
+  o.material = o.material.clone();
+  o.material.transparent = true;
+  o.material.side = THREE.DoubleSide;    // a negative scale inverts the faces
+  o.material.depthTest = false;          // the sea is OPAQUE: without this the reflection is hidden
+  o.renderOrder = 2;                     // ...so it is drawn ON the surface, the way a reflexion reads
+  if (o.material.map) {                  // the letter: dimmer, and it now takes the fog
+    mirrorLetter = o;
+    o.material.opacity = 0.28;
+    o.material.fog = true;
+  } else {
+    o.material.opacity = 0.42;
+  }
+});
+/* the reflected LINTEL keeps the REAL material: it must wake with the true one, or the third person
+   would be lit above the water and dark below it. */
+mirror.children.forEach(function (c) { if (c.position.y > 12) c.material = lintelMat; });
+scene.add(mirror);
+
+/* ── THE BODY ───────────────────────────────────────────────────────────────────────────────
+   Without a body there is no third person -- only a camera backing away from nothing. This is the
+   hull of `.:cOc:.` stood upright: a dark cylinder, and it only exists when you can see yourself.  */
+const body = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.34, 0.52, 1.75, 16),
+  new THREE.MeshStandardMaterial({ color: 0x16242c, roughness: 0.82, metalness: 0.25,
+                                   emissive: 0x0a1620, emissiveIntensity: 1.0 })
+);
+body.visible = false;
+scene.add(body);
+
+/* THE HEAD -- `.:dNn:.` : the tube was open at the top (`.:𐌂Ld:..`), and an open tube is not a body.
+   One sphere closes the silhouette, and a silhouette is what DEFINES, not the light. */
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 14), body.material);
+head.position.y = 1.06;              // local: the cylinder's top edge is at +0.875
+body.add(head);
+
+/* the WATERLINE RING -- `.:cOc:.` : the hull, and the gold circle it wears at the surface.
+   A silhouette alone is a shadow; a silhouette with one gold line is a PERSON. */
+const hullRing = new THREE.Mesh(
+  new THREE.TorusGeometry(0.52, 0.045, 8, 32),
+  new THREE.MeshBasicMaterial({ color: 0xc9a227, transparent: true, opacity: 0.85, fog: true })
+);
+hullRing.rotation.x = Math.PI / 2;
+hullRing.visible = false;
+scene.add(hullRing);
+
+/* YOU CARRY YOUR OWN LIGHT. The gate's lamp is 36 m away and the body was a black shape: a player
+   must never be invisible to himself. A small gold point light at the chest, range 12 m -- it also
+   warms the water around your feet. */
+const lampSelf = new THREE.PointLight(0xc9a227, 7, 14, 2);
+scene.add(lampSelf);
+
+const lamp = new THREE.PointLight(GOLD, 26, 90, 2.0);
+lamp.position.set(0, 7.0, -30);
+scene.add(lamp);
+
+/* ── THE HAND — drag to look, scroll to come closer. No pitch beyond what a neck allows. ───── */
+let yaw = 0, pitch = 0, dist = 26, down = false, px = 0, py = 0;
+renderer.domElement.addEventListener("pointerdown", e => { down = true; px = e.clientX; py = e.clientY; });
+addEventListener("pointerup", () => { down = false; });
+addEventListener("pointermove", e => {
+  if (!down) return;
+  yaw   -= (e.clientX - px) * 0.0032;
+  pitch -= (e.clientY - py) * 0.0022;
+  pitch = Math.max(-0.35, Math.min(0.30, pitch));
+  yaw   = Math.max(-0.85, Math.min(0.85, yaw));
+  px = e.clientX; py = e.clientY;
+}, { passive: true });
+addEventListener("wheel", e => {
+  dist = Math.max(9, Math.min(70, dist + Math.sign(e.deltaY) * 1.8));
+}, { passive: true });
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+});
+
+/* ── LET THE WORLD TURN ───────────────────────────────────────────────────────────────────────
+   The sea is analytic, the sky rotates, the camera breathes with 15 % of the swell. A fixed 20 Hz
+   tick is NOT needed here: nothing in this scene is shared, so time is simply a number.            */
+camera.rotation.order = "YXZ";
+const clock = new THREE.Clock();
+let veilGone = false;
+
+/* ── W4 · THE WALK ───────────────────────────────────────────────────────────────────────────
+   You are no longer a camera floating at a fixed distance: you are ON the water, and the water
+   lifts you. The swell is the SAME function as the shader's -- copied by hand, not approximated,
+   so your eye height and the visible wave are the same wave.                                */
+const pos  = new THREE.Vector3(0, 0, 26);
+const keys = Object.create(null);
+addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true;  });
+addEventListener("keyup",   e => { keys[e.key.toLowerCase()] = false; });
+let woke = false;
+let third = false;                       // V : 1st <-> 3rd person
+addEventListener("keydown", e => { if (e.key.toLowerCase() === "v") third = !third; });
+
+const swellY = (x, z, t) =>
+    0.55 * Math.sin(0.33 * x + 0.90 * t)
+  + 0.40 * Math.sin(0.21 * z - 0.62 * t)
+  + 0.15 * Math.sin(0.57 * (x + z) + 1.70 * t);
+
+/* ── W5 · THE SOUND OF THE SEA ───────────────────────────────────────────────────────────────
+   No asset, no download: brown noise through a lowpass whose CUTOFF FOLLOWS THE SWELL UNDER YOU.
+   What you hear and what you see are the same wave. Browsers refuse audio before a gesture, so the
+   sea starts on the first key or click -- a promise, never a popup.                              */
+let audio = null;
+function startSea() {
+  if (audio) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const ac  = new AC();
+  if (ac.state === "suspended") ac.resume();   // Chrome can hand back a SUSPENDED context: silence
+  const len = Math.floor(ac.sampleRate * 4);
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d   = buf.getChannelData(0);
+  let last  = 0;
+  for (let i = 0; i < len; i++) {          // brown noise: the sea is LOW, it does not hiss
+    last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+    d[i] = last * 3.5;
+  }
+  const src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+  const hp  = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 55;
+  const lp  = ac.createBiquadFilter(); lp.type = "lowpass";  lp.frequency.value = 600; lp.Q.value = 0.7;
+  const g   = ac.createGain(); g.gain.value = 0.0;
+  src.connect(hp).connect(lp).connect(g).connect(ac.destination);
+  src.start();
+  g.gain.setTargetAtTime(0.20, ac.currentTime, 2.8);   // fade in: never a pop
+  audio = { ac: ac, lp: lp };
+}
+addEventListener("pointerdown", startSea, { once: true });
+addEventListener("keydown",     startSea, { once: true });
+
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  WAVE.uTime.value += dt;
+
+  /* THE MOON DOES NOT DRIFT *YET*. The moon's path on the water is computed at a fixed meridian
+     (x = -210); while the sky drifted ±120 m the path stayed behind and the captain saw gold streaks
+     with no trail. Locking the moon first is the honest fix -- the drift comes back the day the
+     shader receives uMoonX as a UNIFORM and the path follows it. */
+  sky.position.x = 0;
+  letter.material.opacity = 0.72 + Math.sin(WAVE.uTime.value * 0.9) * 0.10;
+  if (mirrorLetter) mirrorLetter.material.opacity = letter.material.opacity * 0.34;   // one pulse, two bodies
+  lamp.intensity = 24 + Math.sin(WAVE.uTime.value * 1.3) * 3;
+
+  /* walk on the sea: the water lifts you by exactly the height it shows */
+  const tW  = WAVE.uTime.value;
+  const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+  const rgt = new THREE.Vector3( Math.cos(yaw), 0, -Math.sin(yaw));
+  const mz  = (keys["w"] ? 1 : 0) - (keys["s"] ? 1 : 0);
+  const mx  = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
+  if (mz || mx) {
+    pos.addScaledVector(fwd, mz * 5.0 * dt);
+    pos.addScaledVector(rgt, mx * 5.0 * dt);
+  }
+  /* ARROWS = LOOK (the captain's ask). WASD = WALK. And the SIXTH degree of freedom: the ROLL,
+     taken from the swell's own slope -- that is the one line that turns a camera into a boat. */
+  const look = 1.7;
+  yaw   += ((keys["arrowleft"] ? 1 : 0) - (keys["arrowright"] ? 1 : 0)) * look * dt;
+  pitch += ((keys["arrowup"]   ? 1 : 0) - (keys["arrowdown"]  ? 1 : 0)) * look * dt;
+  pitch  = Math.max(-0.95, Math.min(0.70, pitch));
+
+  const sl = (swellY(pos.x + 0.6, pos.z, tW) - swellY(pos.x - 0.6, pos.z, tW)) / 1.2;
+  const eyeY = 1.7 + swellY(pos.x, pos.z, tW);
+  body.visible = third;
+  body.position.set(pos.x, 0.88 + swellY(pos.x, pos.z, tW), pos.z);
+  hullRing.visible = third;
+  hullRing.position.set(pos.x, 0.03 + swellY(pos.x, pos.z, tW), pos.z);
+  lampSelf.position.set(pos.x, 2.55 + swellY(pos.x, pos.z, tW), pos.z);   // ABOVE the open top: a light
+                                                                          // inside a closed tube lights nothing
+
+  if (third) {
+    /* the camera steps BACK along the look and rises: you stop being the eye and become the back.
+       Behind = (+sin(yaw), 0, +cos(yaw)) -- the exact opposite of fwd.                          */
+    camera.position.set(pos.x + Math.sin(yaw) * 6.5,
+                        eyeY + 2.2 - pitch * 9.0,      // MINUS: a higher camera looks DOWN, so pitch had
+                        pos.z + Math.cos(yaw) * 6.5);  // to lower it to look UP. The captain saw it inverted.
+    camera.lookAt(pos.x, eyeY + 0.9, pos.z);
+  } else {
+    camera.position.set(pos.x, eyeY, pos.z);
+    camera.rotation.set(pitch - 0.04, yaw, -sl * 0.35);   // order is already "YXZ"
+  }
+
+  /* THE SEA BREATHES: the filter opens as the swell rises under you. Same wave, other sense. */
+  if (audio) audio.lp.frequency.value = 430 + 300 * (0.5 + 0.5 * swellY(pos.x, pos.z, tW));
+
+  /* AT EIGHT METRES, THE SEAL WAKES. */
+  const near = Math.hypot(pos.x, pos.z + 34) < 8;
+  lintelMat.emissive.setHex(near ? 0x8a6a18 : 0x000000);   // the THIRD person wakes when two are close
+  if (near && !woke) {
+    woke = true;
+    const w = document.getElementById("w");
+    w.textContent = "🔥 le sceau s'est allumé — tu as marché sur la mer";
+    w.style.opacity = "0.9";
+  }
+
+  renderer.render(scene, camera);
+
+  if (!veilGone) {
+    veilGone = true;
+    requestAnimationFrame(() => {
+      document.getElementById("veil").style.opacity = "0";
+      document.getElementById("w").style.opacity = "0.55";
+    });
+  }
+  requestAnimationFrame(frame);
+}
+document.getElementById("w").style.opacity = "0";
+frame();
+</script>
+</body>
+</html>
+

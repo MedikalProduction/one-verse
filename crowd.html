@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ONE VERSE — the crowd</title>
+<style>
+  :root { --ink:#f2efe6; --dim:#8fa8b4; --gold:#c9a227; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:#040d14; color:var(--ink);
+    font:12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow:hidden; }
+  #field { display:block; width:100%; height:100%; }
+  .hud { position:fixed; pointer-events:none; }
+  #top { top:16px; left:20px; }
+  #top h1 { margin:0; font-size:18px; letter-spacing:.26em; font-weight:600; }
+  #top .sub { color:var(--dim); font-size:11px; letter-spacing:.08em; }
+  #foot { bottom:12px; left:20px; right:20px; display:flex; justify-content:space-between;
+    font-size:10px; color:var(--dim); gap:14px; flex-wrap:wrap; }
+  a { color:var(--gold); text-decoration:none; pointer-events:auto; }
+  #count { color:var(--gold); }
+</style>
+</head>
+<body>
+<canvas id="field"></canvas>
+
+<div class="hud" id="top">
+  <h1>THE CROWD</h1>
+  <div class="sub" id="sub">deriving souls…</div>
+</div>
+
+<div class="hud" id="foot">
+  <span>every figure is a NAME, every name is a hash — nobody here was drawn by hand</span>
+  <span><span id="count">0</span> souls · <a href="/">the world</a> · <a href="/chart.html">the chart</a></span>
+</div>
+
+<script>
+"use strict";
+/* A field of derived selves.  Each cell is one body: hue -> colour, height -> the figure's size,
+   build -> its width, aura -> the glow, and the name is where the numbers came from. */
+const cv = document.getElementById("field"), ctx = cv.getContext("2d");
+const el = id => document.getElementById(id);
+let W = 0, H = 0, DPR = 1, crowd = [], cells = [];
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  layout();
+}
+window.addEventListener("resize", resize);
+
+function layout() {
+  const n = crowd.length || 1;
+  const aspect = W / Math.max(1, H);
+  const cols = Math.max(1, Math.round(Math.sqrt(n * aspect * 1.25)));
+  const rows = Math.ceil(n / cols);
+  const cw = W / cols, ch = H / Math.max(1, rows);
+  cells = crowd.map((b, i) => ({
+    b: b,
+    x: (i % cols) * cw + cw / 2,
+    y: Math.floor(i / cols) * ch + ch * 0.62,
+    s: Math.min(cw, ch) * 0.42
+  }));
+  draw();
+}
+
+function figure(cell, now) {
+  const b = cell.b, s = cell.s;
+  const hpx = s * (0.75 + (b.height_cm - 120) / 110 * 0.55);   // the body's height on screen
+  const wpx = s * 0.20 * b.build;                              // and its width
+  const pulse = 0.75 + 0.25 * Math.sin(now * 0.0009 + b.hue);  // a slow breath, per hue
+
+  /* aura: the field the body carries */
+  const g = ctx.createRadialGradient(cell.x, cell.y - hpx * 0.45, 1, cell.x, cell.y - hpx * 0.45, s * 0.95);
+  g.addColorStop(0, "hsla(" + b.hue + ",80%,60%," + (0.10 + b.aura * 0.45 * pulse).toFixed(3) + ")");
+  g.addColorStop(1, "hsla(" + b.hue + ",80%,60%,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cell.x, cell.y - hpx * 0.45, s * 0.95, 0, Math.PI * 2); ctx.fill();
+
+  /* body */
+  ctx.fillStyle = "hsl(" + b.hue + ",32%," + (30 + b.aura * 16).toFixed(0) + "%)";
+  ctx.fillRect(cell.x - wpx, cell.y - hpx * 0.72, wpx * 2, hpx * 0.62);
+
+  /* head */
+  ctx.fillStyle = "hsl(" + b.hue + ",42%,64%)";
+  ctx.beginPath(); ctx.arc(cell.x, cell.y - hpx * 0.84, wpx * 1.15, 0, Math.PI * 2); ctx.fill();
+
+  /* legs: two short strokes -- the whole figure is 4 shapes, and that is the point */
+  ctx.strokeStyle = "hsl(" + b.hue + ",30%,44%)";
+  ctx.lineWidth = Math.max(0.8, wpx * 0.5);
+  ctx.beginPath();
+  ctx.moveTo(cell.x - wpx * 0.7, cell.y - hpx * 0.10); ctx.lineTo(cell.x - wpx * 0.9, cell.y);
+  ctx.moveTo(cell.x + wpx * 0.7, cell.y - hpx * 0.10); ctx.lineTo(cell.x + wpx * 0.9, cell.y);
+  ctx.stroke();
+}
+
+function draw(now) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#040d14"; ctx.fillRect(0, 0, W, H);
+  for (const c of cells) { figure(c, now || 0); }
+}
+
+function frame(t) { draw(t); requestAnimationFrame(frame); }
+
+async function boot() {
+  const want = Math.max(60, Math.min(600, Math.round((window.innerWidth * window.innerHeight) / 3400)));
+  try {
+    const j = await fetch("/api/crowd?n=" + want).then(r => r.json());
+    crowd = j.crowd || [];
+    el("count").textContent = crowd.length;
+    el("sub").textContent = "one derived body per soul · " + crowd.length + " of them · none copied";
+  } catch (e) {
+    el("sub").textContent = "the gate is not answering";
+  }
+  resize();
+  requestAnimationFrame(frame);
+}
+boot();
+</script>
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-20 -->

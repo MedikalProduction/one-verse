@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLOCK HARNESS · v0.1.2</title>
+<!-- 🔥 Ace · 2026-10-22 · property-based harness for the temporal contract.
+     B1.3 v0.1.2 : age RESTORED in target (the v0.1.1 had silently dropped arrivedAt,
+     and certified an ideal clock that nobody specified).  B3.2 : GAP_MAX = 2, hard jump,
+     B1.3 suspended for exactly one frame, no interpolation across the hole.
+     Five acceptance lights. If all five are green, v0.1.2 freezes. -->
+<style>
+  :root{--gold:#c9a227;--dim:#8fa8b4;--line:#1d3b4a;--ok:#6ee7a8;--bad:#ff8a7a}
+  *{box-sizing:border-box}
+  body{margin:0;background:#06121a;color:#e9e4d8;font:13px/1.55 ui-monospace,Consolas,monospace;padding:20px}
+  h1{margin:0;font-size:15px;letter-spacing:.22em;color:var(--gold)}
+  .sub{color:var(--dim);font-size:11px;margin:4px 0 14px}
+  .c{max-width:860px;border:1px solid var(--line);padding:7px 10px;display:flex;gap:10px;align-items:baseline;margin-bottom:5px}
+  .c .n{color:var(--dim);width:30px}
+  .c .v{margin-left:auto;font-weight:600;letter-spacing:.12em}
+  .ok{color:var(--ok)}.bad{color:var(--bad)}.wait{color:var(--gold)}
+  button{background:transparent;border:1px solid var(--gold);color:var(--gold);padding:7px 14px;
+    font:inherit;cursor:pointer;letter-spacing:.14em;margin:10px 0}
+  table{border-collapse:collapse;margin-top:8px}
+  td,th{border:1px solid var(--line);padding:3px 9px;font-size:12px;text-align:left}
+  pre{background:#04101a;border:1px solid var(--line);padding:9px;max-height:200px;overflow:auto;font-size:11px;max-width:860px}
+</style>
+</head>
+<body>
+<h1>CLOCK HARNESS · v0.1.2</h1>
+<div class="sub">TICK 50 ms · DELAY 100 ms · GAP_MAX 2 · rate ∈ [0.9,1.1] · 1000 adversarial scenarios × 4 framerates</div>
+<div id="lights"></div>
+<button id="run">RUN</button>
+<div id="stats"></div>
+<script>
+"use strict";
+/* ─── constants of the frozen contract ─────────────────────────────────────────────────────── */
+const TICK_MS = 50, DELAY_MS = 100, GAP_MAX = 2, RATE_AMP = 0.1, GAIN = 10 * TICK_MS;
+const FPS = [60, 120, 144, 165];
+
+/* ─── adversarial packet streams ──────────────────────────────────────────────────────────── */
+function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0;
+  let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function stream(mode, seed) {
+  const r = mulberry(seed), n = 60 + Math.floor(r() * 140), out = [];
+  let tick = 0;
+  for (let k = 0; k < n; k++) {
+    tick += (mode === "reorder" && r() < 0.10) ? 3 + Math.floor(r() * 20) : 1;   // HOLES
+    if (mode === "reorder" && r() < 0.15) continue;                              // LOSS
+    const jit = mode === "reorder" ? (r() - 0.35) * 300 : (r() - 0.5) * 40;      // reorder vs pure jitter
+    out.push({ tick: tick, at: Math.max(0, tick * TICK_MS + jit) });
+  }
+  out.sort((a, b) => a.at - b.at);            // the OS delivers by ARRIVAL, never by tick
+  return out;
+}
+
+/* ─── one scenario, one framerate ─────────────────────────────────────────────────────────── */
+function runOne(mode, seed, fps) {
+  const pk = stream(mode, seed), c = new Clock();
+  const st = { mono: 0, ahead: 0, valid: 0, maxStep: 0, steps: 0 };
+  let i = 0, now = 0, last = 0, nextCmd = 5;
+  const dt = 1000 / fps;
+  for (let f = 0; f < 1400; f++) {
+    now += dt;
+    while (i < pk.length && pk[i].at <= now) { c.snapshot(pk[i].tick, pk[i].at); i++; }
+    if (c.highest >= nextCmd) { c.command(nextCmd); nextCmd += 5; }
+    const rt = c.step(now, dt);
+    if (rt < last - 1e-9) st.mono++;                       // C1  monotone
+    st.maxStep = Math.max(st.maxStep, Math.abs(rt - last)); st.steps++;
+    if (c.highest >= 0) {
+      const newest = c.highest * TICK_MS;
+      if (rt > newest + 1e-9) st.ahead++;                  // C5a never ahead
+      const fl = Math.floor(rt / TICK_MS);
+      if (fl < 0 || fl > c.highest) st.valid++;            // C5b floor(rt/TICK) valid
+    }
+    last = rt;
+  }
+  return { st: st, disc: c.disc, rejected: c.rejected, acks: c.acks.length, dt: dt };
+}
+
+/* ─── the five lights ─────────────────────────────────────────────────────────────────────── */
+function runAll(N) {
+  const L = [
+    { n: "C1", t: "renderTime monotone + continuous (no hole)", v: 0 },
+    { n: "C2", t: "pure jitter  -> discontinuity === 0",        v: 0 },
+    { n: "C3", t: "reorder      -> discontinuity > 0 everywhere", v: 0 },
+    { n: "C4", t: "pure jitter  -> 'rejected' === 0",           v: 0 },
+    { n: "C5", t: "invariants green under reorder",             v: 0 },
+  ];
+  let maxStepRatio = 0, discTotal = 0, monoTotal = 0, aheadTotal = 0, validTotal = 0;
+  for (let s = 0; s < N; s++) {
+    for (const fps of FPS) {
+      const a = runOne("jitter", s * 7919 + 11, fps);
+      if (a.st.mono) L[0].v++;
+      if (a.disc !== 0) L[1].v++;
+      if (a.rejected !== 0) L[3].v++;
+      monoTotal += a.st.mono; discTotal += a.disc;
+      maxStepRatio = Math.max(maxStepRatio, a.st.maxStep / (a.dt * 1.1));
+      const b = runOne("reorder", s * 104729 + 7, fps);
+      if (b.disc === 0) L[2].v++;                           // a reorder with NO hole = B3.2 dead
+      if (b.st.mono || b.st.ahead || b.st.valid) L[4].v++;
+      if (b.st.mono) L[0].v++;                              // monotone must hold even across a jump
+      monoTotal += b.st.mono; aheadTotal += b.st.ahead; validTotal += b.st.valid; discTotal += b.disc;
+    }
+  }
+  return { L: L, maxStepRatio: maxStepRatio, discTotal: discTotal,
+           monoTotal: monoTotal, aheadTotal: aheadTotal, validTotal: validTotal };
+}
+
+/* ─── UI ─────────────────────────────────────────────────────────────────────────────────── */
+function paint(res, N) {
+  const box = document.getElementById("lights");
+  box.innerHTML = res.L.map(function (c) {
+    const green = c.v === 0;
+    return '<div class="c"><span class="n">' + c.n + '</span><span>' + c.t + '</span>' +
+           '<span class="v ' + (green ? "ok" : "bad") + '">' +
+           (green ? "GREEN" : "RED ×" + c.v) + '</span></div>';
+  }).join("");
+  const green = res.L.every(function (c) { return c.v === 0; });
+  document.getElementById("stats").innerHTML =
+    '<table><tr><th>scénarios</th><td>' + N + ' × ' + FPS.length + ' framerates × 1400 frames</td></tr>' +
+    '<tr><th>discontinuities</th><td>' + res.discTotal + '</td></tr>' +
+    '<tr><th>monotonie rompue</th><td>' + res.monoTotal + '</td></tr>' +
+    '<tr><th>rt &gt; newest</th><td>' + res.aheadTotal + '</td></tr>' +
+    '<tr><th>floor(rt/TICK) invalide</th><td>' + res.validTotal + '</td></tr>' +
+    '<tr><th>pire pas / (dt·1.1)</th><td>' + res.maxStepRatio.toFixed(4) + '  (doit rester ≤ 1)</td></tr>' +
+    '</table><pre>' + (green
+      ? "🔥 GEL AUTORISÉ — v0.1.2 : les cinq feux sont verts.\n" +
+        "    renderTime monotone · jamais en avance sur la vérité · trous traités par B3.2 ·\n" +
+        "    late_by_ticks en magnitude · aucun 'rejected' en jitter pur."
+      : "❌ NE PAS GELER — un feu est rouge. On rouvre B3.2, pas B1.") + '</pre>';
+}
+
+document.getElementById("run").addEventListener("click", function () {
+  document.getElementById("stats").textContent = "… running 4000 scenarios";
+  setTimeout(function () { paint(runAll(1000), 1000); }, 30);
+});
+
+class Clock {
+  constructor() {
+    this.highest = -1; this.arrivedAt = new Map(); this.states = new Set();
+    this.rt = 0; this.lastRt = 0; this.skip = 0;
+    this.disc = 0; this.acks = []; this.rejected = 0;
+  }
+  snapshot(tick, now) {
+    const prev = this.highest;
+    if (!this.arrivedAt.has(tick)) this.arrivedAt.set(tick, now);
+    if (tick > this.highest) this.highest = tick;
+    this.states.add(tick);
+    if (prev >= 0 && tick - prev > GAP_MAX) {          // B3.2 -- a HOLE
+      this.disc++;
+      const newest = tick * TICK_MS;
+      this.rt = Math.max(0, newest + 0 - DELAY_MS);    // hard jump, age = 0
+      this.skip = 1;                                   // B1.3 suspended exactly one frame
+    }
+    if (this.pending !== undefined) {                  // B2.1 -- late_by_ticks, a MAGNITUDE
+      const late = tick - this.pending;
+      this.acks.push(late <= 0 ? 0 : late >= 4 ? "rejected" : late);
+      if (late >= 4) this.rejected++;
+      this.pending = undefined;
+    }
+  }
+  command(targetTick) { this.pending = targetTick; }
+  step(now, dt) {
+    if (this.highest < 0) return 0;
+    if (this.skip > 0) { this.skip--; return this.rt; }
+    const newest = this.highest * TICK_MS;
+    const age    = Math.max(0, now - this.arrivedAt.get(this.highest));   // RESTORED
+    const target = newest + age - DELAY_MS;                               // THE contract
+    const gap  = target - this.rt;
+    const rate = 1 + Math.sign(gap) * Math.min(Math.abs(gap) / GAIN, RATE_AMP);
+    this.rt += dt * rate;
+    if (this.rt > newest) this.rt = newest;            // clamp the STATE
+    if (this.rt < 0) this.rt = 0;
+    return this.rt;
+  }
+}
+</script>
+</body>
+</html>

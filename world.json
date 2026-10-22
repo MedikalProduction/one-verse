@@ -1,0 +1,43 @@
+{
+  "schema": "0z.world/1",
+  "name": "ONE VERSE",
+  "version": 1,
+  "_why": "The first deck of the 0z metaverse. It is deliberately almost empty: a sea, one island, and numbered plots. Everything else is meant to be built by whoever arrives, not by us.",
+  "origin": {
+    "label": "the 0",
+    "at": [0, 0],
+    "what": "the one point nobody can derive. The island is built around it and the beacon sits on it."
+  },
+  "sea": {
+    "colour": "#0a2a3a",
+    "wave_period": 7.5,
+    "wave_speed": 0.35,
+    "ring_count": 26
+  },
+  "island": {
+    "label": "the island",
+    "radius": 0.22,
+    "colour": "#c9a227",
+    "sand": "#e8d8a0",
+    "what": "the only land. Small on purpose: land is where a claim becomes visible."
+  },
+  "plots": [
+    { "id": "P00", "at": [0.0, -0.30], "when": "the harbour — first stone laid" },
+    { "id": "P01", "at": [-0.34, -0.12], "when": "the archive — where a record is kept" },
+    { "id": "P02", "at": [0.34, -0.12], "when": "the workshop — where a thing is built" },
+    { "id": "P03", "at": [-0.30, 0.26], "when": "the school — where a newcomer is taught the four laws" },
+    { "id": "P04", "at": [0.30, 0.26], "when": "the market — where a price becomes citable" },
+    { "id": "P05", "at": [0.0, 0.40], "when": "the gate — the only door, and it only opens inward" },
+    { "id": "P06", "at": [0.0, 0.0], "when": "the empty seat — six are built, the seventh stays vacant until someone arrives, and then it is theirs" }
+  ],
+  "rules": [
+    "A claim is a row: plot, who, note, timestamp. Nothing is claimed by drawing over someone.",
+    "The public gate is read-only and always will be: POST there returns E_WORLD_READ_ONLY.",
+    "Claims are appended by the defender gate, never edited, never removed.",
+    "The zero at the centre belongs to nobody. It is where counting starts, not where someone lives."
+  ],
+  "gate": {
+    "public": "GET only",
+    "defender": "POST /api/plot with Bearer <core.key>"
+  }
+}

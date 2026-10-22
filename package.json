@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "ONE VERSE pages. `type: module` exists so `node --check` and the parity test read .js as ESM, exactly as the browser does."
+}

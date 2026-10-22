@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gltest</title>
+<style>
+  body{margin:0;background:#06121a;color:#f2efe6;font:14px/1.6 ui-monospace,Consolas,monospace;padding:24px}
+  canvas{display:block;border:1px solid #1d3b4a}
+  b{color:#e0bc45}
+</style>
+</head>
+<body>
+<!-- 🔥 Ace · 2026-10-22 · THE SMOKE TEST. If this square is RED, the machine can draw and the fault
+     is in the engine. If it is BLACK, the browser cannot draw at all (hardware acceleration off) and
+     NO 3D code on this page will ever work. No three.js, no imports: nothing can fail but the GPU. -->
+<h1>GL SMOKE TEST</h1>
+<canvas id="c" width="320" height="200"></canvas>
+<p id="say">…</p>
+<script>
+  var c = document.getElementById("c"), say = document.getElementById("say");
+  var gl = null, how = "";
+  try { gl = c.getContext("webgl2"); how = "webgl2"; } catch (e) {}
+  if (!gl) { try { gl = c.getContext("webgl"); how = "webgl1"; } catch (e) {} }
+  if (!gl) { try { gl = c.getContext("experimental-webgl"); how = "experimental"; } catch (e) {} }
+  if (!gl) {
+    say.innerHTML = "<b>NO WEBGL.</b> This browser cannot draw. Nothing 3D will ever render here — " +
+                    "enable hardware acceleration in chrome://settings/system, then reload.";
+    document.title = "NO WEBGL";
+  } else {
+    gl.clearColor(0.88, 0.12, 0.20, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    say.innerHTML = "<b>WEBGL OK</b> (" + how + ") · " + gl.getParameter(gl.VERSION) +
+                    "<br>renderer: " + (gl.getParameter(gl.RENDERER) || "?") +
+                    "<br><br>If the square is RED, the machine draws and the fault is inside the engine. " +
+                    "If it is BLACK anyway, the GPU is blocked but the context exists (rare) — send me this line.";
+    document.title = "WEBGL OK " + how;
+  }
+</script>
+</body>
+</html>

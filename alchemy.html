@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>0z · THE ATELIER — alchemy, measured</title>
+<style>
+  :root { --ink:#f2efe6; --dim:#7f9aa8; --gold:#e0bc45; --line:rgba(140,190,210,.16);
+          --fused:#7fe0a6; --stack:#9fd8ff; --bad:#e0776f; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:#04080f; color:var(--ink);
+    font:14px/1.5 ui-monospace,"Cascadia Mono",Consolas,monospace; overflow:hidden; }
+  canvas#crucible { position:fixed; inset:0; width:100%; height:100%; }
+  .pane { position:fixed; background:rgba(6,14,20,.86); border:1px solid var(--line);
+    backdrop-filter:blur(8px); }
+  #marks { left:22px; top:22px; width:290px; max-height:calc(100vh - 44px); overflow-y:auto;
+    padding:14px; }
+  #marks h2, #core h2 { margin:0 0 10px; font-size:11px; letter-spacing:.22em; color:var(--gold);
+    font-weight:500; text-transform:uppercase; }
+  /* THE MARKS AS A GRID: 29 rows of names is the slow path. A cell carries the glyph (what you see),
+     the U+ code (what the gate reads) and the name in its tooltip. Drag it, or click it. */
+  #mlist { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; }
+  .m { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+    padding:5px 2px 4px; cursor:grab; border-radius:5px; border:1px solid var(--line);
+    background:rgba(4,10,16,.5); transition:background .1s, border-color .1s;
+    /* A NATIVE DRAG KILLS THE CARRY ON A PC: the browser fires pointercancel and the hand loses the
+       symbol. MEASURED 2026-10-21 by the captain: "I STILL CAN'T CARRY A SYMBOL" on desktop. */
+    -webkit-user-drag:none; user-select:none; -webkit-user-select:none; touch-action:none; }
+  .m * { pointer-events:none; }        /* the press belongs to the CELL, never to its glyph or its code */
+  .m:hover { background:rgba(224,188,69,.14); border-color:rgba(224,188,69,.45); }
+  .m .g { font-size:21px; line-height:1.1; }
+  .m .n { font-size:8px; color:var(--dim); letter-spacing:.04em; }
+  .m .v { font-size:8px; letter-spacing:.1em; }
+  .fused { color:var(--fused); } .stk { color:var(--stack); } .bad { color:var(--bad); }
+  #bench { right:22px; top:22px; width:330px; padding:16px; }
+  #bench h2 { margin:0 0 12px; font-size:11px; letter-spacing:.22em; color:var(--gold);
+    font-weight:500; text-transform:uppercase; }
+  .lbl { font-size:10px; letter-spacing:.16em; color:var(--dim); text-transform:uppercase; }
+  .glyphbox { margin:10px 0 14px; padding:22px 10px; text-align:center; border:1px solid var(--line);
+    border-radius:8px; background:rgba(4,10,16,.6); font-size:56px; line-height:1.15;
+    min-height:112px; word-break:break-all; }
+  .cps { font-size:10.5px; color:var(--dim); word-break:break-all; }
+  .verdict { margin:14px 0 6px; font-size:16px; letter-spacing:.2em; }
+  .say { font-size:11px; color:#c3d6e0; margin-top:6px; line-height:1.55; }
+  .row { display:flex; gap:8px; margin-top:14px; }
+  button { flex:1; background:transparent; border:1px solid var(--gold); color:var(--gold);
+    padding:8px 10px; font:inherit; font-size:10.5px; letter-spacing:.18em; cursor:pointer;
+    text-transform:uppercase; transition:background .15s; }
+  button:hover:not(:disabled) { background:rgba(224,188,69,.14); }
+  button:disabled { opacity:.28; cursor:default; }
+  button.ghost { border-color:var(--line); color:var(--dim); }
+  #core { left:22px; bottom:22px; width:290px; max-height:34vh; overflow-y:auto; padding:14px; }
+  .c { font-size:10.5px; color:var(--dim); margin:5px 0; }
+  .c b { color:var(--gold); }
+  #hint { position:fixed; left:50%; transform:translateX(-50%); bottom:22px; font-size:10.5px;
+    color:var(--dim); letter-spacing:.14em; text-transform:uppercase; text-align:center; }
+  #out { font-size:10.5px; color:var(--fused); margin-top:8px; min-height:15px; }
+
+  /* ── THE MATRIX: 27 letters, Old Italic U+10300..U+1031A, click to build ─────────────────────── */
+  #matrix { position:fixed; left:50%; transform:translateX(-50%); bottom:56px; width:min(560px,88vw);
+    padding:14px 16px; }
+  #matrix h2 { margin:0 0 3px; font-size:11px; letter-spacing:.22em; color:var(--gold); font-weight:500;
+    text-transform:uppercase; }
+  #matrix h2 span { color:var(--dim); letter-spacing:.1em; }
+  #grid { display:grid; grid-template-columns:repeat(9, 1fr); gap:6px; margin-top:10px; }
+  .cell { aspect-ratio:1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; border:1px solid var(--line); border-radius:6px; cursor:pointer;
+    background:rgba(4,10,16,.55); transition:background .12s, border-color .12s, transform .12s; }
+  .cell:hover { background:rgba(224,188,69,.14); border-color:rgba(224,188,69,.55);
+    transform:translateY(-1px); }
+  .cell { user-select:none; -webkit-user-select:none; touch-action:none;
+    -webkit-user-drag:none; cursor:grab; }   /* a letter is CARRIED, never text-selected */
+  .cell:active { transform:translateY(1px); }
+  .cell .gl { font-size:21px; line-height:1; }
+  .cell .tr { font-size:9px; color:var(--dim); margin-top:3px; letter-spacing:.1em; }
+  .cell.bad .gl { color:var(--bad); }
+  #built { margin-top:10px; font-size:22px; letter-spacing:.06em; min-height:30px;
+    word-break:break-all; color:var(--gold); }
+  #builtbit { font-size:10px; color:var(--dim); letter-spacing:.08em; margin-top:2px;
+    word-break:break-all; }
+  #mrow { display:flex; gap:8px; margin-top:10px; }
+  #mrow button { flex:0 0 auto; padding:6px 12px; font-size:10px; }
+
+  /* ── THE LIBRARY: every sealed discovery as a brick you can play again ────────────────────────── */
+  #lib { position:fixed; right:22px; bottom:22px; width:330px; padding:14px; }
+  #lib h2 { margin:0 0 8px; font-size:11px; letter-spacing:.22em; color:var(--gold); font-weight:500;
+    text-transform:uppercase; }
+  #lib h2 span { color:var(--dim); letter-spacing:.1em; }
+  #bricks { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .brick { border:1px solid var(--line); border-radius:6px; padding:5px 9px; cursor:pointer;
+    background:rgba(4,10,16,.55); font-size:15px; line-height:1.2; transition:background .12s, border-color .12s; }
+  .brick:hover { background:rgba(224,188,69,.14); border-color:rgba(224,188,69,.55); }
+  .brick .bv { display:block; font-size:8px; letter-spacing:.14em; margin-top:2px; text-align:center; }
+  .brick.dead { opacity:.4; cursor:not-allowed; }
+  #libempty { font-size:10.5px; color:var(--dim); }
+
+  /* ── THE SNAP CANVAS: a 10×10 grid, like graph paper. Cells are places; a symbol dropped in a cell
+     STAYS there, and the composition is read in READING ORDER (left→right, top→bottom). The grid is an
+     ARRANGEMENT; the chain still receives one linear sequence. Nothing here pretends otherwise.      */
+  #canvas { display:grid; grid-template-columns:repeat(9, 1fr); gap:3px; margin:8px 0 6px; padding:6px;
+    border:1px solid var(--line); border-radius:9px; background:rgba(4,10,16,.5); position:relative; }
+  .rcell { position:relative; aspect-ratio:1; border:1px solid rgba(140,190,210,.10); border-radius:3px;
+    background:rgba(6,14,20,.6); display:flex; align-items:center; justify-content:center;
+    font-size:17px; line-height:1; cursor:pointer;
+    transition:transform .1s cubic-bezier(.2,1.5,.4,1), border-color .1s, background .1s; }
+  .rcell:hover { border-color:rgba(224,188,69,.45); background:rgba(224,188,69,.10); }
+  .rcell.filled { cursor:grab; border-color:rgba(140,190,210,.32); background:rgba(10,24,32,.92); }
+  .rcell.base { border-color:rgba(224,188,69,.75);
+    box-shadow:0 0 0 1px rgba(224,188,69,.22) inset, 0 0 12px rgba(224,188,69,.20); }
+  .rcell .u { position:absolute; bottom:0; left:0; right:0; text-align:center; font-size:5.5px;
+    color:var(--dim); opacity:.8; }
+  .rcell .x { position:absolute; right:0; top:0; font-size:8px; color:var(--dim); padding:0 2px;
+    opacity:0; cursor:pointer; }
+  .rcell:hover .x { opacity:1; }
+  .rcell .x:hover { color:var(--bad); }
+  .rcell.drop-here { border-color:var(--gold); background:rgba(224,188,69,.28); transform:scale(1.14); }
+  /* THE AXIS. An odd grid has ONE centre; an even one has none. The centre cell is the BASE: the
+     glyph is read around its axis, not from a corner. It is drawn as a ring so the eye finds it. */
+  .rcell.axis { border-radius:50%; border-color:rgba(224,188,69,.85);
+    background:radial-gradient(circle at 50% 45%, rgba(224,188,69,.22), rgba(4,10,16,.85) 70%);
+    box-shadow:0 0 14px rgba(224,188,69,.30), 0 0 0 1px rgba(224,188,69,.30) inset; }
+  .rcell.axis::after { content:""; position:absolute; inset:-4px; border-radius:50%;
+    border:1px dashed rgba(224,188,69,.28); pointer-events:none; }
+
+  /* SLIDE, NOT PUSH: a symbol is CARRIED under the pointer, follows it, and is released on a cell.
+     The captain asked for this in words: *"i want to be able to slide symbol not push them to the
+     grid.. left clic hold slide then right clic to delete on grid"*. */
+  .carry { position:fixed; z-index:9999; pointer-events:none; transform:translate(-50%,-50%);
+    font-size:38px; line-height:1; color:var(--gold);
+    text-shadow:0 0 18px rgba(224,188,69,.75), 0 0 4px rgba(255,255,255,.35); }
+  .rcell.hover-target { border-color:var(--gold); background:rgba(224,188,69,.30); transform:scale(1.16); }
+  body.carrying, body.carrying .rcell, body.carrying .m { cursor:grabbing !important; }
+  #canvas { user-select:none; -webkit-user-select:none; touch-action:none; }
+
+  /* ── MOBILE-GAME LAYOUT. A phone has no right-hand column: the grid takes the screen, the marks
+     become a THUMB TRAY you swipe, and the two actions sit where a thumb already is. Desktop keeps the
+     four panes; nothing here is a different app, only a different reach.                            */
+  @media (max-width: 860px), (pointer: coarse) {
+    html, body { overflow:auto; }
+    .pane { position:static; width:auto; max-height:none; margin:10px; }
+    #bench { order:1; margin:10px 10px 6px; }
+    #canvas { position:fixed; left:0; right:0; bottom:0; top:auto; margin:0; border-radius:14px 14px 0 0;
+      padding:8px; z-index:20; max-height:52vh; overflow:auto; }
+    #marks { position:fixed; left:0; right:0; bottom:calc(52vh + 6px); margin:0; padding:8px 10px;
+      border-radius:10px; z-index:19; }
+    #mlist { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+    #mlist .m { flex:0 0 auto; width:56px; height:56px; }   /* thumb-sized cells */
+    #core, #matrix, #lib { display:none; }                  /* reachable later from a menu, not now */
+    #bench { position:relative; margin-bottom:calc(52vh + 84px); }
+    .row button { padding:14px 10px; font-size:12px; }       /* 44px+ targets */
+    #hint { display:none; }
+  }
+  .rcell.pop { animation:pop .3s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes pop { 0% { transform:scale(.4); } 55% { transform:scale(1.18); } 100% { transform:scale(1); } }
+  #composed { margin:4px 0 2px; padding:8px; text-align:center; border:1px solid var(--line);
+    border-radius:8px; background:rgba(4,10,16,.6); font-size:44px; line-height:1.25;
+    min-height:68px; word-break:break-all; transition:border-color .2s, box-shadow .2s; }
+  #composed.fused { border-color:rgba(127,224,166,.7); box-shadow:0 0 26px rgba(127,224,166,.25); }
+  #composed.stack { border-color:rgba(159,216,255,.6); box-shadow:0 0 20px rgba(159,216,255,.16); }
+  #composed.magic { animation:breathe .9s ease-in-out; }
+  @keyframes breathe { 0% { transform:scale(1); } 38% { transform:scale(1.07); } 100% { transform:scale(1); } }
+  .m.pop { animation:pop .3s cubic-bezier(.2,1.6,.4,1); }
+  #hint.pulse { animation:hintpulse .7s ease-out; }
+  @keyframes hintpulse { 0% { color:var(--gold); letter-spacing:.3em; } 100% { color:var(--dim); } }
+  #seqline { font-size:10px; color:var(--dim); word-break:break-all; margin:2px 0 6px; }
+  #seqline b { color:var(--gold); font-weight:500; }
+  .m, .brick { cursor:grab; }
+  .m:active, .brick:active { cursor:grabbing; }
+  .dragging { opacity:.45; }
+  #bench.drop-ok { outline:1px dashed rgba(224,188,69,.75); outline-offset:5px; }
+  #bench.drop-no { outline:1px dashed rgba(255,120,100,.75); outline-offset:5px; }
+  #show.drop-ok { background:rgba(224,188,69,.12); }
+  #dropnote { font-size:9.5px; letter-spacing:.12em; color:var(--dim); min-height:13px; margin-top:2px; }
+
+  /* THE FIRST MINUTE. Easy to learn, hard to master: three lines, plain words, dismissable, and it
+     never comes back once you close it (localStorage). MEASURED 2026-10-21: the captain asked for the
+     atelier to stay friendly -- the precision belongs in the machine, not in the greeting. */
+  #coach { border:1px solid rgba(224,188,69,.45); border-radius:8px; padding:10px 12px; margin:0 0 12px;
+    background:rgba(224,188,69,.06); font-size:11.5px; line-height:1.75; color:#dfe9ee; }
+  #coach b { color:var(--gold); font-weight:600; }
+  #coach .x { float:right; cursor:pointer; color:var(--dim); font-size:13px; margin:-2px 0 0 8px; }
+  #coach .x:hover { color:var(--bad); }
+  /* WHO AM I, AND WHAT HAVE I ACTUALLY DONE -- counts read from the chain, never invented. */
+  #who { font-size:10.5px; letter-spacing:.1em; color:var(--dim); margin:-4px 0 10px;
+    border-left:2px solid rgba(224,188,69,.5); padding-left:8px; line-height:1.7; }
+  #who b { color:var(--gold); letter-spacing:.06em; }
+  .brick.mine { border-color:rgba(127,224,166,.55); box-shadow:0 0 8px rgba(127,224,166,.16) inset; }
+  .brick .tag { display:block; font-size:7.5px; color:var(--fused); letter-spacing:.1em; text-align:center; }
+  .shake { animation:shake .32s ease-in-out; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)}
+    60%{transform:translateX(3px)} }
+</style>
+</head>
+<body>
+<canvas id="crucible"></canvas>
+
+<div class="pane" id="marks">
+  <h2>The marks <span id="mn" style="color:var(--dim)"></span></h2>
+  <div id="mlist">reading the machine…</div>
+</div>
+
+<div class="pane" id="bench">
+  <h2>The bench</h2>
+  <div id="coach">
+    <span class="x" id="coachx" title="hide this">✕</span>
+    <b>1.</b> Drag a <b>letter</b> into the <b>middle</b> — that's your base.<br>
+    <b>2.</b> Drag <b>marks</b> (the little accents) onto the <b>other cells</b>.<br>
+    <b>3.</b> <b>PROVE</b>, then <b>SEAL</b> it. Right-click a cell to remove it.
+  </div>
+  <div id="who">apprentice <b>captain</b></div>
+  <div class="lbl">base</div>
+  <div id="base" style="font-size:26px; margin-top:4px">E</div>
+  <div id="composed">E</div>
+  <div id="canvas" title="a mark you drop stays in its cell"></div>
+  <div id="show" style="display:none">E</div>
+  <div id="seqline"></div>
+  <div class="cps" id="cps">U+0045</div>
+  <div id="dropnote">the middle is the base · accents go around it · right-click removes</div>
+  <div class="cps" id="cps">U+0045</div>
+  <div class="verdict" id="verdict">—</div>
+  <div class="say" id="say">click a mark to stack it on the base</div>
+  <div class="row">
+    <button id="prove" disabled>PROVE</button>
+    <button id="seal" disabled>SEAL</button>
+  </div>
+  <div class="row"><button class="ghost" id="clear">CLEAR</button></div>
+  <div id="out"></div>
+</div>
+
+<div class="pane" id="core">
+  <h2>The core</h2>
+  <div id="clist">nothing sealed yet</div>
+</div>
+
+<div class="pane" id="matrix">
+  <h2>THE MATRIX <span id="mn2">· old italic · 27 letters</span></h2>
+  <div id="grid">reading the machine…</div>
+  <div id="built"></div>
+  <div id="builtbit"></div>
+  <div id="mrow">
+    <button class="ghost" id="undo">UNDO</button>
+    <button class="ghost" id="wipe">WIPE</button>
+    <button class="ghost" id="sendToBench">→ BENCH</button>
+  </div>
+</div>
+
+<div class="pane" id="lib">
+  <h2>THE LIBRARY <span id="ln">· 0 bricks</span></h2>
+  <div id="bricks"><span id="libempty">seal a discovery and it becomes a brick you can play again</span></div>
+</div>
+
+<div id="hint">study quietly — nothing is saved until you SEAL</div>
+
+<script>
+"use strict";
+let MARKS = [], CORE = [], CAN_SEAL = false;
+let ME = "captain", PROG = null, WORLD = null;
+
+/* WHO IS AT THE BENCH? `?as=name` is the door (a link an apprentice can be handed); localStorage keeps
+   the name for the next visit. Nothing is claimed: the name only LABELS rows the gate already confirmed
+   -- it cannot promote anyone, because progression is counted from the chain. */
+function resolveMe() {
+  let name = "";
+  try {
+    const q = new URLSearchParams(location.search).get("as") || "";
+    if (q) { name = q; try { localStorage.setItem("oz_who", q); } catch (e) { /* storage refused */ } }
+    if (!name) { try { name = localStorage.getItem("oz_who") || ""; } catch (e) { name = ""; } }
+  } catch (e) { name = ""; }
+  return (name || "captain").trim().slice(0, 32);
+}
+let base = "E", cps = [], last = null, proven = false;
+const $ = id => document.getElementById(id);
+const hex = n => "U+" + n.toString(16).toUpperCase().padStart(4, "0");
+
+/* ── THE SNAP CANVAS: 10×10 cells, like graph paper. A cell is a PLACE and holds one codepoint; the
+   composition is READ IN READING ORDER (left→right, top→bottom). The grid is an ARRANGEMENT -- the
+   chain still receives one linear sequence, and nothing here pretends the grid is the chain.
+   The grid is a VIEW: `syncFromGrid()` is the only writer of base/cps, and every gesture ends there. */
+const GRID_W = 9, GRID_H = 9, GRID_N = GRID_W * GRID_H;
+/* THE AXIS. An ODD grid has exactly one centre (index 40 on 9×9); an even one has none -- and the
+   captain's correction is right: an alchemy grid NEEDS a centre. The centre cell holds the BASE; the
+   glyph is read around its axis, never from a corner. */
+const AXIS = (GRID_H >> 1) * GRID_W + (GRID_W >> 1);
+let grid = new Array(GRID_N).fill(null);        /* cell: {ch, cp} or null */
+let askSeq = 0;                                 /* stale-response guard: only the newest answer wins */
+
+function markName(cp) {
+  const m = MARKS.find(x => x.cp === "U+" + String(cp).toUpperCase());
+  return m ? m.name.replace("COMBINING ", "") : "";
+}
+
+/* IS THIS CODEPOINT A MARK? The world has exactly one rule about the grid: the axis holds the BASE
+   (a letter), every other cell holds a MARK (a combining character). MEASURED 2026-10-21: the captain
+   slid OLD ITALIC LETTER PE onto a cell and got "U+10310 ... not a COMBINING mark" -- the gate was
+   right, the page was slow. Now the page refuses BEFORE the move is made, and says why. */
+function isMarkCp(cp) {
+  const want = "U+" + String(cp).toUpperCase();
+  return MARKS.some(m => m.cp === want);
+}
+
+function gridSequence() {                 /* reading order, the AXIS excluded: the centre is the base */
+  const out = [];
+  for (let i = 0; i < GRID_N; i++) if (i !== AXIS && grid[i]) out.push(grid[i]);
+  return out;
+}
+
+function syncFromGrid() {                 /* the ONLY writer of base/cps */
+  const b = grid[AXIS];
+  base = b ? b.ch : "E";
+  cps = gridSequence().map(c => c.cp);
+}
+
+function cellOfHex(cp) {
+  const ch = String.fromCodePoint(parseInt(cp, 16));
+  return { ch: ch, cp: String(cp).toUpperCase() };
+}
+grid[AXIS] = cellOfHex("0045");           /* the axis always holds a base: E until you choose another */
+
+function renderPlate() {
+  const box = $("canvas");
+  const html = [];
+  for (let i = 0; i < GRID_N; i++) {
+    const c = grid[i];
+    const isAxis = i === AXIS;
+    html.push('<div class="rcell' + (c ? " filled" : "") + (isAxis ? " axis" : "") +
+      '" data-cell="' + i + '"' +
+      (c ? ' title="' + (isAxis ? "THE AXIS — the base" : (markName(c.cp) || c.ch)) + ' — ' + c.cp + '\"' : '') + '>' +
+      (c ? c.ch + '<span class="u">U+' + c.cp + '</span>' +
+           (isAxis ? '' : '<span class="x" data-del="' + i + '">✕</span>')
+         : "") +
+      '</div>');
+  }
+  box.innerHTML = html.join("");
+  box.querySelectorAll("[data-del]").forEach(el =>
+    el.addEventListener("click", ev => {
+      ev.stopPropagation();
+      deleteCell(+el.dataset.del);
+    }));
+  /* A FILLED CELL IS CARRIED, not dragged by the browser: pointer events only. */
+  box.querySelectorAll(".rcell.filled").forEach(el => {
+    el.addEventListener("pointerdown", ev => {
+      const i = +el.dataset.cell;
+      const c = grid[i];
+      if (!c) return;
+      window.slideStart(ev, { kind: "cell", from: i, ch: c.ch });
+    });
+  });
+  /* (no HTML5 drag on the grid: the pointer carry in slide() is the only gesture language here.) */
+  const line = [hex(base.codePointAt(0))].concat(cps.map(c => "U+" + c.toUpperCase())).join(" ");
+  $("seqline").innerHTML = "reading order · <b>" + line + "</b>";
+}
+
+/* A REFUSAL THE HAND CAN UNDERSTAND. The machine's exact words are still one PROVE away -- the bench
+   says the short version, because easy to learn / hard to master means the *greeting* stays simple. */
+function refuseMove(plain) {
+  $("say").textContent = plain;
+  const bench = $("bench");
+  bench.classList.remove("shake");
+  void bench.offsetWidth;                    /* restart the animation */
+  bench.classList.add("shake");
+  if (window.tone) window.tone(150, 80, "square");
+  if (window.haptic) window.haptic([5, 25, 5]);
+}
+
+function placeCell(i, hexCp, pop) {
+  if (i < 0 || i >= GRID_N) return;
+  grid[i] = cellOfHex(hexCp);
+  syncFromGrid();
+  paint();
+  if (pop) {
+    const el = $("canvas").querySelector('[data-cell="' + i + '"]');
+    if (el) { el.classList.add("pop"); }
+    burst(el, "#e0bc45");
+  }
+  if (window.tone) window.tone(520 + (i % 7) * 45, 70, "triangle");   /* one pluck per placement */
+  if (window.haptic) window.haptic(10);
+  ask();
+}
+
+/* ONE MARK, ONE PLACE: a click lands a mark in the first FREE cell, in reading order. That is the whole
+   "snappy" rule -- the hand never has to aim precisely when it just wants to build.                 */
+function firstFreeCell() {
+  for (let i = 0; i < GRID_N; i++) if (i !== AXIS && !grid[i]) return i;
+  return -1;
+}
+
+function placeMarkSilently(hexCp) {
+  const i = firstFreeCell();
+  if (i < 0) { $("say").textContent = "the grid is full — clear a cell first"; return; }
+  placeCell(i, hexCp, true);
+}
+
+function deleteCell(i) {
+  if (i < 0 || i >= GRID_N) return;
+  if (i === AXIS) return;                     /* the axis holds the base: replaced, never removed */
+  grid[i] = null;
+  syncFromGrid();
+  paint();
+  if (window.tone) window.tone(180, 60, "sawtooth");
+  if (window.haptic) window.haptic([6, 22, 6]);
+  ask();
+}
+
+function paint() {
+  const seq = base + cps.map(c => String.fromCodePoint(parseInt(c, 16))).join("");
+  $("base").textContent = base;
+  $("show").textContent = seq;
+  $("composed").textContent = seq;
+  renderPlate();
+  $("cps").textContent = [hex(base.codePointAt(0))].concat(cps.map(c => "U+" + c.toUpperCase())).join(" ");
+  if (!last) {
+    $("verdict").textContent = "—"; $("verdict").className = "verdict";
+    $("composed").className = "";
+    return;
+  }
+  $("verdict").textContent = last.verdict;
+  $("verdict").className = "verdict " + (last.verdict === "FUSED" ? "fused" : "stk");
+  $("composed").className = last.verdict === "FUSED" ? "fused" : "stack";
+  $("say").textContent = last.verdict === "FUSED"
+    ? "the table already held this — nothing new was made"
+    : "legal, but the table gives it no name — the two remain two";
+}
+
+/* SNAPPY. The hand must see its own move BEFORE the network answers: paint first, then ask. Only the
+   NEWEST answer may touch the screen (askSeq), or a fast builder watches old verdicts overwrite new
+   ones -- the exact reason a responsive bench feels broken. Nothing here invents a verdict: until the
+   gate answers, the composed glyph carries NO verdict class and the say-line says it is asking. */
+async function ask() {
+  const mine = ++askSeq;
+  if (!cps.length) {
+    last = null; proven = false; $("prove").disabled = true; $("seal").disabled = true;
+    $("say").textContent = "start with a letter in the middle";
+    paint(); return;
+  }
+  last = null; proven = false;
+  $("prove").disabled = true; $("seal").disabled = true;
+  $("say").textContent = "asking the table…";
+  paint();                                   /* optimistic: the glyph is already on the bench */
+  const q = "/api/alchemy?try=1&base=" + encodeURIComponent(base) +
+            "&cps=" + encodeURIComponent(cps.join(","));
+  try {
+    const j = await (await fetch(q, { cache: "no-store" })).json();
+    if (mine !== askSeq) return;             /* a newer move is already on its way: this answer is stale */
+    last = j.result && j.result.ok ? j.result : null;
+    proven = false;
+    $("prove").disabled = !last;
+    $("seal").disabled = true;
+    if (!last) {
+      $("verdict").textContent = "REFUSED";
+      $("verdict").className = "verdict bad";
+      $("composed").className = "";
+      $("say").textContent = (j.result && j.result.detail) || "refused";
+      return;
+    }
+    paint();
+    $("composed").classList.add("magic");
+    setTimeout(() => $("composed").classList.remove("magic"), 900);
+    burst($("composed"), last.verdict === "FUSED" ? "#7fe0a6" : "#9fd8ff", 26);
+    /* THE ANSWER HAS A SOUND, and it is the answer's own: a fifth for FUSED (closed), a minor third
+       for STACK (open). Only after the gate has spoken -- never before. */
+    if (window.tone) {
+      if (last.verdict === "FUSED") { window.tone(784, 120, "sine"); setTimeout(() => window.tone(1175, 180, "sine"), 90); }
+      else { window.tone(440, 110, "sine"); setTimeout(() => window.tone(523, 150, "sine"), 80); }
+    }
+    if (window.haptic) window.haptic(last.verdict === "FUSED" ? [12, 40, 18] : 14);
+  } catch (e) { $("say").textContent = "the gate is not answering"; }
+}
+
+async function boot() {
+  try {
+    ME = resolveMe();
+    const j = await (await fetch("/api/alchemy?as=" + encodeURIComponent(ME),
+                                 { cache: "no-store" })).json();
+    MARKS = j.marks || []; CORE = j.core || []; CAN_SEAL = !!j.can_seal;
+    MATRIX = j.matrix || [];
+    LIB = j.library || [];
+    PROG = j.progress || null; WORLD = j.world_progress || null;
+    renderWho();
+    renderMatrix();
+    renderLib();
+    $("mn").textContent = "· " + MARKS.length;
+    $("mlist").innerHTML = MARKS.map(m => {
+      const cp = m.cp.slice(2);
+      return '<div class="m" data-cp="' + cp + '" draggable="false" title="slide it onto a cell, or click">' +
+        '<span class="g">' +
+        String.fromCodePoint(parseInt(cp, 16)) + '</span><span class="n">' +
+        m.name.replace("COMBINING ", "") + '</span><span class="v ' +
+        (m.single_glyph ? "fused" : "stk") + '">' + (m.single_glyph ? "F" : "S") + '</span></div>';
+    }).join("");
+    $("mlist").querySelectorAll(".m").forEach(el => {
+      /* THE TRAY FEEDS THE HAND: press a mark and it comes WITH you; release over a cell and it lands
+         there; release over nothing and it takes the first free cell. No browser drag, no second
+         gesture language -- the same pointer stream as the grid. Tap works because a tap is a very
+         short carry that ends where it began. */
+      el.addEventListener("pointerdown", ev => {
+        window.slideStart(ev, { kind: "mark", cp: el.dataset.cp,
+                                ch: String.fromCodePoint(parseInt(el.dataset.cp, 16)) });
+      });
+    });
+    renderCore();
+    $("seal").title = CAN_SEAL ? "" : "sealing needs the captain's door (:8473)";
+    /* THE COACH STAYS UNTIL IT IS DISMISSED, then never returns -- a tutorial that reappears is a nag,
+       not a teacher. localStorage is wrapped: a browser that refuses storage must not break the page. */
+    (function coach() {
+      const box = $("coach"), x = $("coachx");
+      let off = false;
+      try { off = localStorage.getItem("oz_coach") === "off"; } catch (e) { off = false; }
+      if (off) { box.style.display = "none"; return; }
+      x.addEventListener("click", () => {
+        box.style.display = "none";
+        try { localStorage.setItem("oz_coach", "off"); } catch (e) { /* storage refused: fine */ }
+      });
+    })();
+  } catch (e) { $("mlist").textContent = "the machine is not answering"; }
+  paint();
+}
+
+function renderWho() {
+  const p = PROG || { seals: 0, bases: 0, fusions: 0 };
+  const w = WORLD || { seals: 0 };
+  const mine = (ME || "").toLowerCase() === "captain";
+  $("who").innerHTML =
+    'apprentice <b>' + (ME || "captain") + '</b>' + (mine ? ' <span style="opacity:.6">(the captain)</span>' : '') +
+    '<br>' + p.seals + ' sealed · ' + p.bases + ' base' + (p.bases === 1 ? '' : 's') +
+    ' · ' + p.fusions + ' fused' + (p.fusions ? ' ✦' : '') +
+    '<br><span style="opacity:.55">the world holds ' + w.seals + '</span>';
+}
+
+function renderCore() {
+  $("clist").innerHTML = CORE.length
+    ? CORE.map(c => '<div class="c"><b>' + c.plot + '</b> · ' + c.hash + ' · ' +
+                    String(c.note).slice(0, 46) + '…</div>').join("")
+    : "nothing sealed yet";
+}
+
+/* ── THE MATRIX: click a letter, it is written. UNDO / WIPE / → BENCH. ───────────────────────────── */
+let MATRIX = [], built = [];
+
+function paintBuilt() {
+  $("built").textContent = built.map(m => m.glyph).join("");
+  $("builtbit").textContent = built.length
+    ? built.map(m => m.translit).join(" ") + "   ·   " + built.map(m => m.cp).join(" ")
+    : "";
+}
+
+function renderMatrix() {
+  $("grid").innerHTML = MATRIX.map((m, i) =>
+    '<div class="cell' + (m.matches ? "" : " bad") + '" data-i="' + i + '" title="' +
+    m.db_name + '"><span class="gl">' + m.glyph + '</span><span class="tr">' +
+    m.translit + '</span></div>').join("");
+  $("grid").querySelectorAll(".cell").forEach(el => {
+    const m = MATRIX[+el.dataset.i];
+    if (!m) return;
+    /* THE MATRIX FEEDS THE HAND TOO (the captain, 2026-10-21: *"I NEED TO BE ABLE TO SLIDE FROM HERE
+       TOO"*). Press a letter and it is carried like a mark; release over a cell and the letter GOES
+       THERE -- over the axis and it becomes the BASE. A TAP (no movement) still does what it did:
+       it appends to the built word, so the old gesture is not lost, only joined by the new one. */
+    el.addEventListener("pointerdown", ev => {
+      const hex = String(m.cp || "").replace("U+", "").trim();
+      if (!hex) return;
+      window.slideStart(ev, { kind: "letter", cp: hex, ch: m.glyph, entry: m });
+    });
+  });
+  $("mn2").textContent = "· old italic · " + MATRIX.length + " letters" +
+    (MATRIX.length && MATRIX.every(m => m.matches) ? " · all confirmed" : " · CHECK NEEDED");
+}
+
+$("undo").addEventListener("click", () => { built.pop(); paintBuilt(); });
+$("wipe").addEventListener("click", () => { built = []; paintBuilt(); });
+
+/* ── THE LIBRARY: a brick is a MOVE. Clicking it puts the whole combination back on the bench. ─────
+   Same gesture as the matrix: you do not retype a discovery you already proved -- you play it.        */
+let LIB = [];
+
+function renderLib() {
+  const box = $("bricks");
+  const usable = LIB.filter(b => b.reusable);
+  $("ln").textContent = "· " + LIB.length + (LIB.length === 1 ? " brick" : " bricks");
+  if (!LIB.length) {
+    box.innerHTML = '<span id="libempty">seal a discovery and it becomes a brick you can play again</span>';
+    return;
+  }
+  box.innerHTML = LIB.map((b, i) => {
+    const glyphs = b.reusable
+      ? b.base + b.cps.map(cp => String.fromCodePoint(parseInt(cp, 16))).join("")
+      : "?";
+    const cls = (b.reusable ? "brick" : "brick dead") +
+                (String(b.who || "").toLowerCase() === String(ME || "").toLowerCase() ? " mine" : "");
+    const v = b.verdict === "FUSED" ? "fused" : "stk";
+    const mine = String(b.who || "").toLowerCase() === String(ME || "").toLowerCase();
+    return '<div class="' + cls + '" data-i="' + i + '" draggable="' + (b.reusable ? "true" : "false") +
+      '" title="' + (b.note || "").replace(/"/g, "&quot;") + (b.who ? " · by " + b.who : "") +
+      '"><span class="bg">' + glyphs + '</span><span class="bv ' + v + '">' + b.verdict +
+      '</span>' + (mine ? '<span class="tag">you</span>' : '') + '</div>';
+  }).join("");
+  box.querySelectorAll(".brick").forEach(el => {
+    el.addEventListener("click", () => playBrick(+el.dataset.i));
+    el.addEventListener("dragstart", ev => {
+      const b = LIB[+el.dataset.i];
+      if (!b.reusable) { ev.preventDefault(); return; }
+      ev.dataTransfer.setData("application/x-0z-brick", String(el.dataset.i));
+      ev.dataTransfer.effectAllowed = "copy";
+    });
+  });
+  void usable;
+}
+
+/* PLAYING A BRICK is the same move whether it arrives by click or by drop -- one function, not two.
+   A brick is a SEQUENCE, so it is laid out from cell 0 in reading order: base, then its marks. */
+function loadSequence(baseCh, markHexes) {
+  grid = new Array(GRID_N).fill(null);
+  grid[AXIS] = cellOfHex(baseCh.codePointAt(0).toString(16));
+  let k = 0;
+  for (const cp of markHexes) {                     /* marks fill reading order AROUND the axis */
+    while (k < GRID_N && (k === AXIS || grid[k])) k++;
+    if (k >= GRID_N) break;
+    grid[k] = cellOfHex(cp);
+  }
+  syncFromGrid();
+}
+
+function playBrick(i) {
+  const b = LIB[i];
+  if (!b) return;
+  if (!b.reusable) { $("out").textContent = "this seal cannot be replayed — it did not record U+ codepoints"; return; }
+  loadSequence(b.base, b.cps.slice());
+  last = null; proven = false;
+  $("base").textContent = base;
+  $("prove").disabled = true; $("seal").disabled = true;
+  $("out").textContent = "brick " + b.plot + " played";
+  $("say").textContent = "replaying a sealed move — asking the table again";
+  paint(); ask();
+}
+$("sendToBench").addEventListener("click", () => {
+  if (!built.length) return;
+  loadSequence(built[0].glyph, []);
+  last = null; proven = false;
+  $("base").textContent = base;
+  $("prove").disabled = true; $("seal").disabled = true; $("out").textContent = "";
+  $("say").textContent = "base set from the matrix — drop a mark in a cell"; paint(); ask();
+});
+
+$("clear").addEventListener("click", () => {
+  grid = new Array(GRID_N).fill(null);
+  grid[AXIS] = cellOfHex("0045");          /* the axis keeps a base: an empty grid still has an axis */
+  syncFromGrid();
+  last = null; proven = false;
+  $("prove").disabled = true; $("seal").disabled = true; $("out").textContent = "";
+  $("say").textContent = "the grid is empty around its axis — drop a mark in a cell"; paint();
+});
+
+/* ── THE DROP TARGET. Three gestures, one rule each, and every one ends in the SAME writer:
+     MARK  → lands in the CELL you dropped it on          = PLACE (a cell is a place)
+     CELL  → dragged onto another cell                    = MOVE (or SWAP, if the target is taken)
+     BRICK → laid out from cell 0 in reading order        = REPLAY
+   Dragging is a SHORTCUT, never the only way: clicking places in the first free cell.            */
+(function benchDrops() {
+  const bench = $("bench"), canvas = $("canvas"), dropnote = $("dropnote");
+  const RESET = "drop a mark in a cell · drag a cell to move it · ✕ removes";
+  const kind = ev => {
+    const t = ev.dataTransfer;
+    if (!t) return "";
+    const types = Array.from(t.types || []);
+    for (const k of ["application/x-0z-cell", "application/x-0z-mark", "application/x-0z-brick"]) {
+      if (types.includes(k)) return k;
+    }
+    return "";
+  };
+  const clearMarks = () => {
+    bench.classList.remove("drop-ok", "drop-no");
+    canvas.querySelectorAll(".drop-here").forEach(c => c.classList.remove("drop-here"));
+    dropnote.textContent = RESET;
+  };
+
+  bench.addEventListener("dragover", ev => {
+    if (!kind(ev)) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = kind(ev) === "application/x-0z-cell" ? "move" : "copy";
+    bench.classList.add("drop-ok");
+    dropnote.textContent = "release to place it";
+  });
+  bench.addEventListener("dragleave", ev => {
+    if (bench.contains(ev.relatedTarget)) return;
+    clearMarks();
+  });
+
+  /* The canvas lights the exact CELL that will receive the drop: snapping is shown, never guessed. */
+  canvas.addEventListener("dragover", ev => {
+    if (!kind(ev)) return;
+    ev.preventDefault();
+    canvas.querySelectorAll(".drop-here").forEach(c => c.classList.remove("drop-here"));
+    const cell = ev.target.closest && ev.target.closest(".rcell");
+    if (cell) cell.classList.add("drop-here");
+  });
+
+  canvas.addEventListener("drop", ev => {
+    const k = kind(ev);
+    if (!k) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const cell = ev.target.closest && ev.target.closest(".rcell");
+    clearMarks();
+    if (k === "application/x-0z-brick") {
+      playBrick(+ev.dataTransfer.getData("application/x-0z-brick")); return;
+    }
+    if (!cell) return;
+    const at = +cell.dataset.cell;
+    if (k === "application/x-0z-cell") {
+      const from = +ev.dataTransfer.getData("application/x-0z-cell");
+      if (from === at) return;
+      const a = grid[from], b = grid[at];
+      grid[at] = a; grid[from] = b;          /* MOVE, or SWAP when the target is already taken */
+      syncFromGrid(); paint();
+      const el = canvas.querySelector('[data-cell="' + at + '"]');
+      if (el) { el.classList.add("pop"); burst(el, "#e0bc45", 10); }
+      ask();
+      return;
+    }
+    const mark = ev.dataTransfer.getData("application/x-0z-mark");
+    if (mark) placeCell(at, mark, true);
+  });
+
+  bench.addEventListener("drop", ev => {
+    if (!kind(ev)) return;
+    ev.preventDefault();
+    const k = kind(ev);
+    clearMarks();
+    if (k === "application/x-0z-brick") { playBrick(+ev.dataTransfer.getData("application/x-0z-brick")); return; }
+    const mark = ev.dataTransfer.getData("application/x-0z-mark");
+    if (mark) placeMarkSilently(mark);       /* dropped on the bench, not on a cell: first free cell */
+  });
+
+  /* DRAGGED AWAY without a target: every cell keeps its place -- nothing is deleted by accident. */
+  canvas.addEventListener("dragend", () => clearMarks());
+})();
+
+/* ── PROVE then SEAL. A seal is refused unless the machine confirmed the statement. ─────────────── */
+$("prove").addEventListener("click", async () => {
+  $("out").textContent = "proving…";
+  try {
+    const r = await fetch("/api/alchemy/prove", { method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base: base, cps: cps }) });
+    const j = await r.json();
+    if (r.ok && j.proven) {
+      proven = true;
+      $("out").textContent = "PROVEN — " + j.statement;
+      $("seal").disabled = !CAN_SEAL;
+      if (!CAN_SEAL) $("out").textContent += " · sealing needs :8473";
+    } else {
+      $("out").textContent = "REFUSED — " + (j.detail || j.error || "not proven");
+    }
+  } catch (e) { $("out").textContent = "the gate is not answering"; }
+});
+
+$("seal").addEventListener("click", async () => {
+  $("out").textContent = "sealing…";
+  try {
+    const r = await fetch("/api/alchemy/seal", { method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base: base, cps: cps, who: ME }) });
+    const j = await r.json();
+    if (r.ok && j.ok) {
+      $("out").textContent = "SEALED " + j.sealed.plot + " · " + j.sealed.hash.slice(0, 12);
+      CORE.push({ plot: j.sealed.plot, hash: j.sealed.hash.slice(0, 12), note: j.sealed.note });
+      renderCore();
+      /* THE BRICK ENTERS THE SYSTEM LIBRARY AT ONCE. A discovery you cannot replay is a trophy, not a
+         tool. The library is RE-READ from the gate (the chain is the truth, not this page's memory);
+         a failed re-read says so instead of quietly inventing a brick that the chain may not hold. */
+      let fromGate = false;
+      try {
+        const fresh = await (await fetch("/api/alchemy?as=" + encodeURIComponent(ME),
+                                         { cache: "no-store" })).json();
+        if (Array.isArray(fresh.library)) {
+          LIB = fresh.library; fromGate = true;
+          PROG = fresh.progress || PROG; WORLD = fresh.world_progress || WORLD;
+          renderWho();
+        }
+      } catch (e) { fromGate = false; }
+      if (!fromGate) {
+        LIB.push({ plot: j.sealed.plot, base: base, cps: cps.slice(),
+                   verdict: (last && last.verdict) || "?", note: j.sealed.note, reusable: true });
+        $("out").textContent += " · library not re-read (the brick is shown from this page, not the chain)";
+      }
+      renderLib();
+      $("dropnote").textContent = "sealed → the brick is in the library: drag it onto the bench to replay";
+    } else {
+      $("out").textContent = "REFUSED — " + (j.detail || j.error || "unproven");
+    }
+  } catch (e) { $("out").textContent = "the gate is not answering"; }
+});
+
+/* ── GAME FEEL, kept honest: sound and haptics fire only AFTER a real state change, never instead of
+   one. `tone()` is a tiny WebAudio blip created on the first gesture (browsers require a user gesture
+   to start audio -- a sound that cannot play is not a sound). `haptic()` is silent where unsupported. */
+(function feel() {
+  let ctx = null;
+  function audio() {
+    if (ctx) return ctx;
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) { ctx = null; }
+    return ctx;
+  }
+  window.tone = function (freq, ms, kind) {
+    const a = audio();
+    if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = kind || "sine";
+      o.frequency.value = freq;
+      g.gain.value = 0.0001;
+      o.connect(g); g.connect(a.destination);
+      const t = a.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.08, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (ms || 90) / 1000);
+      o.start(t); o.stop(t + (ms || 90) / 1000 + 0.02);
+    } catch (e) { /* audio is a garnish, never a promise */ }
+  };
+  window.haptic = function (pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern || 12); } catch (e) { /* unsupported */ }
+  };
+})();
+
+/* ── SLIDE: press, hold, slide, release. A symbol is CARRIED under the pointer instead of pushed onto
+   the grid. Left button carries · release on a cell to place/swap · Escape cancels · RIGHT-click on a
+   filled cell deletes it. One pointer stream, no HTML5 drag-and-drop for the grid at all: two systems
+   for one gesture is how a hand learns to distrust the page.                                        */
+(function slide() {
+  const canvas = $("canvas");
+  let ghost = null, payload = null, target = -1, moved = false, origin = { x: 0, y: 0 };
+
+  function clearHover() {
+    canvas.querySelectorAll(".hover-target").forEach(c => c.classList.remove("hover-target"));
+  }
+
+  function move(ev) {
+    if (!ghost) return;
+    if (Math.abs(ev.clientX - origin.x) + Math.abs(ev.clientY - origin.y) > 6) moved = true;
+    ghost.style.left = ev.clientX + "px";
+    ghost.style.top = ev.clientY + "px";
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    const cell = under && under.closest ? under.closest(".rcell") : null;
+    clearHover();
+    target = cell ? +cell.dataset.cell : -1;
+    if (cell) cell.classList.add("hover-target");     /* the axis is a legal target: it takes a base */
+  }
+
+  function esc(ev) { if (ev.key === "Escape") { end(); } }
+
+  function end() {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", end);
+    window.removeEventListener("pointercancel", end);
+    window.removeEventListener("keydown", esc);
+    document.body.classList.remove("carrying");
+    clearHover();
+    if (ghost) { ghost.remove(); ghost = null; }
+    const p = payload;
+    payload = null;
+    if (!p) return;
+    if (p.kind === "mark") {
+      if (target === AXIS) {
+        refuseMove("the middle takes a letter — pick one from the matrix, or keep E");
+        return;
+      }
+      if (target >= 0) placeCell(target, p.cp, true);
+      else placeMarkSilently(p.cp);                   /* released over nothing: first free cell */
+    } else if (p.kind === "letter") {
+      if (!moved && p.entry) {                        /* a TAP: the old gesture, kept */
+        built.push(p.entry); paintBuilt();
+      } else if (target === AXIS || target < 0) {
+        placeCell(AXIS, p.cp, true);                  /* a LETTER belongs on the axis: it IS a base */
+      } else {
+        refuseMove("that's a letter, not an accent — letters go in the middle");
+      }
+    } else if (p.kind === "cell") {
+      if (target >= 0 && target !== p.from) {
+        const a = grid[p.from], b = grid[target];
+        /* THE SAME LAW, ONE MOVE OVER: a letter may only live on the axis, a mark only off it. Without
+           this guard a DRAG could rebuild the exact state the gate refuses (two letters, or a mark as
+           the base) even though a drop could not. */
+        if (a && !isMarkCp(a.cp) && target !== AXIS) {
+          refuseMove("that's a letter, not an accent — letters go in the middle"); return;
+        }
+        if (a && isMarkCp(a.cp) && target === AXIS) {
+          refuseMove("the middle takes a letter — pick one from the matrix, or keep E"); return;
+        }
+        grid[target] = a; grid[p.from] = b;           /* MOVE, or SWAP when the target is occupied */
+        if (target === AXIS && !a) grid[AXIS] = cellOfHex("0045");
+        syncFromGrid(); paint(); ask();
+        const el = canvas.querySelector('[data-cell="' + target + '"]');
+        if (el) { el.classList.add("pop"); burst(el, "#e0bc45", 10); }
+      }
+    }
+  }
+
+  /* Called by the renderers, which are the only places that know what sits in a cell. */
+  window.slideStart = function (ev, p) {
+    if (ev.button !== undefined && ev.button !== 0) return;   /* left button only */
+    ev.preventDefault();
+    payload = p; target = -1; moved = false;
+    origin = { x: ev.clientX, y: ev.clientY };
+    ghost = document.createElement("div");
+    ghost.className = "carry";
+    ghost.textContent = p.ch || String.fromCodePoint(parseInt(p.cp, 16));
+    document.body.appendChild(ghost);
+    document.body.classList.add("carrying");
+    move(ev);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end, { once: true });
+    /* A CANCELLED POINTER MUST END THE CARRY. MEASURED 2026-10-21: without this, a native drag (or the
+       browser stealing the pointer) left the ghost frozen on screen and body.carrying stuck. */
+    window.addEventListener("pointercancel", end, { once: true });
+    window.addEventListener("keydown", esc);
+  };
+
+  /* RIGHT-CLICK DELETES, and only where a deletion is meaningful (a filled cell that is not the axis).
+     LONG-PRESS does the same thing, because a phone has no right button -- the same rule, one gesture
+     per device, and neither invents a deletion the grid did not allow. */
+  let holdTimer = null;
+  canvas.addEventListener("pointerdown", ev => {
+    const cell = ev.target.closest ? ev.target.closest(".rcell") : null;
+    if (!cell) return;
+    const i = +cell.dataset.cell;
+    if (i === AXIS || !grid[i]) return;
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => {
+      if (window.haptic) window.haptic([8, 30, 8]);
+      deleteCell(i);
+    }, 550);
+  }, true);
+  ["pointerup", "pointercancel", "pointermove"].forEach(t =>
+    window.addEventListener(t, () => clearTimeout(holdTimer), true));
+  canvas.addEventListener("contextmenu", ev => {
+    const cell = ev.target.closest ? ev.target.closest(".rcell") : null;
+    if (!cell) return;
+    const i = +cell.dataset.cell;
+    if (i === AXIS || !grid[i]) return;
+    ev.preventDefault();
+    clearTimeout(holdTimer);
+    deleteCell(i);
+  });
+})();
+
+/* ── THE MAGIC: sparks on the #crucible canvas that was already in the page and never used.
+   This is DECORATION and it says so: it draws only AFTER the gate has answered, it never renders a
+   verdict the machine has not given, and it costs one requestAnimationFrame while alive.            */
+(function sparks() {
+  const cv = $("crucible");
+  if (!cv) return;
+  const ctx = cv.getContext("2d");
+  let parts = [], running = false, dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function fit() {
+    cv.width = Math.floor(window.innerWidth * dpr);
+    cv.height = Math.floor(window.innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  fit();
+  window.addEventListener("resize", fit);
+
+  function tick() {
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    let alive = 0;
+    for (const p of parts) {
+      p.life -= 1;
+      if (p.life <= 0) continue;
+      alive++;
+      p.vy += 0.045;                     /* a little gravity: sparks fall, they do not float */
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.985; p.vy *= 0.985;
+      const a = Math.max(0, p.life / p.ttl);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.colour;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * (0.4 + a * 0.9), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    parts = parts.filter(p => p.life > 0);
+    if (alive) { requestAnimationFrame(tick); } else { running = false; ctx.clearRect(0, 0, window.innerWidth, window.innerHeight); }
+  }
+
+  /* burst(el, colour, n): a small fountain from the centre of `el`. If `el` is not on screen the
+     sparks come from the middle of the viewport -- never from nowhere, and never a lie. */
+  window.burst = function (el, colour, n) {
+    const count = n || 18;
+    let cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    if (el && el.getBoundingClientRect) {
+      const r = el.getBoundingClientRect();
+      cx = r.left + r.width / 2;
+      cy = r.top + r.height / 2;
+    }
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 1 + Math.random() * 3.6;
+      parts.push({
+        x: cx, y: cy,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 1.1,
+        r: 1 + Math.random() * 2.2,
+        life: 34 + Math.floor(Math.random() * 30),
+        ttl: 64,
+        colour: colour || "#e0bc45",
+      });
+    }
+    if (!running) { running = true; requestAnimationFrame(tick); }
+  };
+})();
+
+/* BOOT — the page was rendering its own placeholders forever because NOTHING CALLED boot().
+   MEASURED 2026-10-21: `boot();` was missing from the end of this block, so `boot_calls=0` and every
+   pane kept its textContent ("reading the machine…", "nothing sealed yet", "0 bricks") while the gate
+   answered 200 on /api/alchemy. A definition is not an invocation -- the handler was there, the hand
+   never pulled it. */
+boot();
+</script>
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-21 -->

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ONE VERSE — the 0z</title>
+<style>
+  :root { --ink: #f2efe6; --dim: #7f9aa8; --gold: #e0bc45; --line: rgba(140,190,210,.16); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #04080f; color: var(--ink);
+    font: 14px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow: hidden;
+    -webkit-font-smoothing: antialiased; }
+  #sea { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+  /* ── the HUD is a thin frame around the world, never a dashboard over it ─────────────────────── */
+  .hud { position: fixed; pointer-events: none; }
+  #top { top: 26px; left: 30px; }
+  #top h1 { margin: 0; font-size: 26px; letter-spacing: .34em; font-weight: 300;
+    text-shadow: 0 0 26px rgba(224,188,69,.28); }
+  #top .sub { color: var(--dim); font-size: 11px; letter-spacing: .22em; margin-top: 3px;
+    text-transform: uppercase; }
+  #gate { top: 26px; right: 30px; text-align: right; font-size: 10.5px; letter-spacing: .16em;
+    color: var(--dim); line-height: 1.9; text-transform: uppercase; }
+  #gate b { color: var(--gold); font-weight: 500; letter-spacing: .1em; }
+
+  /* ── ONE LINE OF TRUTH at the bottom. Not four boxes. ───────────────────────────────────────── */
+  #bar { position: fixed; left: 30px; right: 30px; bottom: 22px; display: flex; gap: 14px;
+    align-items: center; pointer-events: auto; font-size: 11.5px; color: var(--dim);
+    letter-spacing: .06em; padding-top: 12px; border-top: 1px solid var(--line); }
+  #bar .sp { flex: 1; }
+  #bar b { color: var(--gold); font-weight: 500; }
+  #bar .ok { color: #7fe0a6; }
+  #bar .bad { color: #e0776f; }
+  #sigText { flex: 0 0 clamp(160px, 26vw, 320px); background: rgba(4,12,18,.7);
+    border: 0; border-bottom: 1px solid var(--line); color: var(--ink); padding: 5px 2px;
+    font: inherit; outline: none; }
+  #sigText:focus { border-bottom-color: var(--gold); }
+  #sigBtn { background: transparent; border: 1px solid var(--gold); color: var(--gold);
+    padding: 5px 14px; font: inherit; font-size: 10.5px; letter-spacing: .22em; cursor: pointer;
+    text-transform: uppercase; transition: background .15s ease; }
+  #sigBtn:hover:not(:disabled) { background: rgba(224,188,69,.14); }
+  #sigBtn:disabled { opacity: .3; cursor: default; }
+  #linkSelf { color: var(--gold); text-decoration: none; letter-spacing: .16em;
+    border-bottom: 1px solid rgba(224,188,69,.35); padding-bottom: 1px; white-space: nowrap; }
+  #linkSelf:hover { border-bottom-color: var(--gold); }
+
+  /* ── the sea line sits under the title, where it belongs: it is weather, not a claim ────────── */
+  #seaLine { top: 78px; left: 30px; font-size: 10.5px; color: var(--dim); letter-spacing: .14em;
+    text-transform: uppercase; }
+  #seaLine b { color: #9fd8ff; font-weight: 500; }
+
+  /* ── the plot card: ONE, on demand, sliding in from the right ───────────────────────────────── */
+  #panel { position: fixed; right: 30px; bottom: 62px; width: min(340px, 82vw);
+    background: linear-gradient(160deg, rgba(8,20,28,.94), rgba(4,12,18,.94));
+    border: 1px solid var(--line); border-left: 2px solid var(--gold);
+    padding: 16px 18px; font-size: 12.5px; backdrop-filter: blur(10px);
+    opacity: 0; transform: translateY(10px); pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease; }
+  #panel.on { opacity: 1; transform: none; pointer-events: auto; }
+  #panel h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: .22em; color: var(--gold);
+    font-weight: 500; text-transform: uppercase; }
+  #panel p { margin: 7px 0; color: #c3d6e0; line-height: 1.6; }
+  #panel code { color: var(--gold); }
+  #panel a.gold { color: var(--gold); text-decoration: none; letter-spacing: .14em;
+    border-bottom: 1px solid rgba(224,188,69,.35); }
+  #panel a.gold:hover { border-bottom-color: var(--gold); }
+  #panel b { color: #9fd8ff; font-weight: 500; }
+
+  #sigOut { color: #7fe0a6; letter-spacing: .1em; white-space: nowrap; }
+</style>
+</head>
+<body>
+<canvas id="sea"></canvas>
+
+<div class="hud" id="top">
+  <h1>ONE VERSE</h1>
+  <div class="sub" id="sub">the 0z · loading…</div>
+</div>
+
+<div class="hud" id="seaLine">sea · reading the beats…</div>
+
+<div class="hud" id="gate">
+  gate <b id="gateMode">?</b><br />
+  read-only <b id="gateRo">?</b><br />
+  claims <b id="claimCount">0</b>
+</div>
+
+<div id="panel"><h2 id="pTitle">—</h2><p id="pBody"></p></div>
+
+<!-- ONE BAR. The root, the chain, the witness and the beat all live on this single line, because
+     they are all one sentence: this world is provable, and here is the proof.                      -->
+<div id="bar">
+  <span>root <b id="xRoot">—</b></span>
+  <span>chain <b id="xChain" class="ok">—</b></span>
+  <span id="xWitness">witness …</span>
+  <span class="sp"></span>
+  <input id="sigText" maxlength="200" placeholder="a beat — writes nothing" />
+  <button id="sigBtn" disabled>SIGNAL</button>
+  <span id="sigOut"></span>
+  <a id="linkSelf" href="/config.html">MY SELF →</a>
+</div>
+
+<script src="/witness.js"></script>
+
+<script>
+"use strict";
+const cv = document.getElementById("sea");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1, t0 = performance.now();
+
+/* ---- the world: from /api/world if the gate answers, else the page stands alone ---- */
+const FALLBACK = {
+  name: "ONE VERSE", sea: { colour: "#0a2a3a", wave_period: 7.5, wave_speed: 0.35, ring_count: 26 },
+  island: { radius: 0.22, colour: "#c9a227", sand: "#e8d8a0" },
+  origin: { label: "the 0" },
+  plots: [
+    { id: "P00", at: [0, -0.30], when: "the harbour" },
+    { id: "P01", at: [-0.34, -0.12], when: "the archive" },
+    { id: "P02", at: [0.34, -0.12], when: "the workshop" },
+    { id: "P03", at: [-0.30, 0.26], when: "the school" },
+    { id: "P04", at: [0.30, 0.26], when: "the market" },
+    { id: "P05", at: [0, 0.40], when: "the gate" }
+  ],
+  claims: [], gate: "offline"
+};
+let world = FALLBACK;
+/* THE SEA READS THE LAST HOUR OF BEATS.  Nothing is stored: the gate recomputes it on every read,
+   and this page only displays what it was told.  A beat moves the water; it enters no chain. */
+let seaState = null;
+
+function updateSea(s) {
+  if (!s) { return; }
+  seaState = s;
+  const el = document.getElementById("seaLine");
+  if (!el) { return; }
+  el.innerHTML = "sea · <b>swell " + esc(String(s.swell)) + "</b> · wind " + esc(s.wind) +
+    " · " + esc(s.light) + " · tide " + (s.tide_m >= 0 ? "+" : "") + esc(String(s.tide_m)) +
+    " m · " + esc(String(s.beats_1h)) + " beat" + (s.beats_1h === 1 ? "" : "s") + "/h";
+}
+
+let swellKick = 0;   /* 1 right after a beat, decaying to 0 -- the sea answers, then calms */
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════
+   THE MAGICIAN'S WHEEL.  0x computes: it hands back a number.  0z carries: it lets you descend into
+   the number and come back out with the shape of a life.  Scroll or use ←/→ to pass through the plots. */
+let idx = -1;
+function plotsList() { return world.plots || FALLBACK.plots; }
+
+function carousel(dir) {
+  const ps = plotsList();
+  if (!ps.length) return;
+  idx = idx < 0 ? 0 : (idx + dir + ps.length) % ps.length;
+  const p = ps[idx];
+  const claims = new Map();
+  (world.claims || []).forEach(c => { if (c && c.plot) claims.set(String(c.plot), c); });
+  const c = claims.get(p.id);
+  const seeds = (world.seeds && world.seeds[p.id]) || null;
+  const lines = [];
+  if (c) {
+    lines.push("<p><b>claimed</b> · " + esc(String(c.who || "someone")) + "</p>");
+    if (c.note) lines.push("<p>" + esc(String(c.note)) + "</p>");
+  } else {
+    lines.push("<p>unclaimed — a plot is land; an event is not.</p>");
+  }
+  if (seeds) {
+    const tw = seeds.twin || {};
+    lines.push("<p>seed <code>" + esc(String(seeds.seed || "").slice(0, 12)) + "</code>" +
+      " · peak <code>" + esc(seeds.peak_m) + " m</code></p>");
+    if (tw.peak_m != null) {
+      lines.push("<p>its twin <code>" + esc(tw.peak_m) + " m</code> (residue " +
+        esc(tw.residue) + ")</p>");
+    }
+  }
+  lines.push("<p><a class='gold' href='/chart.html?plot=" + encodeURIComponent(p.id) +
+    "'>SEE ITS TWIN ON THE CHART →</a></p>");
+  pTitle.textContent = p.id + " · " + ((p.when || "").split("—")[0].trim() || "a plot");
+  pBody.innerHTML = lines.join("");
+  panel.classList.add("on");
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.target && e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowRight") carousel(1);
+  if (e.key === "ArrowLeft") carousel(-1);
+  if (e.key === "Escape") { panel.classList.remove("on"); idx = -1; }
+});
+cv.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  carousel(e.deltaY > 0 ? 1 : -1);
+}, { passive: false });
+
+window.addEventListener("resize", resize);
+
+
+/* world units -> pixels: the island is the ruler */
+function scale() { return Math.min(W, H) * 0.5; }
+function toPx(x, y) { return [W / 2 + x * scale(), H / 2 + y * scale()]; }
+
+function drawSea(now) {
+  const s = world.sea || FALLBACK.sea;
+  /* THE NIGHT SKY AND THE WATER ARE ONE GRADIENT: you are standing at the edge of the world, looking
+     down.  No image, no texture -- three stops and the camera does the rest. */
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#04080f");
+  sky.addColorStop(0.42, "#061a26");
+  sky.addColorStop(0.72, "#08303f");
+  sky.addColorStop(1, "#04141d");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+  /* THE STARS ARE DERIVED, NOT RANDOM: a fixed LCG seeded by the world's own root, so every visitor
+     sees the same sky and the same sky can be recomputed. */
+  const seed0 = parseInt(String(world.root || "a8d5a297").slice(0, 8), 16) || 1;
+  let st = seed0 >>> 0;
+  const nx = () => { st = (st * 1664525 + 1013904223) >>> 0; return st / 4294967296; };
+  for (let i = 0; i < 220; i++) {
+    const x = nx() * W, y = nx() * H * 0.62;
+    const b = 0.15 + nx() * 0.55;
+    const tw = 0.75 + 0.25 * Math.sin(now * 0.9 + i);
+    ctx.fillStyle = "rgba(214,236,255," + (b * tw).toFixed(3) + ")";
+    ctx.fillRect(x, y, 1.2, 1.2);
+  }
+
+  /* THE HORIZON: the line where the sky becomes sea.  Everything below is water. */
+  const hy = H * 0.46;
+  const hg = ctx.createLinearGradient(0, hy - 2, 0, hy + 90);
+  hg.addColorStop(0, "rgba(120,200,220,.20)");
+  hg.addColorStop(1, "rgba(120,200,220,0)");
+  ctx.fillStyle = hg; ctx.fillRect(0, hy - 2, W, 92);
+
+  const rings = s.ring_count || 26, period = s.wave_period || 7.5, speed = s.wave_speed || 0.35;
+  /* the beats of the last hour become chop: one visitor makes a ripple, eight make a sea */
+  const swell = seaState ? (seaState.swell || 0) : 0;
+  const chop = 1 + swell * 2.2;
+
+  /* THE MOON-GLADE: the centre is where the 0 stands, and light falls on it */
+  const glow = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, scale() * 1.15);
+  glow.addColorStop(0, "rgba(201,162,39,.13)");
+  glow.addColorStop(0.45, "rgba(201,162,39,.045)");
+  glow.addColorStop(1, "rgba(201,162,39,0)");
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  ctx.lineWidth = 1;
+  for (let i = 0; i < rings; i++) {
+    const k = i / rings;
+    const r = scale() * (0.10 + k * 1.25);
+    const wob = Math.sin(now * speed + i * 0.55) * (2 + k * 7) * chop;
+    ctx.beginPath();
+    const steps = 96;
+    for (let a = 0; a <= steps; a++) {
+      const th = (a / steps) * Math.PI * 2;
+      const rr = r + wob * Math.sin(th * period + now * speed * 0.6);
+      const [px, py] = toPx(Math.cos(th) * rr / scale(), Math.sin(th) * rr / scale());
+      a ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    /* the far rings fade, and every twelfth ring is brighter: the sea has long swells in it */
+    const bright = i % 12 === 0 ? 1.9 : 1;
+    const alpha = (0.085 * (1 - k) + 0.012) * (0.7 + swell * 0.9) * bright;
+    ctx.strokeStyle = "rgba(150, 214, 230, " + alpha.toFixed(3) + ")";
+    ctx.stroke();
+  }
+}
+
+
+function drawIsland() {
+  const isl = world.island || FALLBACK.island;
+  const cx = W / 2, cy = H / 2, R = scale() * (isl.radius || 0.22);
+
+  /* THE SHADOW THE LAND CASTS ON THE WATER -- the thing that makes it stand up out of the sea */
+  const sh = ctx.createRadialGradient(cx + R * 0.10, cy + R * 0.20, R * 0.4, cx + R * 0.10, cy + R * 0.20, R * 1.9);
+  sh.addColorStop(0, "rgba(0,0,0,.55)");
+  sh.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = sh;
+  ctx.beginPath(); ctx.ellipse(cx + R * 0.10, cy + R * 0.20, R * 1.75, R * 1.45, 0, 0, Math.PI * 2); ctx.fill();
+
+  /* the shallows: the water goes pale before it reaches sand */
+  const g = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, R * 1.85);
+  g.addColorStop(0, "rgba(120,210,220,.28)");
+  g.addColorStop(0.55, "rgba(90,180,200,.13)");
+  g.addColorStop(1, "rgba(232,216,160,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 1.85, 0, Math.PI * 2); ctx.fill();
+
+  const steps = 128;
+  const shore = (k, ph) => {
+    ctx.beginPath();
+    for (let a = 0; a <= steps; a++) {
+      const th = (a / steps) * Math.PI * 2;
+      const wob = 1 + 0.055 * Math.sin(th * 3.1 + ph) + 0.030 * Math.sin(th * 5.7 + 1.2 + ph)
+                    + 0.016 * Math.sin(th * 11.3 + 0.4);
+      const rr = R * k * wob;
+      const x = cx + Math.cos(th) * rr, y = cy + Math.sin(th) * rr * 0.80;
+      a ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  };
+
+  /* THE SURF: a thin bright line where water cuts the sand */
+  shore(1.235, 0.0);
+  ctx.strokeStyle = "rgba(226,248,255,.55)"; ctx.lineWidth = 1.4; ctx.stroke();
+
+  /* the sand */
+  shore(1.16, 0.9);
+  const sg = ctx.createLinearGradient(cx, cy - R * 1.2, cx, cy + R * 1.1);
+  sg.addColorStop(0, "#f4e7bd");
+  sg.addColorStop(1, "#b89b5e");
+  ctx.fillStyle = sg; ctx.fill();
+
+  /* the land */
+  shore(1.0, 0.25);
+  const lg = ctx.createLinearGradient(cx - R * 0.5, cy - R * 0.9, cx + R * 0.6, cy + R * 0.9);
+  lg.addColorStop(0, "#e0bc45");
+  lg.addColorStop(0.45, isl.colour || "#c9a227");
+  lg.addColorStop(1, "#6d5511");
+  ctx.fillStyle = lg; ctx.fill();
+  ctx.strokeStyle = "rgba(255,246,214,.28)"; ctx.lineWidth = 1; ctx.stroke();
+
+  /* THE RELIEF: ridges on the land, clipped so they never spill past the coast.
+     Same sine family as the coast -- a hilly island, not a flat disc.                       */
+  ctx.save(); ctx.clip();
+  for (let i = 0; i < 9; i++) {
+    const k = 0.22 + i * 0.085;
+    ctx.beginPath();
+    for (let a = 0; a <= 64; a++) {
+      const th = (a / 64) * Math.PI * 2;
+      const rr = R * k * (1 + 0.10 * Math.sin(th * 2 + i * 1.7));
+      const x = cx + Math.cos(th) * rr + Math.sin(i * 2.3) * R * 0.06;
+      const y = cy + Math.sin(th) * rr * 0.80 + Math.cos(i * 1.9) * R * 0.05;
+      a ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      if (a === 64) { ctx.strokeStyle = "rgba(80,58,8," + (0.16 - i * 0.012).toFixed(3) + ")"; ctx.lineWidth = 1; ctx.stroke(); }
+    }
+  }
+  ctx.restore();
+
+  /* THE ZERO: the point nobody can derive, and nothing is built on it */
+  const pulse = 3 + Math.sin(performance.now() / 640) * 1.4;
+  const zg = ctx.createRadialGradient(cx, cy, 0, cx, cy, pulse * 7);
+  zg.addColorStop(0, "rgba(255,252,235,.55)");
+  zg.addColorStop(1, "rgba(255,252,235,0)");
+  ctx.fillStyle = zg; ctx.beginPath(); ctx.arc(cx, cy, pulse * 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, pulse + 6, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(255,252,235,.55)"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, pulse, 0, Math.PI * 2);
+  ctx.fillStyle = "#fffdf2"; ctx.fill();
+  ctx.font = "10px ui-monospace, monospace"; ctx.fillStyle = "rgba(20,26,20,.85)";
+  ctx.textAlign = "center"; ctx.fillText("0", cx, cy + 3.5);
+}
+
+
+function drawPlots() {
+  const claims = new Map();
+  (world.claims || []).forEach(c => { if (c && c.plot) claims.set(String(c.plot), c); });
+  /* THE HALO: a claimed plot glows. No claim, no light -- nothing is lit that nobody holds. */
+  (world.plots || FALLBACK.plots).forEach(p => {
+    if (!claims.has(p.id)) return;
+    const [x, y] = toPx(p.at[0], p.at[1]);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 42);
+    g.addColorStop(0, "rgba(224,188,69,.30)");
+    g.addColorStop(1, "rgba(224,188,69,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 42, 0, Math.PI * 2); ctx.fill();
+  });
+
+  (world.plots || FALLBACK.plots).forEach((p, i) => {
+    const [x, y] = toPx(p.at[0], p.at[1]);
+    const claimed = claims.get(p.id);
+    const r = 15;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = claimed ? "rgba(201,162,39,.30)" : "rgba(255,255,255,.05)";
+    ctx.fill();
+    ctx.strokeStyle = claimed ? "#e8d8a0" : "rgba(143,168,180,.75)";
+    ctx.setLineDash(claimed ? [] : [3, 3]);
+    ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.fillStyle = claimed ? "#f2efe6" : "#8fa8b4";
+    ctx.textAlign = "center";
+    ctx.fillText(p.id, x, y + 3.5);
+
+    ctx.font = "9px ui-monospace, monospace"; ctx.fillStyle = "rgba(143,168,180,.85)";
+    ctx.fillText((claimed && claimed.who) || (p.when || "").split("—")[0].trim(), x, y + r + 13);
+
+    p._px = x; p._py = y;
+  });
+}
+
+function frame() {
+  const now = (performance.now() - t0) / 1000;
+  drawSea(now);
+  drawIsland();
+  drawPlots();
+  requestAnimationFrame(frame);
+}
+
+/* ---- the panel: a click explains a plot, and never writes ---- */
+const panel = document.getElementById("panel");
+const pTitle = document.getElementById("pTitle");
+const pBody = document.getElementById("pBody");
+
+cv.addEventListener("click", ev => {
+  const rect = cv.getBoundingClientRect();
+  const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+  let hit = null;
+  (world.plots || FALLBACK.plots).forEach(p => {
+    if (p._px == null) return;
+    if (Math.hypot(p._px - mx, p._py - my) <= 20) hit = p;
+  });
+  if (!hit) { panel.classList.remove("on"); return; }
+  const claimed = (world.claims || []).find(c => c && String(c.plot) === hit.id);
+  pTitle.textContent = hit.id + " · " + ((hit.when || "").split("—")[0].trim() || "a plot");
+  pBody.innerHTML = claimed
+    ? "claimed by <b>" + esc(claimed.who) + "</b> at <code>" + esc(claimed.ts) + "</code>"
+      + (claimed.note ? "<br />" + esc(claimed.note) : "")
+    : "unclaimed." + (hit.when ? "<br />" + esc(hit.when) : "")
+      + "<br /><br />a claim is written through the <b>defender gate</b> only:<br />"
+      + "<code>POST /api/plot</code> with <code>Bearer &lt;core.key&gt;</code>.<br />"
+      + "this page cannot write, by design — a public gate that could write is a hole.";
+  panel.classList.add("on");
+});
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ---- bind to the gate if it answers; otherwise this page still stands ---- */
+async function boot() {
+  resize();
+  try {
+    const r = await fetch("/api/world", { headers: { "Accept": "application/json" } });
+    if (r.ok) {
+      const j = await r.json();
+      if (j && j.name) world = j;
+    }
+  } catch (e) { /* offline: the fallback is already a whole world */ }
+
+  const sea = world.sea || FALLBACK.sea;
+  document.getElementById("sub").textContent =
+    "the 0z · " + (world.plots || FALLBACK.plots).length + " plots · origin " +
+    ((world.origin && world.origin.label) || "the 0");
+  document.getElementById("gateMode").textContent = world.gate || "offline";
+  document.getElementById("gateRo").textContent = (world.gate === "public") ? "yes" : "—";
+  document.getElementById("claimCount").textContent = (world.claims || []).length;
+  requestAnimationFrame(frame);
+
+  /* ---- THE BAR: read the root, read the chain, witness it, beat once ---- */
+  const el = id => document.getElementById(id);
+  el("xRoot").textContent = String(world.root || "—").slice(0, 16);
+  el("xChain").textContent = world.chain_ok === true ? "INTACT"
+    : (world.chain_ok === false ? "BROKEN" : "—");
+  el("xChain").className = world.chain_ok === true ? "ok" : "bad";
+  try {
+    const s = await fetch("/api/signals", { headers: { "Accept": "application/json" } }).then(r => r.json());
+    updateSea(s.sea);
+  } catch (e) { /* an older gate: the page still stands */ }
+  el("sigBtn").disabled = false;
+
+  /* ---- THE WITNESS: recompute the chain HERE, with our own sha256, and say what we found ---- */
+  try {
+    const c = await fetch("/api/chain?n=20", { headers: { "Accept": "application/json" } })
+      .then(r => r.json());
+    const w = await window.OZ_WITNESS.verify(c.rows || [], c.prev);
+    el("xWitness").innerHTML = w.ok
+      ? "<span>witness <b>verified here</b></span><span> · " + w.checked +
+        " rows recomputed · total " + esc(c.total) + "</span>"
+      : "<span>witness <b class=\"bad\">NOT PROVEN HERE</b></span><span> · " +
+        esc(w.problems[0] || "unknown") + "</span>";
+  } catch (e) {
+    el("xWitness").innerHTML = "<span>witness <b class=\"bad\">unavailable</b></span>" +
+      "<span> · this browser cannot recompute</span>";
+  }
+
+
+  el("sigBtn").addEventListener("click", async () => {
+    const btn = el("sigBtn"), out = el("sigOut");
+    btn.disabled = true; out.textContent = "…";
+    try {
+      const r = await fetch("/api/signal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ found: String(world.root || "").slice(0, 16), text: el("sigText").value })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) {
+        out.textContent = "heard";
+        el("sigText").value = "";
+        updateSea(j.sea);
+        /* THE WATER REMEMBERS: a beat lifts the sea for a moment, then it settles */
+        swellKick = 1;
+      } else {
+        out.textContent = (j.error || ("HTTP " + r.status)) +
+          (j.retry_after_s != null ? " · retry in " + j.retry_after_s + "s" : "");
+      }
+    } catch (e) { out.textContent = "the gate is not answering"; }
+    btn.disabled = false;
+  });
+}
+boot();
+</script>
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-21 -->

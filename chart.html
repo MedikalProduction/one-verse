@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ONE VERSE — the chart</title>
+<style>
+  :root { --ink:#f2efe6; --dim:#8fa8b4; --gold:#c9a227; --line:#1d3b4a; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:#06121a; color:var(--ink);
+    font:13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow:hidden; }
+  #chart { display:block; width:100%; height:100%; }
+  .hud { position:fixed; pointer-events:none; }
+  #top { top:18px; left:20px; }
+  #top h1 { margin:0; font-size:20px; letter-spacing:.26em; font-weight:600; }
+  #top .sub { color:var(--dim); font-size:12px; letter-spacing:.1em; }
+  #info { top:18px; right:20px; text-align:right; font-size:11px; color:var(--dim); line-height:1.7; }
+  #info b { color:var(--gold); font-weight:600; }
+  #foot { bottom:14px; left:20px; right:20px; display:flex; justify-content:space-between;
+    font-size:11px; color:var(--dim); gap:16px; flex-wrap:wrap; }
+  a { color:var(--gold); text-decoration:none; pointer-events:auto; }
+</style>
+</head>
+<body>
+<canvas id="chart"></canvas>
+<script src="/witness.js"></script>
+
+<div class="hud" id="top">
+  <h1>THE CHART</h1>
+  <div class="sub" id="sub">reading the seed tree…</div>
+</div>
+
+<div class="hud" id="info">
+  root <b id="root">—</b><br />
+  chain <b id="chain">—</b><br />
+  witness <b id="witness">—</b>
+</div>
+
+<div class="hud" id="foot">
+  <span>a PROFILE of four numbers — peak, root ratio, massifs, seed. A reading, not the mesh.</span>
+  <span><a href="/">← the world</a> · <a href="/config.html">make your self</a></span>
+</div>
+
+<script>
+"use strict";
+const cv = document.getElementById("chart"), ctx = cv.getContext("2d");
+const el = id => document.getElementById(id);
+let W = 0, H = 0, DPR = 1;
+const RISE_M = 200;                 // planet_law.K_VOID_RISE_M -- the Void Century, read from the law
+let data = null;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  draw();
+}
+window.addEventListener("resize", resize);
+
+/* a byte of the seed -> [0,1): the same trick every other law in this world uses */
+function unitHex(hex, i) {
+  const s = String(hex || "00");
+  const b = parseInt(s.substr((i * 2) % Math.max(2, s.length), 2) || "00", 16);
+  return (b || 0) / 256;
+}
+
+/* THE PROFILE: four numbers (peak, root ratio, massifs, seed) read as a silhouette.
+   It is a READING, not the mesh -- the page says so in the footer, and so does this comment. */
+function profilePath(cx, baseY, peakM, seedHex, halfW, scale, massifs) {
+  const ph1 = unitHex(seedHex, 1) * Math.PI * 2, ph2 = unitHex(seedHex, 3) * Math.PI * 2;
+  const steps = 120, pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = -1 + 2 * (i / steps);                       // -1..1 across the island
+    const dome = Math.exp(-(t * t) * 2.1);
+    const ridge = 1 + 0.16 * Math.sin(t * 5.1 + ph1) + 0.09 * Math.sin(t * 11.3 + ph2);
+    const extra = massifs > 1 ? 0.14 * Math.sin(t * 7.7 + ph2) * Math.sin(t * 2.2 + ph1) : 0;
+    const h = Math.max(0, dome * ridge + extra) * peakM;
+    pts.push([cx + t * halfW, baseY - h * scale]);
+  }
+  return pts;
+}
+
+function silhouette(pts, fill, stroke, dash) {
+  ctx.save();
+  if (dash) { ctx.setLineDash(dash); }
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) { ctx.lineTo(pts[i][0], pts[i][1]); }
+  ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1] + 4);
+  ctx.closePath();
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.restore();
+}
+</script>
+
+<script>
+"use strict";
+/* the drawing half: everything here is derived from /api/seed and /api/world. No asset, no image. */
+function draw() {
+  if (!data) { return; }
+  ctx.clearRect(0, 0, W, H);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#08202b"); g.addColorStop(1, "#040d14");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  const p = data.plot || {};
+  const twin = p.twin || {};
+  const peak = Number(p.peak_m || 0), twinPeak = Number(twin.peak_m || 0);
+  const maxM = Math.max(400, twinPeak, peak) * 1.18;
+  const scale = (H * 0.46) / maxM;
+  const y0 = H * 0.40;                                   // TODAY's sea level
+  const yOld = y0 + RISE_M * scale;                      // the sea level before the Void Century rise
+  const halfW = Math.min(W * 0.20, 190);
+
+  /* the metre grid */
+  ctx.font = "10px ui-monospace, monospace"; ctx.textBaseline = "middle";
+  for (let m = 0; m <= maxM; m += 200) {
+    const y = y0 - m * scale;
+    ctx.strokeStyle = "rgba(143,168,180,.10)"; ctx.beginPath();
+    ctx.moveTo(40, y); ctx.lineTo(W - 20, y); ctx.stroke();
+    ctx.fillStyle = "rgba(143,168,180,.55)"; ctx.textAlign = "right";
+    ctx.fillText(m + " m", 36, y);
+  }
+  for (let m = 200; m <= 600; m += 200) {
+    const y = y0 + m * scale;
+    ctx.strokeStyle = "rgba(143,168,180,.08)"; ctx.beginPath();
+    ctx.moveTo(40, y); ctx.lineTo(W - 20, y); ctx.stroke();
+    ctx.fillStyle = "rgba(143,168,180,.45)"; ctx.textAlign = "right";
+    ctx.fillText("-" + m + " m", 36, y);
+  }
+
+  /* THE RISE: 200 m of water that arrived after the island was already there */
+  ctx.fillStyle = "rgba(90,170,210,.09)";
+  ctx.fillRect(40, y0, W - 60, RISE_M * scale);
+  ctx.strokeStyle = "rgba(120,200,235,.28)"; ctx.setLineDash([4, 5]);
+  ctx.beginPath(); ctx.moveTo(40, yOld); ctx.lineTo(W - 20, yOld); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(140,200,225,.65)"; ctx.textAlign = "left";
+  ctx.fillText("the rise: +" + RISE_M + " m", 48, yOld - 9);
+
+  /* the sea line */
+  ctx.strokeStyle = "rgba(200,235,245,.55)"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(40, y0); ctx.lineTo(W - 20, y0); ctx.stroke();
+  ctx.fillStyle = "rgba(200,235,245,.75)"; ctx.fillText("sea level 0 m", 48, y0 - 10);
+
+  /* HERE -- the plot, drawn under the OLD sea level so the 200 m shows as what it took */
+  const ptsHere = profilePath(W * 0.30, yOld, peak, p.seed, halfW, scale, Number(p.massifs || 1));
+  silhouette(ptsHere, "rgba(201,162,39,.13)", "rgba(201,162,39,.75)", null);
+
+  /* THERE -- the twin, same law, own seed, standing in daylight */
+  const ptsTwin = profilePath(W * 0.70, y0, twinPeak, twin.seed, halfW, scale, Number(twin.massifs || 1));
+  silhouette(ptsTwin, "rgba(120,220,190,.10)", "rgba(120,220,190,.70)", [3, 4]);
+
+  /* the labels -- every number on this chart comes from the gate */
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  const hereNow = (peak - RISE_M);
+  ctx.fillStyle = "rgba(201,162,39,.95)"; ctx.font = "12px ui-monospace, monospace";
+  ctx.fillText(String(p.plot || "plot"), W * 0.30, H * 0.72);
+  ctx.fillStyle = "rgba(143,168,180,.85)"; ctx.font = "10px ui-monospace, monospace";
+  ctx.fillText("peak " + peak.toFixed(1) + " m  --  now " + (hereNow >= 0 ? "+" : "") +
+               hereNow.toFixed(1) + " m", W * 0.30, H * 0.72 + 16);
+  ctx.fillText("seed " + String(p.seed || "").slice(0, 12), W * 0.30, H * 0.72 + 30);
+
+  ctx.fillStyle = "rgba(120,220,190,.95)"; ctx.font = "12px ui-monospace, monospace";
+  ctx.fillText(String(twin.plot || (p.plot || "") + "·mirror"), W * 0.70, H * 0.72);
+  ctx.fillStyle = "rgba(143,168,180,.85)"; ctx.font = "10px ui-monospace, monospace";
+  ctx.fillText("peak " + twinPeak.toFixed(1) + " m  --  above the water", W * 0.70, H * 0.72 + 16);
+  ctx.fillText("residue " + twin.residue + "  ·  seed " + String(twin.seed || "").slice(0, 12),
+               W * 0.70, H * 0.72 + 30);
+
+  /* the law, in the middle of the picture where it belongs */
+  ctx.textAlign = "center"; ctx.fillStyle = "rgba(242,239,230,.55)";
+  ctx.font = "11px ui-monospace, monospace";
+  ctx.fillText("what is d metres below here is d metres above there", W / 2, H * 0.60);
+  ctx.strokeStyle = "rgba(242,239,230,.18)"; ctx.setLineDash([2, 6]);
+  ctx.beginPath(); ctx.moveTo(W * 0.30, H * 0.60 - 8); ctx.lineTo(W * 0.70, H * 0.60 - 8); ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* THE SKYLINE: the landmarks, placed on the island's own radius. Every size is a number the gate
+     derived -- the arch's span, the tree's height, the ring's radius. Nothing here is drawn by taste. */
+  if (data.landmarks && data.landmarks.landmarks) { drawLandmarks(data.landmarks, y0, scale, halfW); }
+}
+
+function drawLandmarks(lm, y0, scale, halfW) {
+  const p = data.plot || {};
+  const cxA = W * 0.30;
+  const seaR = Number(lm.sea_radius_km) || 1;
+  const marks = lm.landmarks || [];
+  ctx.save();
+  ctx.font = "9px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  for (const m of marks) {
+    const xkm = Number((m.at || [0, 0])[0]);
+    const x = cxA + (xkm / seaR) * halfW;
+    ctx.strokeStyle = "rgba(201,162,39,.75)";
+    ctx.fillStyle = "rgba(201,162,39,.13)";
+    ctx.lineWidth = 1.4;
+    /* THE UNKNOWN: a shape you can see, a size you have not earned. Drawn as a hollow mark. */
+    if (m.undisclosed) {
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.arc(x, y0 - 9, 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(201,162,39,.55)"; ctx.fillText(m.kind + " ?", x, y0 + 10);
+      continue;
+    }
+    if (m.kind === "arch") {
+      const h = Math.max(8, Number(m.height_m) * scale);
+      const w = Math.min(halfW * 1.4, Number(m.span_m) * scale * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(x - w / 2, y0); ctx.quadraticCurveTo(x, y0 - h * 2.2, x + w / 2, y0);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(201,162,39,.8)"; ctx.fillText("arch", x, y0 + 10);
+    } else if (m.kind === "great_tree") {
+      const h = Math.max(12, Number(m.height_m) * scale * 0.6);
+      ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 - h); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y0 - h, Math.max(4, Number(m.canopy_m) * scale * 0.35), 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(201,162,39,.8)"; ctx.fillText("tree " + Math.round(m.height_m) + " m", x, y0 + 10);
+    } else if (m.kind === "ring") {
+      const r = Math.max(6, Math.min(halfW * 0.5, Number(m.radius_m) * scale));
+      ctx.beginPath(); ctx.arc(x, y0 - r, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "rgba(201,162,39,.8)"; ctx.fillText("ring", x, y0 + 10);
+    } else if (m.kind === "bridge") {
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(x, y0 - 3); ctx.lineTo(W * 0.70 - halfW * 0.6, y0 - 3); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(120,220,190,.8)"; ctx.fillText("bridge", (x + W * 0.70) / 2, y0 - 12);
+    } else if (m.kind === "floating") {
+      const lift = Math.max(6, Number(m.lift_m) * scale);
+      ctx.beginPath(); ctx.ellipse(x, y0 - lift, halfW * 0.22, 4, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "rgba(201,162,39,.8)"; ctx.fillText("floating", x, y0 + 10);
+    }
+  }
+  ctx.restore();
+}
+
+async function boot() {
+  resize();
+  try {
+    const s = await fetch("/api/seed").then(r => r.json());
+    const seeds = s.seeds || {};
+    const keys = Object.keys(seeds);
+    if (!keys.length) {
+      el("sub").textContent = "the chain holds no plot yet -- plant one";
+    } else {
+      const k = keys[0];
+      data = { plot: Object.assign({ plot: k }, seeds[k]) };
+      el("sub").textContent = k + " and its twin · " + (s.chain_ok ? "chain intact" : "CHAIN BROKEN");
+      el("root").textContent = String(s.root || "—").slice(0, 16);
+      el("chain").textContent = s.chain_ok ? "INTACT" : "BROKEN";
+    }
+  } catch (e) { el("sub").textContent = "the gate is not answering"; }
+
+  /* the skyline: derived landmarks, optional -- the chart still stands without them */
+  try {
+    const lm = await fetch("/api/landmarks").then(r => r.json());
+    if (data) { data.landmarks = lm; }
+  } catch (e) { /* no landmarks: the profile is still true */ }
+
+  /* the chart proves itself too: the same witness the world uses, in this browser */
+  try {
+    const c = await fetch("/api/chain?n=20").then(r => r.json());
+    const w = await window.OZ_WITNESS.verify(c.rows || [], c.prev);
+    el("witness").textContent = w.ok ? (w.checked + "/" + w.checked + " here")
+                                     : "NOT PROVEN HERE";
+  } catch (e) { el("witness").textContent = "unavailable"; }
+
+  draw();
+}
+boot();
+</script>
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-20 -->

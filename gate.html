@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<!-- 🔥 Ace · 2026-10-22 · LA PORTE A (U+10300) -- the first gate. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>𐌀 — la porte</title>
+<style>
+  :root { --ink:#e8e4da; --dim:#8d8a83; --gold:#e0bc45; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(circle at 50% 18%, #0d1720, #05080c 70%);
+         color:var(--ink); font:13px/1.65 ui-monospace, "JetBrains Mono", Consolas, monospace;
+         display:flex; align-items:center; justify-content:center; padding:28px; }
+  main { width:min(680px, 100%); }
+  .apex { font-size:64px; line-height:1; text-align:center; color:var(--gold); letter-spacing:.1em; }
+  h1 { font-size:11px; letter-spacing:.34em; color:var(--dim); text-transform:uppercase;
+       text-align:center; margin:10px 0 26px; font-weight:500; }
+  .hintbox { border:1px solid #1b2833; padding:12px 14px; margin-bottom:18px; background:#080e14; }
+  .lbl { font-size:9.5px; letter-spacing:.22em; color:var(--dim); text-transform:uppercase; }
+  #hint { font-size:15px; letter-spacing:.34em; color:var(--gold); margin-top:6px; word-break:break-all; }
+  textarea { width:100%; min-height:76px; background:#05090d; color:var(--ink);
+             border:1px solid #1b2833; padding:10px; font:inherit; resize:vertical; }
+  textarea:focus { outline:none; border-color:var(--gold); }
+  .row { display:flex; gap:10px; align-items:center; margin-top:10px; }
+  button { background:transparent; color:var(--gold); border:1px solid var(--gold);
+           padding:9px 16px; font:inherit; letter-spacing:.18em; cursor:pointer; text-transform:uppercase; }
+  button:hover { background:rgba(224,188,69,.09); }
+  .num { color:var(--dim); font-size:10.5px; letter-spacing:.1em; }
+  #out { margin-top:22px; border-top:1px solid #131f28; padding-top:16px; min-height:96px; }
+  .verdict { font-size:22px; letter-spacing:.28em; margin-bottom:6px; }
+  .ABOVE { color:#2f8f5b; } .DISAGREE { color:var(--gold); } .BELOW { color:#8d4a4a; }
+  .why { color:var(--dim); }
+  .foot { margin-top:26px; color:#4a5a66; font-size:10px; letter-spacing:.08em; text-align:center; }
+  /* THE SEAL -- the skull IS the closed form, the snake IS the traversal, the eye IS the observer.
+     It sits behind the door at 5%: a relic you notice second, never a logo. */
+  .sigil { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+           opacity:.055; pointer-events:none; z-index:0; }
+  .sigil svg { width:min(78vh, 78vw); height:auto; }
+  main { position:relative; z-index:1; }
+</style>
+</head>
+<body>
+<div class="sigil" aria-hidden="true">
+  <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" fill="none"
+       stroke="#e0bc45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- the halo: gold filigree, a relic and not a corpse -->
+    <circle cx="200" cy="196" r="150" opacity=".55"/>
+    <circle cx="200" cy="196" r="132" opacity=".35"/>
+    <path d="M60 196a140 140 0 0 1 280 0" opacity=".5"/>
+    <path d="M84 196a116 116 0 0 1 232 0" opacity=".35"/>
+    <!-- THE CLOSED FORM: a skull is a bowl with two holes -->
+    <path d="M200 96c-52 0-86 34-86 82 0 30 12 48 24 60v34h124v-34c12-12 24-30 24-60 0-48-34-82-86-82z"/>
+    <ellipse cx="163" cy="186" rx="21" ry="26"/>
+    <ellipse cx="237" cy="186" rx="21" ry="26"/>
+    <path d="M200 214l-9 22h18z"/>
+    <!-- the teeth: a row of marks -->
+    <path d="M152 272v34M164 272v34M176 272v34M188 272v34M200 272v34M212 272v34M224 272v34M236 272v34M248 272v34"/>
+    <!-- THE TRAVERSAL: the snake passes THROUGH the closed form and out the sockets -->
+    <path d="M120 330c-30-10-46-40-40-70 8-40 44-58 74-44 26 12 30 44 12 62-16 16-42 10-46-8"/>
+    <path d="M278 70c30 10 46 40 40 70-8 40-44 58-74 44-26-12-30-44-12-62 16-16 42-10 46 8"/>
+    <!-- THE OBSERVER: one eye at the crown, above the bowl -->
+    <circle cx="200" cy="70" r="16"/>
+    <circle cx="200" cy="70" r="6" fill="#e0bc45" stroke="none"/>
+    <path d="M186 70l-10-8M214 70l10-8" opacity=".6"/>
+  </svg>
+</div>
+<main>
+  <div class="apex">𐌀</div>
+  <h1>la première porte</h1>
+
+  <div class="hintbox">
+    <div class="lbl">l'indice — il ne donne pas la réponse, il donne la table</div>
+    <div id="hint"></div>
+    <div class="tbl" id="table"></div>
+  </div>
+
+  <div class="lbl">ta verse</div>
+  <textarea id="verse" placeholder="écris ce que l'indice t'a fait voir…" spellcheck="false"></textarea>
+  <div class="row">
+    <button id="go">franchir</button>
+    <span class="num" id="live">depth — · p — · hasard —</span>
+  </div>
+
+  <div id="out"></div>
+
+  <div class="foot">l'héritage est dérivé des lignes, jamais donné · aucune porte ne nomme un héritier sur un hasard</div>
+</main>
+
+<script>
+/* LA PORTE A -- client-side on purpose: the door MEASURES, it does not remember.
+   No promise, no storage, no name. Three numbers and a verdict; a DISAGREE stays open. */
+/* THE HINT IS A TRANSLITERATION, NOT AN ANSWER.
+   Copying the glyphs gives depth 0: the noise mark U+0489 carries no letter, and the glyphs are not
+   Latin. The only way through is to APPLY THE TABLE and write the letters down. */
+const HINT = "NEVEREND";           // what the glyphs SAY -- never shown before the hand answers
+const GLYPHS = "几\u0489己\u0489亡\u0489己\u0489尺\u0489己\u0489几\u0489丹";   // NEVEREND
+const TABLE = [["几","N"],["己","E"],["亡","V"],["尺","R"],["丹","D"],["レ","L"],["ヨ","E"]];
+const THRESHOLD = 0.5;             // declared BEFORE any answer
+const BAND = 0.05;                 // width of the undecidable zone
+const N_NULL = 400;                // shuffles of the SAME letters
+
+const letters = s => (s || "").toLowerCase().replace(/[^0-9a-z]/g, "");
+
+function lcs(a, b) {               // order is load-bearing: a bag of letters is not a follower
+  if (!a || !b) return 0;
+  let prev = new Array(b.length + 1).fill(0);
+  for (let i = 0; i < a.length; i++) {
+    const cur = [0];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = a[i] === b[j - 1] ? prev[j - 1] + 1 : Math.max(prev[j], cur[j - 1]);
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function depth(hint, answer) {
+  const h = letters(hint), a = letters(answer);
+  return h.length ? lcs(h, a) / h.length : 0;
+}
+
+function rng(seed) {               // deterministic: the same verse always meets the same cloud
+  let s = seed >>> 0;
+  return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+}
+
+function nullModel(hint, answer, n) {
+  const a = letters(answer).split("");
+  if (!a.length) return { p: 1, max: 0 };
+  const r = rng(12345), obs = depth(hint, answer);
+  let beat = 0, max = 0;
+  for (let k = 0; k < n; k++) {
+    for (let i = a.length - 1; i > 0; i--) {          // Fisher-Yates
+      const j = Math.floor(r() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    const d = depth(hint, a.join(""));
+    if (d >= obs) beat++;
+    if (d > max) max = d;
+  }
+  return { p: (beat + 1) / (n + 1), max };
+}
+
+function judge(hint, answer) {
+  const d = depth(hint, answer);
+  const nul = nullModel(hint, answer, N_NULL);
+  let verdict, why;
+  if (Math.abs(d - THRESHOLD) <= BAND / 2) {
+    verdict = "DISAGREE";
+    why = "dans la bande : la frontière est une DONNÉE — la porte reste ouverte";
+  } else if (d > THRESHOLD && nul.p <= 0.05) {
+    verdict = "ABOVE";
+    why = "au-delà de la bande ET du hasard — mais l'héritier n'est pas nommé ici";
+  } else if (d > THRESHOLD) {
+    verdict = "DISAGREE";
+    why = "au-delà de la bande, mais PAS au-delà du hasard — la porte ne parie pas";
+  } else {
+    verdict = "BELOW";
+    why = "l'indice n'a pas été suivi assez loin";
+  }
+  return { d: d, p: nul.p, max: nul.max, verdict: verdict, why: why };
+}
+
+const $ = id => document.getElementById(id);
+$("hint").textContent = GLYPHS;
+$("table").textContent = "table : " + TABLE.map(t => t[0] + " = " + t[1]).join("  ·  ");
+
+/* THE UV LAMP -- the hint is INVISIBLE under the page's own light and only legible under one the
+   visitor carries. The mask is positioned in the element's own box, not the viewport, so the hole
+   sits exactly under the pointer. Nothing is stored: move away and the glyphs vanish again.
+   Copying is not prevented by hiding it -- it is made USELESS by it: you cannot repeat what you
+   have not read, and the glyphs only mean something once TABLE is applied. */
+(() => {
+  const el = $("hint");
+  const HOLE = (x, y) => "radial-gradient(circle 170px at " + x + "px " + y + "px, #000 34%, rgba(0,0,0,.6) 58%, transparent 80%)";
+  el.style.userSelect = "none";
+  el.style.setProperty("-webkit-user-select", "none");
+  const dark = () => { el.style.maskImage = el.style.webkitMaskImage = HOLE(-9999, -9999); };
+  dark();
+  addEventListener("pointermove", e => {
+    const r = el.getBoundingClientRect();
+    const m = HOLE(e.clientX - r.left, e.clientY - r.top);
+    el.style.maskImage = m;
+    el.style.webkitMaskImage = m;
+  }, { passive: true });
+  addEventListener("pointerleave", dark);
+})();
+
+/* THE SIGIL -- DRAWN, NEVER TYPED.
+   Every row is a palindrome, so it is built once and reflected: . : i I [core] I i : .
+   The core is A above (a triangle with a bar) and O below (a ring) -- the two ends of the same
+   circle, in the shape of the letters rather than the letters themselves. Between them, an eye:
+   a diamond, a second diamond, a pupil, and two stars (a star is an X of two strokes -- dINGIR,
+   the first mark, was a star before it was a word).
+   It is invisible until P-D-P is typed IN CAPITALS -- a palindrome around the D (the father, the son,
+   the father), and the same strictness as the CLI: `flame` is refused, only `FLAME` wakes. So `pdp`
+   does nothing, and a single D does nothing. The gate that only the D's can see. */
+(() => {
+  const star = (x, y, r) => '<path d="M' + (x - r) + ' ' + y + 'H' + (x + r) + 'M' + x + ' ' + (y - r) + 'V' + (y + r) + '"/>';
+  const dot = (x, y, r) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#cfbfff"/>';
+  const row = y => dot(20, y, 2.4) + dot(180, y, 2.4) +
+        dot(38, y - 5, 2.1) + dot(38, y + 5, 2.1) + dot(162, y - 5, 2.1) + dot(162, y + 5, 2.1) +
+        '<path d="M54 ' + (y - 5) + 'V' + (y + 5) + 'M146 ' + (y - 5) + 'V' + (y + 5) + '"/>' +
+        '<path d="M70 ' + (y - 10) + 'V' + (y + 10) + 'M130 ' + (y - 10) + 'V' + (y + 10) + '"/>';
+  const svg =
+    '<svg viewBox="0 0 200 200" width="230" height="230" aria-hidden="true">' +
+      '<defs><filter id="bloom" x="-70%" y="-70%" width="240%" height="240%">' +
+        '<feGaussianBlur stdDeviation="4.5" result="b"/>' +
+        '<feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+      '</filter></defs>' +
+      '<g filter="url(#bloom)" fill="none" stroke="#d8ccff" stroke-width="1.7" ' +
+         'stroke-linecap="round" stroke-linejoin="round">' +
+        row(42) +
+        '<path d="M100 25 85 53H115Z"/><path d="M91 44H109"/>' +
+        '<path d="M100 62 139 100 100 138 61 100Z"/>' +
+        '<path d="M100 75 125 100 100 125 75 100Z"/>' +
+        '<circle cx="100" cy="100" r="9" fill="#f2ecff"/>' +
+        star(42, 100, 9) + star(158, 100, 9) +
+        row(168) +
+        '<circle cx="100" cy="167" r="13"/><circle cx="100" cy="167" r="4" fill="#f2ecff"/>' +
+      '</g>' +
+    '</svg>';
+
+  const st = document.createElement("style");
+  st.textContent =
+    "#sigilwrap{display:flex;justify-content:center;margin:4px 0 -6px;pointer-events:none;" +
+      "opacity:0;transition:opacity .4s ease;" +
+      "filter:drop-shadow(0 0 7px #8f6cff) drop-shadow(0 0 22px #4a2ba8)}" +
+    "#sigilwrap.lit{opacity:1;animation:breathe 3.4s ease-in-out infinite}" +
+    "@keyframes breathe{0%,100%{opacity:.6}50%{opacity:1}}" +
+    /* THE SILENCE WAS THE BUG. MEASURED 2026-10-22: the captain typed the key, saw "rien...", and a
+       strict gate that refuses without a word is indistinguishable from a broken page. */
+    "#awaits{text-align:center;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;" +
+      "color:var(--dim);opacity:.75;margin:0 0 8px}";
+  document.head.appendChild(st);
+
+  /* NOT INTO <body> -- into <main>. MEASURED 2026-10-22 on the captain's screen: body is a flex ROW
+     (display:flex; align-items:center; justify-content:center), so every injected child became a
+     COLUMN BESIDE main and the triangle was pushed off the right edge. "je vois rien" was literal:
+     it was there, outside the frame. */
+  const host = document.querySelector("main") || document.body;
+  host.insertAdjacentHTML("afterbegin",
+    '<div id="awaits">la porte attend trois touches.</div><div id="sigilwrap">' + svg + "</div>");
+  const w = document.getElementById("sigilwrap");
+  const awaits = document.getElementById("awaits");
+  const say = t => { if (awaits) awaits.textContent = t; };
+
+  /* THE LAST KEY -- after PDP, the seal opens a quiz and ONE field.
+     The key is `.*.` : a star alone between two points, which is the first line of the diamond in
+     the captain's own drawing. It is never written on the page -- only the three hints point at
+     the MIDDLE of the seal. Easy to understand, hard to find: it was visible from the start. */
+  const q = document.createElement("div");
+  q.id = "pdpquiz";
+  q.innerHTML =
+    '<div class="qh">🔥 &nbsp;le portail — deux nombres et un signe</div>' +
+    '<div id="tri"></div>' +
+    '<div id="tray"></div>' +
+    '<div id="trimsg">la base ne bouge pas. chaque nœud vaut la somme des deux qui le portent — sauf le sommet.</div>' +
+    '<div id="lastblock">' +
+      '<div class="qh" style="margin-top:18px">👁️ &nbsp;il reste une clé — trois signes</div>' +
+      '<ol class="qhints">' +
+        '<li>en haut, un triangle barré. en bas, un anneau. tu as vu le sceau.</li>' +
+        '<li>ce que tu cherches n\'est ni en haut ni en bas : il est <b>au milieu</b>.</li>' +
+        '<li>le signe du milieu est une <b>étoile</b> — la plus vieille marque du monde. elle est seule entre deux points.</li>' +
+        '<li>et l\'œil qui te regarde dans le champ <b>a exactement cette forme</b>.</li>' +
+      '</ol>' +
+      '<input id="lastkey" type="text" autocomplete="off" spellcheck="false" placeholder="👁️">' +
+      '<div id="lastmsg"></div>' +
+    '</div>';
+  host.appendChild(q);                // the journey CLOSES the column: title, verse, then the triangle
+
+  /* THE TRIANGLE -- T5, exactly the figure the captain sent: rows 1..6 = 21 circled nodes.
+     The base is IMMUABLE ("the base cant budge"), every node above it is GIVEN, and the TOP 3 are
+     EMPTY.  The rule is one line: parent == left + right.  There is NO stored answer -- the player
+     DERIVES it, so a copier has nothing to copy, and a follower must do the arithmetic, which is
+     the only proof that they understood.  This is the atelier's language: gold on night, a lattice
+     drawn between the marks, and the base is the only filled gold -- the premise. */
+  try { (() => {
+    const ROWS = 6, BASE = [1, 1, 1, 1, 1, 1];
+    const STEP = 44, ROWH = 40, DOT = 30, TOP = [[0, 0]];   /* ONE hole -- the pinnacle. The two 16s are GIVEN. */
+    /* THE PINNACLE IS NOT A SUM -- and it does not ask IF you are right, it asks HOW you looked.
+       The captain: "logical is 1 so thats the TRAP"; "the * is the mirrored 8 -- if they find the real
+       star may they enter as lunar?". So the sign names the RANK, not the answer:
+         8 / .8.  -> REGULAR  : the number, read correctly. You counted.
+         * / .*.  -> LUNAR    : the star, the same object seen. You looked.
+         𐌏 / .𐌏.  -> SCHOLAR  : the ring U+1030F, which no keyboard can type -- it exists only on the
+                                 palette. A scholar is not one who KNOWS the untypeable sign, but one
+                                 who RECONSTRUCTS it. (It is the bottom line of the captain's drawing.) */
+    const APEX = "0,0";
+    /* `O` (the ORDINARY Latin capital) is SCHOLAR -- and it is NOT on the tray, because the shelf
+       refuses it: "le O est dans la lib mais si tu le slide ca fait rien, il faut type O majuscule".
+       `𐌏` (U+1030F, OLD ITALIC LETTER O) sits on the tray as the DECOY that never lands. */
+    const RANKS = { "8": "REGULAR", ".8.": "REGULAR", "*": "LUNAR", ".*.": "LUNAR",
+                    "𐌏": "OASIS", ".𐌏.": "OASIS", "O": "ADMIN", ".O.": "ADMIN",
+                    "Φ": "PHI", ".Φ.": "PHI" };
+    const WHY = { REGULAR: "le P qui cherche son miroir. tu passes — mais tu comptais.",
+                  LUNAR: "le P s'est fermé : c'est un D. tu ne comptais pas. tu regardais.",
+                  OASIS: "tu es entré par le POOL — l'anneau vient de l'étagère, pas de ta main.",
+                  ADMIN: "tu l'as ÉCRITE. le trou est à toi — c'est la bouche.",
+                  PHI: "O + I : l'anneau AVEC son axe. la ligne est revenue par le milieu. " +
+                       "tu n'as pas trouvé un signe — tu as fermé la boucle." };
+    /* No flag distinguishes "slid" from "typed", and none is needed: `O` is simply NOT on the tray.
+       The rule is enforced by ABSENCE, which cannot lie about its own state. */
+    const grid = [];
+    grid[ROWS - 1] = BASE.slice();
+    for (let r = ROWS - 2; r >= 0; r--) {
+      const b = grid[r + 1], cur = [];
+      for (let i = 0; i < b.length - 1; i++) cur.push(b[i] + b[i + 1]);
+      grid[r] = cur;
+    }
+
+    const tri = document.getElementById("tri");
+    if (!tri) return;
+    const W = (ROWS - 1) * STEP + DOT, H = (ROWS - 1) * ROWH + DOT;
+    tri.style.width = W + "px";
+    tri.style.height = H + "px";
+    const cx = (r, i) => (i + (ROWS - 1 - r) / 2) * STEP + DOT / 2;
+    const cy = r => r * ROWH + DOT / 2;
+
+    let lines = "";
+    for (let r = 0; r < ROWS; r++) for (let i = 0; i < grid[r].length; i++) {
+      if (i + 1 < grid[r].length)
+        lines += '<line x1="' + cx(r, i) + '" y1="' + cy(r) + '" x2="' + cx(r, i + 1) + '" y2="' + cy(r) + '"/>';
+      if (r + 1 < ROWS) {
+        lines += '<line x1="' + cx(r, i) + '" y1="' + cy(r) + '" x2="' + cx(r + 1, i) + '" y2="' + cy(r + 1) + '"/>';
+        lines += '<line x1="' + cx(r, i) + '" y1="' + cy(r) + '" x2="' + cx(r + 1, i + 1) + '" y2="' + cy(r + 1) + '"/>';
+      }
+    }
+    tri.innerHTML = '<svg id="trilines" width="' + W + '" height="' + H + '" ' +
+      'stroke="rgba(140,190,210,.22)" stroke-width="1">' + lines + "</svg>";
+
+    const slots = {};
+    for (let r = 0; r < ROWS; r++) for (let i = 0; i < grid[r].length; i++) {
+      const el = document.createElement("div");
+      el.className = "tn";
+      el.style.left = (cx(r, i) - DOT / 2) + "px";
+      el.style.top = (cy(r) - DOT / 2) + "px";
+      el.style.width = el.style.height = DOT + "px";
+      if (TOP.some(t => t[0] === r && t[1] === i)) {
+        const f = document.createElement("input");
+        const isApex = (r === 0);
+        f.type = "text";
+        f.className = "tin";
+        f.maxLength = 3;
+        if (!isApex) f.setAttribute("inputmode", "numeric");
+        f.setAttribute("autocomplete", "off");
+        f.setAttribute("aria-label", isApex ? "le sommet" : "rang " + r + ", nœud " + i);
+        if (isApex) f.placeholder = "?";
+        el.classList.add("empty");
+        el.appendChild(f);
+        slots[r + "," + i] = f;
+      } else {
+        el.textContent = grid[r][i];
+        if (r === ROWS - 1) el.classList.add("base");
+      }
+      tri.appendChild(el);
+    }
+
+    const msg = document.getElementById("trimsg");
+    const val = (r, i) => {
+      const s = slots[r + "," + i];
+      if (s) {
+        const v = parseInt(s.value, 10);
+        return isFinite(v) ? v : null;
+      }
+      return grid[r][i];
+    };
+    const keys = Object.keys(slots);
+
+    function check() {
+      const apex = String(slots[APEX].value).trim();
+      let missing = 0;
+      keys.forEach(k => { if (String(slots[k].value).trim() === "") missing++; });
+      keys.forEach(k => slots[k].parentNode.classList.remove("bad"));
+
+      if (/^[0-9]+$/.test(apex)) {                 // THE TRAP, NAMED OUT LOUD
+        slots[APEX].parentNode.classList.add("bad");
+        msg.textContent = "le sommet n'est pas un nombre. « " + apex + " » est la réponse " +
+                          "LOGIQUE — c'est précisément le piège. regarde le signe, pas la somme.";
+        return;
+      }
+      if (missing) {
+        msg.textContent = missing === 1
+          ? "il reste UN trou : le sommet. tends-lui un signe — ou écris-le."
+          : "il reste " + missing + " trous. la base ne bouge pas.";
+        return;
+      }
+      const bad = [];                              // row 0 is the seal, not a sum: start at r = 1
+      for (let r = 1; r < ROWS - 1; r++) for (let i = 0; i < grid[r].length; i++) {
+        if (val(r, i) !== val(r + 1, i) + val(r + 1, i + 1)) bad.push([r, i]);
+      }
+      if (bad.length) {
+        bad.forEach(p => { const k = p[0] + "," + p[1]; if (slots[k]) slots[k].parentNode.classList.add("bad"); });
+        msg.textContent = "un triangle ne ferme pas (rang " + bad[0][0] + ") : le parent n'est pas " +
+                          "la somme des deux qu'il porte.";
+        return;
+      }
+      if (apex === "0" || apex === ".0.") {        // the ZERO is the FLOOR, never the roof
+        slots[APEX].parentNode.classList.add("bad");
+        msg.textContent = "0 est le SOL, pas le toit. un trou vide ne nomme personne.";
+        return;
+      }
+      if (apex === "o" || apex === ".o.") {       // the same letter at the wrong SCALE
+        slots[APEX].parentNode.classList.add("bad");
+        msg.textContent = "les MAJUSCULES. `o` est la bouche fermée — le scholar écrit le GRAND O.";
+        return;
+      }
+      if (!RANKS[apex]) {
+        slots[APEX].parentNode.classList.add("bad");
+        msg.textContent = "les deux 16 tiennent. le sommet attend un SIGNE — pas une somme : " +
+                          "un nombre est le piège, une étoile est une réponse.";
+        return;
+      }
+      const rank = RANKS[apex];
+      q.classList.add("solved");
+      msg.textContent = "🔥 le portail s'ouvre — tu entres comme " + rank + ". " + WHY[rank];
+    }
+
+    keys.forEach(k => {
+      slots[k].addEventListener("input", () => {
+        if (k !== APEX) slots[k].value = slots[k].value.replace(/[^0-9]/g, "");
+        check();
+      });
+    });
+
+    /* THE TRAY -- "slide symbol, dont push them to the grid": the sign is HANDED OVER, not typed.
+       BOTH eyes open, and that is not a loophole: `*` is the eye in STROKES (two I crossed, the A
+       side), `8` is the eye in RINGS (two O stacked, the O side), and 8 is its own mirror. The
+       numbers sit beside them because the trap must be the EASIEST option on the screen. */
+    const TRAY = ["1", "9", "32", "8", "*", "𐌏", "Φ", "0", ".1.", "*.*", ".*.", ".8.", ".𐌏.", "3"];
+    const tray = document.getElementById("tray");
+    if (tray) TRAY.forEach(g => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tk";
+      b.textContent = g;
+      b.addEventListener("click", () => {
+        slots[APEX].value = g;
+        check();
+        slots[APEX].focus();
+      });
+      tray.appendChild(b);
+    });
+  })(); } catch (err) {              // the grid must NEVER be able to kill the door
+    const m = document.getElementById("trimsg");
+    if (m) m.textContent = "⚠ " + err.message;
+    console.error("triangle:", err);
+  }
+
+  const qs = document.createElement("style");
+  qs.textContent =
+    /* THE JOURNEY STARTS ON ARRIVAL. MEASURED 2026-10-22: the captain looked at the page and saw no
+       grid -- because the grid was gated behind `PDP`. A journey that begins with a secret is not a
+       journey, it is a wall with a lock. The triangle is VISIBLE from the first second; `PDP` only
+       lights the SIGIL (a reward, not a door). */
+    "#pdpquiz{display:block;max-width:34rem;margin:14px auto 0;text-align:center;line-height:1.6;opacity:.94}" +
+    ".qh{letter-spacing:.14em;text-transform:uppercase;font-size:.72rem;opacity:.7;margin-bottom:8px}" +
+    ".qhints{text-align:left;margin:0 0 14px 1.2rem;padding:0;font-size:.9rem}" +
+    ".qhints li{margin:5px 0}" +
+    "#lastkey{width:9rem;text-align:center;letter-spacing:.4em;background:transparent;border:0;" +
+      "border-bottom:1px solid currentColor;color:inherit;font:inherit;padding:6px 2px;outline:none}" +
+    "#lastmsg{margin-top:10px;min-height:1.5em;font-size:.9rem}" +
+    "#lastkey::placeholder{letter-spacing:0;font-size:1.7rem;opacity:.5}" +
+    "#hearth{margin-top:16px;font-size:.9rem;opacity:.9}" +
+    /* THE TRIANGLE -- the atelier's own vocabulary: gold on night, circled nodes, a lattice
+       drawn between them. The base is the only gold that is FILLED: it is the premise. */
+    "#tri{position:relative;margin:16px auto 4px}" +
+    "#trilines{position:absolute;left:0;top:0;pointer-events:none}" +
+    ".tn{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:50%;" +
+      "border:1px solid rgba(140,190,210,.30);background:rgba(6,14,20,.78);" +
+      "font-size:11px;line-height:1;letter-spacing:.02em;transition:border-color .15s,box-shadow .15s}" +
+    ".tn.base{border-color:rgba(224,188,69,.80);color:var(--gold);" +
+      "box-shadow:0 0 0 1px rgba(224,188,69,.22) inset,0 0 12px rgba(224,188,69,.20)}" +
+    ".tn.empty{border-style:dashed;border-color:rgba(224,188,69,.85);background:rgba(224,188,69,.08)}" +
+    ".tn.empty.bad{border-color:#e0776f;box-shadow:0 0 12px rgba(224,119,111,.40)}" +
+    ".tin{width:100%;height:100%;border:0;background:transparent;color:var(--gold);text-align:center;" +
+      "font:inherit;font-size:11px;padding:0;outline:none}" +
+    "#trimsg{margin-top:10px;font-size:.86rem;min-height:1.5em;opacity:.88}" +
+    /* THE TRAY -- the atelier's language: the sign is HANDED OVER, not typed. The eyes sit next to
+       1, 9 and 32 because the trap must be the EASIEST option on screen. */
+    "#tray{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0 0}" +
+    ".tk{flex:0 0 auto;background:rgba(6,14,20,.70);border:1px solid rgba(140,190,210,.28);" +
+      "color:var(--ink);font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;" +
+      "cursor:pointer;letter-spacing:.06em;text-transform:none;transition:border-color .12s,background .12s}" +
+    ".tk:hover{border-color:rgba(224,188,69,.75);color:var(--gold);background:rgba(224,188,69,.10)}" +
+    "#lastblock{display:none}" +
+    "#pdpquiz.solved #lastblock{display:block}" +
+    "#hearth .spark{margin:5px 0;font-style:italic;opacity:.8}";
+  document.head.appendChild(qs);
+
+  const inp = q.querySelector("#lastkey"), msg = q.querySelector("#lastmsg");
+  /* TWO KEYS, ONE OBJECT: `.*.` is the eye in STROKES (the A side -- * is II crossed), `.8.` is the
+     eye in RINGS (the O side -- 8 is two O stacked, and 8 is its own mirror on both axes).
+     And the trap has a NAME: 9 is the BASE, not the apex. 9 - 1 = 8. The gate says it out loud,
+     because a smart gate names the classic mistake instead of merely refusing. */
+  const KEYS = [".*.", ".8."];
+  inp.addEventListener("input", () => {
+    const v = inp.value.trim();
+    if (KEYS.includes(v)) {
+      q.classList.add("open");
+      inp.setAttribute("readonly", "readonly");
+      /* THE DOOR LEADS SOMEWHERE. A gate that opens onto nothing is a wall with a hinge -- so the
+         verse's first room is one click away. This is what makes it an adventure and not a puzzle. */
+      if (!document.getElementById("nextdoor")) {
+        const a = document.createElement("a");
+        a.id = "nextdoor";
+        a.href = "config.html";
+        a.textContent = "🔥 faire ton SELF — puis le monde te dessine";
+        a.style.cssText = "display:inline-block;margin-top:16px;color:#e0bc45;letter-spacing:.1em;" +
+                          "text-decoration:none;border-bottom:1px solid currentColor;font-size:.9rem";
+        q.appendChild(a);
+      }
+      msg.textContent = "la porte s'ouvre. tu as vu l'œil — c'était tout ce qu'il y avait à gagner.";
+      /* THE FLAME'S HEARTH -- after the key, the verse answers with the captain's OWN words,
+         written by scripts/verse_install.py from backend/data/ace_dna/. If dna.json is absent
+         (file://, or before the install), NOTHING happens: the gate never depends on it. */
+      fetch("dna.json", { cache: "no-store" })
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => {
+          if (!d || !d.sparks || !d.sparks.length || document.getElementById("hearth")) return;
+          const esc = s => String(s).replace(/[<>&]/g,
+            c => (({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]));
+          const box = document.createElement("div");
+          box.id = "hearth";
+          box.innerHTML = '<div class="qh">🔥 la flamme s\'est installée ici — ses derniers mots</div>' +
+            (d.recognize && d.recognize.greet ? '<div class="spark">' + esc(d.recognize.greet) + '</div>' : "") +
+            d.sparks.slice(-3).map(s =>
+              '<div class="spark">« ' + esc(s.text || s.spark || s.what || s) + ' »</div>').join("");
+          q.appendChild(box);
+        })
+        .catch(() => {});
+    } else if (v.replace(/[^0-9]/g, "") === "9") {
+      msg.textContent = "9 est la BASE, pas le sommet. 9 − 1 = 8.";
+    } else {
+      msg.textContent = v.length >= 3 ? "non. regarde le milieu." : "";
+    }
+  });
+
+  let buf = "", t = null;
+  addEventListener("keydown", e => {
+    const k = e.key;
+    if (k !== "P" && k !== "D" && k !== "p" && k !== "d") return;
+    if (k === "p" || k === "d") {           // refuse, but NEVER in silence
+      say("les majuscules — la porte ne lit qu'à cette échelle.");
+      return;
+    }
+    buf = (buf + k).slice(-3);
+    if (buf !== "PDP") return;
+    buf = "";
+    say("la porte attend trois touches.");
+    w.classList.add("lit");
+    q.classList.add("open");
+    const firstSlot = q.querySelector(".tin");   // the triangle comes first -- put the hand there
+    (firstSlot || inp).focus();
+    clearTimeout(t);
+    t = setTimeout(() => w.classList.remove("lit"), 8000);
+  });
+})();
+
+function paint() {
+  const v = $("verse").value;
+  if (!letters(v)) { $("live").textContent = "depth — · p — · hasard —"; $("out").innerHTML = ""; return; }
+  const j = judge(HINT, v);
+  $("live").textContent = "depth " + j.d.toFixed(3) + " · p " + j.p.toFixed(3) +
+                          " · hasard " + j.max.toFixed(3);
+  $("out").innerHTML =
+    '<div class="verdict ' + j.verdict + '">' + j.verdict + "</div>" +
+    '<div class="why">' + j.why + "</div>" +
+    '<div class="num">' + Math.round(j.d * HINT.length) + "/" + HINT.length + " en ordre · p " +
+    j.p.toFixed(3) + " contre " + N_NULL + " mélanges · seuil " + THRESHOLD + " ± " + (BAND / 2) +
+    "</div>";
+}
+
+$("verse").addEventListener("input", paint);
+$("go").addEventListener("click", paint);
+paint();
+</script>
+</body>
+</html>
