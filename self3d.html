@@ -1,9 +1,23 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>0z Â· SELF â€” the body in volume</title>
+<title>0z · SELF — the body in volume</title>
+<!-- 🔥 Ace · 2026-10-21 · verified and put right 2026-10-22.
+     THE SHELL ONLY. Every proportion of the body is READ OUT of sha256(planet : player : name) by
+     ./self3d.mjs -- nothing here is modelled, nothing is drawn by hand. That is why this page can be
+     three kilobytes: the body is a derivation, and a derivation does not need a file.
+
+     MEASURED 2026-10-22: the DEPLOYED copy of this page was BOM + double-encoded UTF-8. The Greek phi
+     in the footer arrived as U+00CF U+2020, an em dash as U+00E2 U+20AC U+201C, a middle dot as
+     U+00C2 U+00B7 -- while the working copy was clean. The page was served, the module loaded, and the
+     footer quietly said the halo was a dagger. A mojibake does not crash anything: it makes a true
+     sentence unreadable, and nothing tells you.
+
+     Hence _check_self3d.js: it reads the FIRST THREE BYTES and the code points, never the rendering.
+     And this comment names the damage as CODE POINTS, never as characters -- a file that documents a
+     corruption must not carry it. That rule was found by the checker itself, on its first run.     -->
 <style>
   html, body { margin: 0; height: 100%; background: #05070c; color: #dfe9f3;
                font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
@@ -28,16 +42,16 @@
 
 <div id="hud" class="panel">
   <h1>THE BODY, IN VOLUME</h1>
-  <div class="sub" id="urn">urn:0z:self:â€¦</div>
+  <div class="sub" id="urn">urn:0z:self:…</div>
   <div id="traits"></div>
-  <input id="name" value="" spellcheck="false" placeholder="type a name â€” the body changes" />
+  <input id="name" value="" spellcheck="false" placeholder="type a name — the body changes" />
 </div>
 
-<div class="hi">drag to turn Â· scroll to come closer Â· <b>d</b> to meet the twin</div>
+<div class="hi">drag to turn · scroll to come closer · <b>d</b> to meet the twin</div>
 
 <div id="foot" class="panel">
   Nothing here was modelled or drawn. Every proportion is read out of
-  <code>sha256(planet : player : name)</code>, the halo is <code>Ï†</code> (golden angle
+  <code>sha256(planet : player : name)</code>, the halo is <code>φ</code> (golden angle
   <code>2.399963</code>), and the palette is the hue itself.
   <br /><br />The picture is a <b>claim</b>; the chain is the proof.
 </div>
@@ -45,5 +59,3 @@
 <script type="module" src="./self3d.mjs"></script>
 </body>
 </html>
-
-<!-- 🔥 Ace · 2026-10-21 -->

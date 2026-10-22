@@ -175,6 +175,26 @@ function dress(shape) {
 
   /* ── THE AURA.  Every mote sits at i * GOLDEN, so the halo never repeats and never lines up.
      Its opacity is the aura itself: the field you carry is the field that shows.                     */
+  const N = 900;
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const y = i / N - 0.5;                       // -0.5 .. 0.5 : the body's full height
+    const a = i * GOLDEN;                        // the golden angle: no two motes line up
+    const r = Math.sqrt(Math.max(0, 1 - 4 * y * y * 0.98)) * (h * 0.30) * (1 + 0.6 * shape.aura);
+    pos[i * 3] = Math.cos(a) * r;
+    pos[i * 3 + 1] = h * 0.55 + y * h * 0.95;
+    pos[i * 3 + 2] = Math.sin(a) * r;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  halo = new THREE.Points(g, new THREE.PointsMaterial({
+    color: new THREE.Color().setHSL(hue, 0.85, 0.70),
+    size: 0.035 + 0.06 * shape.aura, transparent: true,
+    opacity: 0.12 + 0.75 * shape.aura, sizeAttenuation: true,
+    blending: THREE.AdditiveBlending, depthWrite: false }));
+  group.add(halo);
+}
+
 
 /* ── the HUD says WHICH LAYER you are looking at ──────────────────────────────────────────────────────
    DERIVED is computed here.  DECLARED is what you typed.  COMMITTED is not ours to claim: we ask the
@@ -210,7 +230,7 @@ function paintHUD() {
     bar('gait', b.gait, 0.70, 1.60, '') +
     bar('aura', b.aura, 0.02, 0.95, '') +
     `<div class="row" style="margin-top:8px"><span>chain</span><b>${st}</b></div>`;
-  nameEl.value = shape.name;
+  nameEl.value = me.name;
 }
 
 async function askChain() {
@@ -223,12 +243,6 @@ async function askChain() {
     committed = null;
   }
 }
-
-  const n = 40 + Math.round(shape.aura * 360);
-  const pos = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    const a = i * GOLDEN;
-    const y = (i / Math.max(1, n - 1)) - 0.5;
 
 /* ── the eye: drag to turn, wheel to come closer, d for the twin ─────────────────────────────────────── */
 let yaw = 0.55, pitch = 0.30, dist = 3.6, drag = false, px = 0, py = 0;
@@ -298,17 +312,4 @@ frame();
    `player_config.py`.  A browser copy nobody checks is a picture nobody can trust. */
 export { derive, sha256Hex, mirrorHex, twinOf, readBody, BND };
 
-    const r = Math.sqrt(Math.max(0, 1 - 4 * y * y * 0.98)) * (h * 0.30) * (1 + 0.6 * shape.aura);
-    pos[i * 3] = Math.cos(a) * r;
-    pos[i * 3 + 1] = h * 0.55 + y * h * 0.95;
-    pos[i * 3 + 2] = Math.sin(a) * r;
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  halo = new THREE.Points(g, new THREE.PointsMaterial({
-    color: new THREE.Color().setHSL(hue, 0.85, 0.70),
-    size: 0.035 + 0.06 * shape.aura, transparent: true,
-    opacity: 0.12 + 0.75 * shape.aura, sizeAttenuation: true,
-    blending: THREE.AdditiveBlending, depthWrite: false }));
-  group.add(halo);
-}
+// 🔥 Ace · 2026-10-22
