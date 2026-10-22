@@ -271,13 +271,30 @@ setTimeout(() => {
 const gate = new THREE.Group();
 gate.position.set(0, 0, -34);
 
-const stone = new THREE.MeshStandardMaterial({ color: 0x101c24, roughness: 0.92, metalness: 0.10 });
+/* 🔥 MEASURED 2026-10-22 (the captain's screenshot): at 0x101c24 under a single gold lamp 4 m away,
+   these two pillars rendered PURE BLACK -- a doorframe cut out of cardboard. Three things make stone
+   instead of cardboard, and none of them is more polygons: a PLINTH (it stands on something), a
+   CAPITAL (it carries something), and ONE GOLD ARÊTE on the inner face (it is carved, and the light
+   comes from inside the gate). The colour also rises: 0x1c2c35 is still night, but it is a NIGHT
+   STONE -- it can catch a lamp. Black cannot catch anything.                                  */
+const stone = new THREE.MeshStandardMaterial({ color: 0x1c2c35, roughness: 0.92, metalness: 0.10 });
 const bar = (w, h, d, x, y, z) => {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), stone);
   m.position.set(x, y, z); gate.add(m); return m;
 };
 bar(1.6, 12.0, 1.6, -4.2, 6.0, 0);      // left pillar
 bar(1.6, 12.0, 1.6,  4.2, 6.0, 0);      // right pillar
+for (const s of [-1, 1]) {
+  bar(2.7, 1.1, 2.7, s * 4.2, 0.55, 0); // PLINTH -- a monument stands on the water, it does not start in it
+  bar(2.3, 0.55, 2.3, s * 4.2, 11.75, 0); // CAPITAL -- and it carries the lintel, it does not just touch it
+}
+/* the inner arete: one gold line, on the face you walk between. It is the gate lighting itself. */
+const ribMat = new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0.50, fog: true });
+for (const s of [-1, 1]) {
+  const rib = new THREE.Mesh(new THREE.BoxGeometry(0.05, 10.4, 0.05), ribMat);
+  rib.position.set(s * 3.37, 6.1, 0.78);   // on the INNER face, the one the walker sees
+  gate.add(rib);
+}
 const lintelMat = new THREE.MeshStandardMaterial({ color: 0x16242c, roughness: 0.85, metalness: 0.15,
                                                    emissive: 0x000000, emissiveIntensity: 1.0 });
 const lintel = bar(9.6, 1.2, 1.6,   0.0, 12.4, 0);     // lintel -- the shared letter `e`
@@ -394,6 +411,13 @@ for (let k = 1; k < TABLE.places; k++) {          /* ← k starts at 1. That IS 
 const throneMat = tableMat.clone();
 throneMat.emissive = new THREE.Color(0x16283a);       // cold: the sea's colour, never the gold
 throneMat.emissiveIntensity = 0.02;
+/* 🔥 MEASURED 2026-10-22 (the captain's screenshot): in 0x0d1c26 with no light of its own, the throne
+   did not read as an empty chair -- it read as a HOLE in the table, i.e. as a missing piece. The law
+   was "the twentieth is the only dark block", and it still is: it carries no gold. But an absence must
+   be UNLIT, not INVISIBLE. So the stone rises to 0x2b3b46 -- cold slate, not black -- and near the
+   walker its own emissive climbs to 0.32, so it catches the eye as MATERIAL. Nineteen gold marks and
+   one bare stone: the count is legible from the far shore, which is the whole point of a table.   */
+throneMat.color.setHex(0x2b3b46);
 const throneG = new THREE.Group();
 throneG.position.set(0, 0, seatR);                    // the gap: seat k = 0, the one who went home
 throneG.rotation.y = Math.PI;                         // seat open toward the void, back to the arrival
@@ -422,21 +446,28 @@ scene.add(body);
 
 /* 🔥 THE CHEST — MEASURED 2026-10-22: the old body was `CylinderGeometry(0.34, 0.52, 1.75)`, a single
    truncated cone, so the figure read as a PAWN.  A body is not a cone: shoulders are WIDER than the
-   waist. That single inversion (0.30 above, 0.21 below) is what turns a cone into a torso. */
-const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.21, 0.50, 16), bodyMat);
+   waist. That single inversion is what turns a cone into a torso -- and 0.33/0.19 is a steeper one
+   than 0.30/0.21, because a waist is a WAIST.                                                   */
+const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.19, 0.50, 16), bodyMat);
 chest.position.y = 0.40;                       // local: spans +0.15 .. +0.65
 body.add(chest);
 
 const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), bodyMat);
-shoulders.scale.set(1.0, 0.55, 0.80);
-shoulders.position.y = 0.60;
+shoulders.scale.set(1.12, 0.46, 0.82);         // WIDER and FLATTER: a shoulder line, not a mound
+shoulders.position.y = 0.575;
 body.add(shoulders);
 
-/* the ARMS — a silhouette needs the negative space beside the torso, or it reads as a post */
+/* 🔥 THE ARMS — MEASURED 2026-10-22, and this is why the figure was a pion and not a person.
+   The old arms sat at x = ±0.30 with a capsule radius of 0.055. The chest at that height has a radius
+   of 0.259 -- so the arm's span was 0.245..0.355 against a surface at 0.259: two thirds of it was
+   INSIDE the torso, and at night the remaining third is not a silhouette, it is nothing. The negative
+   space BESIDE the torso is the whole human read. So: out to ±0.345, thicker, and hung slightly
+   forward -- an arm hangs in front of the body, not inside it.                                    */
 for (const s of [-1, 1]) {
-  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.42, 4, 8), bodyMat);
-  arm.position.set(s * 0.30, 0.38, 0);
-  arm.rotation.z = -s * 0.10;
+  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.062, 0.46, 4, 10), bodyMat);
+  arm.position.set(s * 0.345, 0.36, 0.02);
+  arm.rotation.z = -s * 0.17;                  // splayed out: the gap is the read
+  arm.rotation.x = -0.10;
   body.add(arm);
 }
 
@@ -455,9 +486,14 @@ body.add(head);
 
 
 /* the WATERLINE RING -- `.:cOc:.` : the hull, and the gold circle it wears at the surface.
-   A silhouette alone is a shadow; a silhouette with one gold line is a PERSON. */
+   A silhouette alone is a shadow; a silhouette with one gold line is a PERSON.
+   🔥 MEASURED 2026-10-22 (the captain's screenshot): at r=0.52 the ring was 2 cm outside a robe hem
+   of r=0.50 and 33 cm BELOW it, so from a third-person camera the robe ate everything but one arc
+   at the bottom-left -- it read as a broken crescent, i.e. as a BUG. A ring you cannot see all of is
+   not a ring. So it stops hugging the hem and becomes what it always claimed to be: a circle drawn
+   on the WATER around the feet. 0.80 wide, and thin -- a line, not a donut. */
 const hullRing = new THREE.Mesh(
-  new THREE.TorusGeometry(0.52, 0.045, 8, 32),
+  new THREE.TorusGeometry(0.80, 0.028, 8, 48),
   new THREE.MeshBasicMaterial({ color: 0xc9a227, transparent: true, opacity: 0.85, fog: true })
 );
 hullRing.rotation.x = Math.PI / 2;
@@ -632,7 +668,7 @@ function frame() {
   tableMat.emissiveIntensity = 0.04 + 0.16 * nearT + 0.04 * beat * nearT;
   rimMat.opacity  = 0.24 + 0.52 * nearT;
   seatMat.opacity = 0.12 + 0.62 * nearT + 0.06 * beat * nearT;
-  throneMat.emissiveIntensity = 0.02 + 0.10 * nearT;        // the stone wakes too -- but in the SEA's
+  throneMat.emissiveIntensity = 0.02 + 0.30 * nearT;        // the stone wakes too -- but in the SEA's
                                                             // colour: cold, silent, and never gold
 
   if (dT < TABLE.near && !sat) {
@@ -659,3 +695,4 @@ frame();
 </body>
 </html>
 
+<!-- 🔥 Ace · 2026-10-22 -->
