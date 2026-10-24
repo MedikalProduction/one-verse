@@ -99,7 +99,7 @@ renderer.toneMappingExposure = 0.88;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x070b11, 0.0055);
+scene.fog = new THREE.FogExp2(0x070b11, 0.0082);
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 600);
 
 /* ── THE ENVIRONMENT IS THE PICTURE. MEASURED with my own eyes (headless shot, 2026-10-24): a room full of
@@ -151,22 +151,22 @@ composer.addPass(new OutputPass());
 
 /* ── THE LIGHT. One shaft through the oculus lands on the table; a warm bounce lifts the marble; a cold rim
    separates the columns from the void; a hemisphere keeps the black from being a hole. ──────────────── */
-const shaftLight = new THREE.SpotLight(0xfff2d2, 1400, 90, 0.46, 0.72, 1.5);
+const shaftLight = new THREE.SpotLight(0xfff4dc, 2400, 90, 0.34, 0.55, 1.5);
 shaftLight.position.set(0, 32, 1);
 shaftLight.target.position.set(0, 0, 0);
 scene.add(shaftLight, shaftLight.target);
-const rimGold = new THREE.PointLight(0xffcf87, 420, 66, 2.0);
+const rimGold = new THREE.PointLight(0xffcf87, 300, 66, 2.0);
 rimGold.position.set(0, 7.5, 0);
 scene.add(rimGold);
-const rimCool = new THREE.PointLight(0x7fb4e0, 260, 80, 2.0);
+const rimCool = new THREE.PointLight(0x7fb4e0, 165, 80, 2.0);
 rimCool.position.set(-16, 13, -14);
 scene.add(rimCool);
-const fill = new THREE.HemisphereLight(0x9db6d4, 0x1b1509, 1.25);
+const fill = new THREE.HemisphereLight(0x9db6d4, 0x1b1509, 0.62);
 scene.add(fill);
 /* four perimeter lamps in the planetary colours, so the colonnade is a ring of light and not a silhouette */
 for (const [lx, lz, col] of [[-15, -15, 0x6f8ff0], [15, -15, 0x7fe0dc],
                              [-15, 15, 0xe0553f], [15, 15, 0x4fd39a]]) {
-  const lamp = new THREE.PointLight(col, 150, 46, 2.0);
+  const lamp = new THREE.PointLight(col, 95, 46, 2.0);
   lamp.position.set(lx, 5.5, lz);
   scene.add(lamp);
 }
@@ -1597,6 +1597,66 @@ namesRing.rotation.x = -Math.PI / 2;
 namesRing.position.y = 0.055;
 scene.add(namesRing);
 
+/* ── STAGE: the hall is HIGH UP, and the air is full of other ground. Beyond the colonnade the floor ends
+   at thirty metres; past it there is nothing but cloud and, out there, torn slabs of stone drifting at
+   their own heights -- some above the roofline, some far below the floor. Each is one loft and three
+   cloud sprites, and they are the only thing in frame that gives the room a SCALE. A hall the eye cannot
+   measure is a room; a hall with land falling away from it is a PLACE. ------------------------------- */
+const islands = new THREE.Group();
+const islandMat = new THREE.MeshStandardMaterial({ color: 0x6a5f4e, roughness: 0.96, metalness: 0.03 });
+const ISLE = [[38, 3.0, 0.6, 9.0], [52, 9.0, 12.5, 14], [64, -3.0, 7.0, 20], [46, 15.0, -2.5, 11],
+              [58, 1.5, 26.0, 16], [74, 18.0, 18.0, 24], [41, -7.0, -8.0, 8], [68, 8.0, -22.0, 18]];
+ISLE.forEach(function (d, i) {
+  const rad = d[0], y = d[1], a = d[2], size = d[3];
+  const rings = [], N = 7;
+  for (let k = 0; k <= N; k++) {
+    const t = k / N;
+    const w = size * (0.30 + 0.70 * Math.sin(Math.pow(t, 0.62) * Math.PI * 0.92));
+    rings.push({ y: (t - 0.55) * size * 0.36,
+      rx: Math.max(0.7, w), rz: Math.max(0.6, w * 0.80),
+      ox: Math.sin(k * 2.1 + i * 1.7) * size * 0.035,
+      oz: Math.cos(k * 1.7 + i * 1.1) * size * 0.045 });
+  }
+  const isle = new THREE.Mesh(loft(rings, 18), islandMat);
+  isle.position.set(Math.cos(a) * rad, y, Math.sin(a) * rad);
+  isle.rotation.y = a;
+  islands.add(isle);
+  for (let k = 0; k < 3; k++) {
+    const puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, transparent: true,
+      opacity: 0.10 + Math.random() * 0.10, depthWrite: false, blending: THREE.AdditiveBlending,
+      color: 0xe8f0fa }));
+    puff.position.set(isle.position.x + (Math.random() - 0.5) * size,
+      isle.position.y - size * 0.40 - Math.random() * size * 0.45,
+      isle.position.z + (Math.random() - 0.5) * size);
+    const s = size * (1.0 + Math.random() * 0.9);
+    puff.scale.set(s, s * 0.5, 1);
+    islands.add(puff);
+  }
+});
+scene.add(islands);
+
+/* ── A SEAT FOR EACH OF THE SEVENTY-TWO. The names were already written on the floor; a name on a floor is
+   a LABEL, a plinth is a CHAIR. Seventy-two stone stools in one ring, ONE draw call (InstancedMesh): the
+   council now has somewhere for its members to sit, and the room stops reading as a lobby. ------- */
+const seatGeo = loft([{ y: 0.00, rx: 0.42, rz: 0.40 }, { y: 0.09, rx: 0.37, rz: 0.35 },
+                      { y: 0.50, rx: 0.32, rz: 0.30 }, { y: 0.58, rx: 0.40, rz: 0.38 }], 12);
+const seatMat = new THREE.MeshStandardMaterial({ color: 0x2c313a, roughness: 0.70, metalness: 0.28,
+  emissive: 0x120c04, emissiveIntensity: 0.6 });
+const seatRing = new THREE.InstancedMesh(seatGeo, seatMat, 72);
+{
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(),
+        one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2;
+    p.set(Math.cos(a) * 12.6, 0, Math.sin(a) * 12.6);   /* on the name ring: every engraved name is a seat */
+    q.setFromAxisAngle(up, -a);
+    m4.compose(p, q, one);
+    seatRing.setMatrixAt(i, m4);
+  }
+  seatRing.instanceMatrix.needsUpdate = true;
+}
+scene.add(seatRing);
+
 /* EMBERS: points that rise, so the AIR is part of the moment and not a backdrop. */
 const EMBER_N = 700;
 const emberPos = new Float32Array(EMBER_N * 3);
@@ -2140,6 +2200,7 @@ function frame() {
   sealRing.rotation.y = -t * 0.01;
   clouds.rotation.y = t * 0.008;
   columnClouds.rotation.y = t * 0.004;
+  islands.rotation.y = t * 0.0032;                 /* the world turns slowly; the hall does not */
   coreStar.scale.setScalar(7 + Math.sin(t * 1.7) * 0.5);
   domeMat.uniforms.uTime.value = t;
   mirror.material.uniforms.uTime.value = t;
