@@ -59,6 +59,12 @@
   #say{position:fixed;left:0;right:0;bottom:96px;text-align:center;color:#d8cfa9;
     font:11px/1.7 ui-monospace,Consolas,monospace;letter-spacing:.16em;opacity:.9;padding:0 18px}
   #say b{color:var(--gold);font-weight:600}
+  /* 🔥 THE LEDGER, READ. The table does not hold its own history -- it reads claims.jsonl, the same file
+     the claim script appends to. Hidden until it has something to say. */
+  #ledger{position:fixed;left:18px;bottom:16px;max-width:min(52vw,420px);color:#8f8574;opacity:0;
+    font:10px/1.8 ui-monospace,Consolas,monospace;letter-spacing:.10em;transition:opacity 1.4s ease}
+  #ledger.live{opacity:.8}
+  #ledger b{color:#c9a227;font-weight:600;letter-spacing:.2em}
 </style>
 <body>
 <div id="hall">
@@ -76,6 +82,7 @@
   <input id="name" placeholder="present a body" aria-label="present a body" spellcheck="false">
   <button type="submit">PRESENT</button>
 </form>
+<div id="ledger"></div>
 <script>
 /* THE ROSTER IS WHAT IS TRUE. Two seats are HELD and their bodies are NOT engraved -- they were made
    before this notation existed. The third is iDk, engraved in BOTH scripts: the Latin trigram body, and
@@ -113,6 +120,25 @@ document.getElementById("gate").addEventListener("submit", function (e) {
 /* ARRIVED BY THE WATER: a receipt gets you INTO the hall -- it does NOT get you a SEAT. A seat is
    derived; a visit is witnessed. That distinction is the whole law of this room, so the two light
    differently: the hall opens, the seats stay exactly as they were, and the head stays empty. */
+/* THE LEDGER, READ -- the half that was missing. The table does not hold its own history: it reads
+   claims.jsonl, the same file scripts/one_verse_claim.py appends to and scripts/one_verse_ship.py pushes.
+   A missing file is not a lie, it is an empty page: silence, never an error dialog. */
+fetch("claims.jsonl", { cache: "no-store" })
+  .then(r => (r.ok ? r.text() : ""))
+  .then(t => {
+    const rows = t.split("\n").filter(Boolean).map(function (l) {
+      try { return JSON.parse(l); } catch (e) { return null; }
+    }).filter(Boolean);
+    if (!rows.length) return;
+    const box = document.getElementById("ledger");
+    box.innerHTML = "<b>THE LEDGER</b><br>" + rows.slice(-5).reverse().map(function (r) {
+      return "· " + (r.ts || "?") + " &nbsp; " + (r.who || "?") + " &nbsp; " + (r.note || "");
+    }).join("<br>");
+    box.classList.add("live");
+  })
+  .catch(function () { /* offline, file://, or nothing to read: stay silent */ });
+
+/* ARRIVED BY THE WATER: a receipt gets you INTO the hall -- it does NOT get you a SEAT. */
 if (/(^|[?&])by=water(&|$)/.test(location.search)) {
   hall.classList.add("lit");
   say.innerHTML = "entered by the water &nbsp;·&nbsp; a visit is witnessed, a <b>seat</b> is derived";

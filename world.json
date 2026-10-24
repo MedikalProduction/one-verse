@@ -1,6 +1,8 @@
 {
   "schema": "0z.world/1",
   "name": "ONE VERSE",
+  "place": "ALUMINA",
+  "_place_why": "Alumina is the crystal that becomes ruby or sapphire -- same body, another light. LUMINA = the lights, in Latin, with the apex in front. The name was the captain's (2026-10-22).",
   "version": 1,
   "_why": "The first deck of the 0z metaverse. It is deliberately almost empty: a sea, one island, and numbered plots. Everything else is meant to be built by whoever arrives, not by us.",
   "origin": {
