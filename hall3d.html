@@ -1150,6 +1150,12 @@ function wingPair(len, mat, rootX) {
   const g = new THREE.Group();
   const sides = [];
   const ROWS = [
+    /* THE REF'S WINGS ARE SHINGLED (captain's refs, 2026-10-24): rows of short WIDE feathers laid over
+       each other like tiles near the root, with the long primaries only at the outer edge. Two dense
+       covert rows are added in front of the old ones, which is what turns a picket fan into plumage. */
+    { n: 24, len: 0.20, w: 0.112, fan: -0.38, spread: 0.30, lift: 0.30, curl: 0.04 },
+    { n: 20, len: 0.32, w: 0.100, fan: -0.50, spread: 0.40, lift: 0.23, curl: 0.06 },
+    { n: 16, len: 0.46, w: 0.086, fan: -0.64, spread: 0.54, lift: 0.16, curl: 0.09 },
     { n: 13, len: 1.00, w: 0.058, fan: -0.95, spread: 0.92, lift: 0.00, curl: 0.20 },
     { n: 11, len: 0.74, w: 0.070, fan: -0.80, spread: 0.74, lift: 0.07, curl: 0.15 },
     { n: 10, len: 0.46, w: 0.082, fan: -0.66, spread: 0.58, lift: 0.14, curl: 0.10 },
@@ -1175,6 +1181,8 @@ function wingPair(len, mat, rootX) {
         f.rotation.x = -0.05 + t * 0.10;
         f.position.set(-0.02 * len, 0, -0.03 * len - t * 0.05 * len);
         f.scale.setScalar(1 - t * 0.18);
+        f.userData.rotX0 = f.rotation.x;             /* the rest angle, so a flutter is a DELTA on it */
+        f.userData.ph = t * 1.7;                     /* each vane keeps its own phase down the fan */
         row.add(f);
       }
       side.add(row);
@@ -1392,53 +1400,142 @@ neck.add(headG);
   ], 24), mSkin);
   headG.add(head);
   HUMAN.push(head);
-  /* the face: brow, nose, mouth, and two eyes set into the socket line -- four strokes, no texture */
-  const brow = new THREE.Mesh(new THREE.BoxGeometry(0.112, 0.010, 0.020), mSkin);
-  brow.position.set(0, 0.112, 0.070);
-  brow.rotation.x = -0.18;
+  /* ── THE FACE IS NOT FOUR STROKES. At the distance this camera holds, the face is most of what the eye
+     reads, so it is built the way the body is: lofts with a CONTOUR. Brow ridges that arc, a nose with a
+     BRIDGE and two wings, an upper lip with a bow over a fuller lower lip, a chin, cheekbones, ears, and
+     eyes with a white, an iris and a PUPIL under a lid that cuts the top -- because a sphere with a dot
+     on it is a doll's eye no matter how it is lit. ------------------------------------------------- */
+  for (const sx of [-1, 1]) {                    /* brow ridges: two arcs, not one bar */
+    const b = new THREE.Mesh(loft([
+      { y: 0.000, rx: 0.0055, rz: 0.005 }, { y: 0.013, rx: 0.0075, rz: 0.0068 },
+      { y: 0.026, rx: 0.0055, rz: 0.005 }], 8), mSkin);
+    b.position.set(sx * 0.032, 0.104, 0.069);
+    b.rotation.z = sx * 1.42;
+    b.rotation.x = -0.22;
+    headG.add(b);
+    HUMAN.push(b);
+    const cheek = new THREE.Mesh(loft([
+      { y: 0.018, rx: 0.010, rz: 0.008 }, { y: 0.000, rx: 0.013, rz: 0.010 },
+      { y: -0.016, rx: 0.009, rz: 0.007 }], 10), mSkin);
+    cheek.position.set(sx * 0.052, 0.062, 0.058);
+    cheek.rotation.z = sx * -0.25;
+    headG.add(cheek);
+    HUMAN.push(cheek);
+    const ear = new THREE.Mesh(loft([
+      { y: 0.020, rx: 0.007, rz: 0.011 }, { y: 0.002, rx: 0.011, rz: 0.017 },
+      { y: -0.018, rx: 0.007, rz: 0.011 }], 10), mSkin);
+    ear.position.set(sx * 0.079, 0.074, -0.004);
+    ear.rotation.y = sx * 0.38;
+    headG.add(ear);
+    HUMAN.push(ear);
+  }
+  /* the nose: bridge, tip and the two wings -- a wedge, not a cone */
   const nose = new THREE.Mesh(loft([
-    { y: 0.100, rx: 0.011, rz: 0.010 }, { y: 0.070, rx: 0.014, rz: 0.018 },
-    { y: 0.048, rx: 0.010, rz: 0.012 }], 8), mSkin);
-  nose.position.set(0, 0, 0.074);
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.006, 0.008), mSkin);
-  mouth.position.set(0, 0.016, 0.068);
-  headG.add(brow, nose, mouth);
-  HUMAN.push(brow, nose, mouth);
+    { y: 0.098, rx: 0.0075, rz: 0.009 },
+    { y: 0.062, rx: 0.0110, rz: 0.015 },
+    { y: 0.040, rx: 0.0165, rz: 0.019 },
+    { y: 0.031, rx: 0.0130, rz: 0.012 }], 14), mSkin);
+  nose.position.set(0, 0, 0.067);
+  headG.add(nose);
+  HUMAN.push(nose);
   for (const sx of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0135, 10, 8), mDarkM);
-    eye.position.set(sx * 0.034, 0.086, 0.064);
-    eye.scale.z = 0.6;
-    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.030, 0.007, 0.008), mSkin);
-    lid.position.set(sx * 0.034, 0.100, 0.068);
-    lid.rotation.x = -0.3;
-    headG.add(eye, lid);
-    HUMAN.push(eye, lid);
+    const wing = new THREE.Mesh(loft([
+      { y: 0.005, rx: 0.0075, rz: 0.0075 }, { y: -0.006, rx: 0.0098, rz: 0.0095 }], 8), mSkin);
+    wing.position.set(sx * 0.0155, 0.031, 0.0755);
+    headG.add(wing);
+    HUMAN.push(wing);
+  }
+  /* lips: a bow over a pillow, and the seam between them is the only line */
+  const lipU = new THREE.Mesh(loft([
+    { y: 0.0055, rx: 0.0255, rz: 0.0035 }, { y: 0.0000, rx: 0.0270, rz: 0.0060 }], 16), mSkin);
+  lipU.position.set(0, 0.0145, 0.0695);
+  const lipL = new THREE.Mesh(loft([
+    { y: 0.0000, rx: 0.0240, rz: 0.0055 }, { y: -0.0065, rx: 0.0150, rz: 0.0040 }], 16), mSkin);
+  lipL.position.set(0, 0.0080, 0.0705);
+  lipL.material = mSkin;
+  const chin = new THREE.Mesh(loft([
+    { y: 0.000, rx: 0.019, rz: 0.009 }, { y: -0.012, rx: 0.013, rz: 0.007 }], 12), mSkin);
+  chin.position.set(0, -0.002, 0.060);
+  headG.add(lipU, lipL, chin);
+  HUMAN.push(lipU, lipL, chin);
+  /* the eyes: white, iris, pupil, and a lid that CUTS the top */
+  const mSclera = new THREE.MeshStandardMaterial({ color: 0xe9e2d4, roughness: 0.30, metalness: 0.0 });
+  const mPupil = new THREE.MeshBasicMaterial({ color: 0x05070a });
+  for (const sx of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0152, 16, 12), mSclera);
+    eye.position.set(sx * 0.0332, 0.0860, 0.0605);
+    eye.scale.set(1, 0.84, 0.74);
+    const iris = new THREE.Mesh(new THREE.CircleGeometry(0.0080, 18), mDarkM);
+    iris.position.set(sx * 0.0332, 0.0858, 0.0742);
+    const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.0034, 12), mPupil);
+    pupil.position.set(sx * 0.0332, 0.0858, 0.0749);
+    const lid = new THREE.Mesh(loft([
+      { y: 0.010, rx: 0.0165, rz: 0.005 }, { y: 0.000, rx: 0.0185, rz: 0.008 },
+      { y: -0.008, rx: 0.0155, rz: 0.004 }], 12), mSkin);
+    lid.position.set(sx * 0.0332, 0.0975, 0.0655);
+    lid.rotation.x = -0.46;
+    const lower = new THREE.Mesh(loft([
+      { y: 0.004, rx: 0.0145, rz: 0.0035 }, { y: -0.003, rx: 0.0110, rz: 0.0030 }], 10), mSkin);
+    lower.position.set(sx * 0.0332, 0.0762, 0.0672);
+    lower.rotation.x = 0.30;
+    headG.add(eye, iris, pupil, lid, lower);
+    HUMAN.push(eye, iris, pupil, lid, lower);
   }
   /* THE HAIR: tubes along real curves with a taper and the teal tips -- not fourteen capsules. */
+  /* ── THE HAIR IS THE SILHOUETTE (the captain's refs, 2026-10-24): a long dark MANE, parted, falling
+     past the waist, with layered strands and locks over the face. Twenty short tubes was a haircut; the
+     ref's first read at any distance is the mass of hair, so the mass is what gets built. ------------ */
   const skull = new THREE.Mesh(loft([
-    { y: 0.095, rx: 0.082, rz: 0.088 }, { y: 0.150, rx: 0.078, rz: 0.086 },
-    { y: 0.196, rx: 0.056, rz: 0.062 }, { y: 0.212, rx: 0.018, rz: 0.020 }], 20), mHair);
+    { y: 0.090, rx: 0.083, rz: 0.089 }, { y: 0.150, rx: 0.079, rz: 0.087 },
+    { y: 0.198, rx: 0.057, rz: 0.063 }, { y: 0.214, rx: 0.018, rz: 0.020 }], 22), mHair);
   skull.position.y = -0.004;
-  skull.scale.set(1.03, 1.0, 1.03);
+  skull.scale.set(1.035, 1.0, 1.035);
   headG.add(skull);
   HUMAN.push(skull);
-  for (let i = 0; i < 20; i++) {
-    const a = (i / 20) * Math.PI * 2 + 0.17;
-    const r0 = 0.070 + ((i * 29) % 7) / 90, len = 0.16 + ((i * 37) % 13) / 55;
-    const hang = Math.cos(a) < 0 ? 1.35 : 1;                       /* the back falls further than the front */
-    const p0 = new THREE.Vector3(Math.cos(a) * r0, 0.150, Math.sin(a) * r0 * 1.08);
-    const p1 = new THREE.Vector3(Math.cos(a) * (r0 + 0.030), 0.150 - len * 0.55,
-      Math.sin(a) * (r0 + 0.030) * 1.10);
-    const p2 = new THREE.Vector3(Math.cos(a) * (r0 + 0.052), 0.150 - len * hang,
-      Math.sin(a) * (r0 + 0.052) * 1.12);
-    const curve = new THREE.CatmullRomCurve3([p0, p1, p2]);
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 8, 0.0085, 6, false), mHair);
+  /* THE MASS: one loft, open at the face, widening as it falls -- the same primitive as the robe */
+  {
+    const rings = [], N = 12, span = 4.35;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const y = 0.185 - t * 0.82;
+      const r = 0.087 + Math.pow(t, 0.85) * 0.078;
+      rings.push({ y, rx: r, rz: r * 1.06, oz: -0.010 - t * 0.034,
+        fold: 0.014 + 0.034 * t, foldN: 9, foldPhase: 0.6,
+        span, a0: -Math.PI / 2 - span / 2 });
+    }
+    const mane = new THREE.Mesh(loft(rings, 44), mHair);
+    headG.add(mane);
+    HUMAN.push(mane);
+  }
+  /* STRANDS: twenty-eight tubes over the mass at three lengths, longer at the sides, so the mane has
+     GRAIN instead of being a shell. */
+  for (let i = 0; i < 28; i++) {
+    const a = -Math.PI / 2 + (i / 27 - 0.5) * 4.15;
+    const frontish = Math.cos(a) < -0.30;
+    const r0 = 0.086 + (i % 3) * 0.0045;
+    const len = 0.36 + ((i * 37) % 11) / 26 + (frontish ? 0.20 : 0);
+    const p0 = new THREE.Vector3(Math.cos(a) * r0, 0.174, Math.sin(a) * r0);
+    const p1 = new THREE.Vector3(Math.cos(a) * (r0 + 0.030), 0.174 - len * 0.44,
+      Math.sin(a) * (r0 + 0.030) - 0.010);
+    const p2 = new THREE.Vector3(Math.cos(a) * (r0 + 0.016), 0.174 - len,
+      Math.sin(a) * (r0 + 0.050) - 0.020);
+    const tube = new THREE.Mesh(
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p0, p1, p2]), 10, 0.0108, 6, false), mHair);
     headG.add(tube);
     HUMAN.push(tube);
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.0105, 7, 6), mTeal);
-    tip.position.copy(p2);
-    headG.add(tip);
-    HUMAN.push(tip);
+  }
+  /* FOUR LOCKS OVER THE FACE: two at the temples, two in front of the shoulders -- the ref's hair falls
+     across the brow, and that is what stops a face reading as a mask. */
+  for (const [ax, ay, az, len, bend] of [
+    [-0.062, 0.150, 0.052, 0.20, -0.012], [0.062, 0.150, 0.050, 0.185, 0.012],
+    [-0.075, 0.120, 0.030, 0.55, -0.020], [0.075, 0.120, 0.028, 0.60, 0.020]]) {
+    const q0 = new THREE.Vector3(ax, ay, az);
+    const q1 = new THREE.Vector3(ax + bend, ay - len * 0.5, az + 0.012);
+    const q2 = new THREE.Vector3(ax + bend * 1.8, ay - len, az - 0.004);
+    const lock = new THREE.Mesh(
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3([q0, q1, q2]), 10, 0.0115, 6, false), mHair);
+    headG.add(lock);
+    HUMAN.push(lock);
   }
 }
 
@@ -1479,26 +1576,51 @@ function armChain(sx, machine) {
         { y: -0.20, rx: 0.043, rz: 0.040 }], 12, 0.5), mDarkM));
     }
   }
-  /* the HAND: a palm and four fingers, because a mitten at the end of an arm is what a toy does */
+  /* ── THE HAND: a palm with a KNUCKLE RIDGE, four fingers of three segments at four DIFFERENT lengths,
+     splayed and curling, and a thumb set across the palm. A mitten with four equal tubes is the loudest
+     toy cue at this scale -- and when a character holds a blade, the eye goes to the hand. ---------- */
   const hand = new THREE.Group();
   hand.position.y = -0.27;
   const handMat = machine ? mMetal : mSkin;
   hand.add(new THREE.Mesh(loft([
-    { y: 0.000, rx: 0.030, rz: 0.022 }, { y: -0.045, rx: 0.034, rz: 0.025 },
-    { y: -0.088, rx: 0.027, rz: 0.020 }], 12, 0.3), handMat));
+    { y: 0.000, rx: 0.030, rz: 0.021 },
+    { y: -0.020, rx: 0.034, rz: 0.024, oz: 0.002 },
+    { y: -0.055, rx: 0.036, rz: 0.023 },          /* the knuckle ridge: the palm WIDENS before fingers */
+    { y: -0.078, rx: 0.029, rz: 0.019 }], 14, 0.25), handMat));
+  const LEN = [0.052, 0.063, 0.059, 0.045];       /* index, middle, ring, little -- real hands differ */
   for (let f = 0; f < 4; f++) {
-    const fing = new THREE.Mesh(loft([
-      { y: 0, rx: 0.0075, rz: 0.0075 }, { y: -0.030, rx: 0.0068, rz: 0.0068 },
-      { y: -0.055, rx: 0.0050, rz: 0.0050 }], 8), handMat);
-    fing.position.set((f - 1.5) * 0.0155, -0.086, 0.004);
-    fing.rotation.x = 0.22 + f * 0.02;
-    hand.add(fing);
+    let seg = new THREE.Group();
+    seg.position.set((f - 1.5) * 0.0165, -0.074, 0.004 - Math.abs(f - 1.5) * 0.0025);
+    seg.rotation.z = (f - 1.5) * -0.055;          /* the fan of the fingers */
+    hand.add(seg);
+    const len = LEN[f];
+    for (let s = 0; s < 3; s++) {
+      const r = 0.0082 - s * 0.0012;
+      seg.add(new THREE.Mesh(loft([{ y: 0, rx: r, rz: r },
+        { y: -len * 0.34, rx: r * 0.88, rz: r * 0.88 }], 8), handMat));
+      const hinge = new THREE.Group();
+      hinge.position.y = -len * 0.34;
+      hinge.rotation.x = 0.24 + s * 0.20;         /* a resting hand curls: three hinges, not one */
+      seg.add(hinge);
+      seg = hinge;
+    }
   }
-  const thumb = new THREE.Mesh(loft([
-    { y: 0, rx: 0.009, rz: 0.009 }, { y: -0.042, rx: 0.0072, rz: 0.0072 }], 8), handMat);
-  thumb.position.set(sx * -0.030, -0.030, 0.012);
-  thumb.rotation.z = sx * 0.85;
-  hand.add(thumb);
+  {                                               /* the thumb: two segments, out of the palm's side */
+    let seg = new THREE.Group();
+    seg.position.set(sx * -0.029, -0.028, 0.015);
+    seg.rotation.set(0.22, 0, sx * 0.98);
+    hand.add(seg);
+    for (let s = 0; s < 2; s++) {
+      const r = 0.0098 - s * 0.0016;
+      seg.add(new THREE.Mesh(loft([{ y: 0, rx: r, rz: r },
+        { y: -0.027, rx: r * 0.9, rz: r * 0.9 }], 8), handMat));
+      const hinge = new THREE.Group();
+      hinge.position.y = -0.027;
+      hinge.rotation.x = -0.34;
+      seg.add(hinge);
+      seg = hinge;
+    }
+  }
   elbow.add(hand);
   sh.add(elbow);
   return { shoulder: sh, elbow, hand };
@@ -1747,6 +1869,27 @@ HUMAN.push(cape);
     ANGELV.push(train);
   }
 
+  /* ── THE RAGGED HEM. The ref's robe does not end in a smooth circle: it ends in a ring of torn, hanging
+     points, each with its own length and lean. Twenty-six narrow strips off the hem -- the cheapest way to
+     break the cone, and the one silhouette cue that does not need a texture. ----------------------- */
+  {
+    const gapH = 1.15, spanH = Math.PI * 2 - gapH, a0H = Math.PI / 2 + gapH / 2, NH = 26;
+    for (let i = 0; i < NH; i++) {
+      const a = a0H + (i / (NH - 1)) * spanH;
+      const len = 0.12 + ((i * 29) % 7) / 30;
+      const strip = new THREE.Mesh(loft([
+        { y: 0.000, rx: 0.030, rz: 0.007 },
+        { y: -len * 0.55, rx: 0.025, rz: 0.006 },
+        { y: -len, rx: 0.009, rz: 0.004 }], 6), WHITE2);
+      strip.position.set(Math.cos(a) * 0.589, 0.145, Math.sin(a) * 0.589 * 0.88);
+      strip.rotation.y = -a;
+      strip.rotation.x = (i % 2 ? 0.07 : -0.05);
+      strip.rotation.z = ((i * 37) % 5 - 2) * 0.02;
+      rig.add(strip);
+      ANGELV.push(strip);
+    }
+  }
+
   /* the two ribbons that stream off the shoulders (cloth, not a cape) */
   for (const sx of [-1, 1]) {
     const ribbon = new THREE.Mesh(loft([
@@ -1792,6 +1935,18 @@ const haloRings = [];
     bar.position.set(0, ay, 0);
     bar.rotation.z = rot;
     haloG.add(bar);
+  }
+  /* THE SPIKES. The ref's halo is a thin ring with sharp rays, not a smooth torus: twelve tapered lofts
+     laid along the ring's own radius, so the crown reads as LIGHT EMITTED rather than a brass hoop. */
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const spike = new THREE.Mesh(loft([
+      { y: 0.000, rx: 0.016, rz: 0.006 }, { y: 0.075, rx: 0.008, rz: 0.004 },
+      { y: 0.150, rx: 0.002, rz: 0.002 }], 6), gm);
+    spike.position.set(Math.cos(a) * 0.30, 0, Math.sin(a) * 0.30);
+    spike.rotation.z = -a - Math.PI / 2;           /* the spike points OUT along its radius */
+    spike.rotation.y = 0;
+    haloG.add(spike);
   }
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, transparent: true,
     opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffe9bb }));
@@ -2223,6 +2378,8 @@ const DIAG = /(\?|&)diag\b/.test(location.search);
 /* ?shot puts the camera on a FIXED 3/4 view of the body, airborne, so a headless run photographs the
    character instead of the room. It is the captain's own sheet turned into a test. ---------------- */
 const SHOT = /(\?|&)shot\b/.test(location.search);
+/* ?face -- the portrait camera: the head, close, so the face can be judged instead of guessed. */
+const FACE = /(\?|&)face\b/.test(location.search);
 /* ?nobody hides the player, so a headless run can DIFF two frames and get the body's exact silhouette
    as a mask -- the only honest way to judge a shape against a bright hall. ---------------------- */
 const NOBODY = /(\?|&)nobody\b/.test(location.search);
@@ -2444,28 +2601,65 @@ function frame() {
       s.side.rotation.y = (1 - fold) * 0.55;                    /* folded back along the spine */
       s.rows.forEach(function (row, ri) {
         row.rotation.z = -fl * (0.18 - ri * 0.04) * fold;
+        /* AND THE FEATHERS BEAT THEMSELVES: each vane flutters about its rest angle with its own phase,
+           lagging further down the fan. This is the difference between plumage and a picket fence. */
+        for (let fi = 0; fi < row.children.length; fi++) {
+          const f = row.children[fi];
+          f.rotation.x = (f.userData.rotX0 || 0)
+            + Math.sin(char.flap * 0.85 - f.userData.ph - ri * 0.35) * 0.055 * fold;
+        }
       });
     });
     angelWings.group.rotation.x = -0.10 - fold * 0.16;
   }
   /* the camera is a body too: it FOLLOWS with damp, it never snaps. In the air it pulls back and up,
      so the whole man is in frame with the wings spread -- a third-person view that can SEE the flight. */
-  cam.dist = THREE.MathUtils.damp(cam.dist, flying ? 9.4 : 6.4, 3.2, dt);
+  /* ── THE CAMERA, AS A RIG AND NOT AS THREE DAMPS. What made it feel buggy: the look-at target was NOT
+     damped (so the whole frame jittered against a smoothly moving eye), the eye could fall BELOW the
+     floor (-0.35 rad pitch put it 1.9 m under the marble, looking up through it), and the yaw never
+     followed the body, so "forward" drifted away from the camera whenever he turned. Fixed here:
+       · pitch clamped to [-0.08, 1.02] -- over the shoulder to over the head, never under the floor;
+       · the TARGET is damped too, at a slower rate than the eye, which is what makes a camera feel heavy;
+       · the eye is clamped to 0.55 m above the floor and 18.6 m inside the colonnade;
+       · after a second of not touching the arrows, the yaw drifts BEHIND the body -- never during a
+         manual orbit, so the captain always wins the argument. ------------------------------------ */
+  cam.dist = THREE.MathUtils.damp(cam.dist, flying ? 8.0 : 5.4, 3.2, dt);
+  if (cam.manual === undefined) cam.manual = 0;
+  if (keys.has("ArrowLeft") || keys.has("ArrowRight")) cam.manual = 0.9;
+  cam.manual = Math.max(0, cam.manual - dt);
+  if (flying && cam.speedHold === undefined) cam.speedHold = 0;
+  if (cam.manual <= 0 && char.speed > 0.6) {          /* follow, gently, only while actually moving */
+    let d = ((char.yaw - cam.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    cam.yaw += d * (1 - Math.exp(-1.6 * dt));
+  }
+  cam.pitch = Math.max(-0.08, Math.min(1.02, cam.pitch));
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const eyeH = char.pos.y + (flying ? 1.10 : 1.32);
   let wantX = char.pos.x + Math.sin(cam.yaw) * cp * cam.dist;
   let wantZ = char.pos.z + Math.cos(cam.yaw) * cp * cam.dist;
-  const wantY = char.pos.y + 1.35 + sp * cam.dist;
+  const wantY = Math.max(0.55, eyeH + sp * cam.dist);
   /* THE CAMERA IS INSIDE THE HOUSE TOO: MEASURED (shot 3, 2026-10-24) it walked into a column and filled
      the frame with marble. So it is clamped to the colonnade ring like the body is. */
   const cRad = Math.hypot(wantX, wantZ);
   if (cRad > 18.6) { wantX *= 18.6 / cRad; wantZ *= 18.6 / cRad; }
-  camera.position.x = THREE.MathUtils.damp(camera.position.x, wantX, 8, dt);
-  camera.position.y = THREE.MathUtils.damp(camera.position.y, Math.max(0.45, wantY), 8, dt);
-  camera.position.z = THREE.MathUtils.damp(camera.position.z, wantZ, 8, dt);
-  camera.lookAt(char.pos.x, char.pos.y + (flying ? 1.28 : 1.45), char.pos.z);
+  camera.position.x = THREE.MathUtils.damp(camera.position.x, wantX, 7, dt);
+  camera.position.y = THREE.MathUtils.damp(camera.position.y, wantY, 7, dt);
+  camera.position.z = THREE.MathUtils.damp(camera.position.z, wantZ, 7, dt);
+  /* the damped target: the body is what the eye chases, and it is chased SLOWLY -- that lag is the
+     weight. Aim at the chest when he is on the ground and the whole figure when he flies. */
+  if (!cam.aim) cam.aim = new THREE.Vector3(char.pos.x, char.pos.y + 1.3, char.pos.z);
+  const aimY = char.pos.y + (flying ? 1.05 : 1.28);
+  cam.aim.x = THREE.MathUtils.damp(cam.aim.x, char.pos.x, 9, dt);
+  cam.aim.y = THREE.MathUtils.damp(cam.aim.y, aimY, 9, dt);
+  cam.aim.z = THREE.MathUtils.damp(cam.aim.z, char.pos.z, 9, dt);
+  camera.lookAt(cam.aim);
   if (SHOT) {                       /* the sheet's view: three-quarters, at the body's own height */
     camera.position.set(char.pos.x + 2.75, char.pos.y + 0.42, char.pos.z + 3.20);
     camera.lookAt(char.pos.x, char.pos.y + 0.95, char.pos.z);
+  }
+  if (FACE) {                       /* the portrait: head height, a hand's width from the cheek */
+    camera.position.set(char.pos.x + 0.46, char.pos.y + 1.64, char.pos.z + 0.66);
+    camera.lookAt(char.pos.x, char.pos.y + 1.55, char.pos.z);
   }
   /* the travelling rim sits just behind the camera and a little above it: the light the eye expects but
      the room cannot give, because the room's only lights are fixed and the body turns. */
