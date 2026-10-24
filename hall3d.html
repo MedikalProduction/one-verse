@@ -36,7 +36,7 @@
     letter-spacing:.06em;z-index:6}
   #hud b{color:var(--gold);font:600 10px/1 var(--serif);letter-spacing:.34em;text-transform:uppercase;
     display:block;margin-bottom:6px}
-  #hudLaw{display:block;margin-top:9px;opacity:.62;max-width:240px;line-height:1.7}
+  #hudLaw,#hudGram{display:block;margin-top:9px;opacity:.62;max-width:250px;line-height:1.7}
   #near{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);text-align:center;
     font:13px/1.7 var(--serif);letter-spacing:.12em;color:rgba(231,223,204,.8);z-index:6;
     opacity:0;transition:opacity .8s ease}
@@ -59,7 +59,7 @@
 <body>
 <div id="veil"></div>
 <div id="enter"><div><span>The Council</span>click to enter · <b>drag</b> to look · <b>W A S D</b> to walk · <b>SHIFT</b> to run</div></div>
-<div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span></div>
+<div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span><span id="hudGram">four grammars of the corpus — <b>♬</b> sound and image · <b>△</b> geometric emblems · <b>⊗</b> planetary squares and traced seals · <b>◎</b> concentric cosmograms</span></div>
 <div id="near"></div>
 <form id="gate"><input id="body" placeholder="present a body" spellcheck="false" autocomplete="off"><button type="submit">PRESENT</button></form>
 <script type="module">
@@ -491,7 +491,18 @@ const SHELF = [
   ["03", "The macrocosm and microcosm"],
   ["02", "Planetary seals and matrices"],
   ["01", "Geometry of the alchemist"],
-  ["00", "Sammlung Alchymistischer Schriften"]
+  ["00", "Sammlung Alchymistischer Schriften"],
+  ["\u25C8", "Ripley's Wheel: the alchemical cosmic diagram"],
+  ["\u266C", "Atalanta Fugiens \u2014 source repository"],
+  ["\u25B3", "Atalanta Fugiens: geometry hidden inside emblems"],
+  ["\u25CE", "The Seals of the Seven Planets"],
+  ["\u2726", "Splendor Solis: the illustrated alchemical sequence"],
+  ["\u2697", "Rosarium Philosophorum and the alchemical process"],
+  ["\u269B", "The Chymistry of Isaac Newton"],
+  ["\u2317", "Voynich visual semantic profiles"],
+  ["\u2318", "EMLAP \u2014 Early Modern Latin Alchemical Prints"],
+  ["\u2312", "alchemical-dictionaries"],
+  ["\u2727", "the real hidden gems"]
 ];
 function plateTex(num, title) {
   const W = 768, H = 192, c = document.createElement("canvas");
@@ -531,6 +542,41 @@ SHELF.forEach(function (row, i) {
   leg.position.set(x, 0.55, z);
   scene.add(leg);
 });
+
+/* ── RIPLEY'S WHEEL: the alchemical cosmic diagram, ◎ — and it is built as what it is: CONCENTRIC
+   COSMOGRAMS, four real circles with twelve spokes, the seven planets on the outer band, every ring
+   turning against its neighbour. Nothing here is a picture of a wheel. ────────────────────────────── */
+const wheel = new THREE.Group();
+wheel.position.set(0, 16.5, -13.7);
+[[6.2, 0.045, 0.40], [9.6, 0.05, 0.24], [13.2, 0.05, 0.34], [16.8, 0.035, 0.18]]
+  .forEach(function (b, i) {
+    const t = new THREE.Mesh(new THREE.TorusGeometry(b[0], b[1], 6, 128),
+      new THREE.MeshBasicMaterial({ color: i % 2 ? GOLD : GOLD_HI, transparent: true,
+        opacity: b[2] }));
+    wheel.add(t);
+  });
+const spokes = new THREE.Group();
+for (let i = 0; i < 12; i++) {
+  const a = (i / 12) * Math.PI * 2;
+  const s = new THREE.Mesh(new THREE.BoxGeometry(0.035, 10.6, 0.02),
+    new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0.18 }));
+  s.position.set(Math.sin(a) * 5.3, Math.cos(a) * 5.3, 0);
+  s.rotation.z = -a;
+  spokes.add(s);
+}
+wheel.add(spokes);
+const wheelGlyphs = new THREE.Group();
+PLANETARY.forEach(function (ch, i) {
+  const a = (i / 7) * Math.PI * 2;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6),
+    new THREE.MeshBasicMaterial({ map: glyphTex(ch, "#f0c667"), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.85 }));
+  m.position.set(Math.cos(a) * 13.2, Math.sin(a) * 13.2, 0.06);
+  wheelGlyphs.add(m);
+});
+wheel.add(wheelGlyphs);
+scene.add(wheel);
+
 
 
 
@@ -648,6 +694,9 @@ function frame() {
   sealRing.rotation.y = -t * 0.01;
   clouds.rotation.y = t * 0.008;
   coreStar.scale.setScalar(9 + Math.sin(t * 1.7) * 0.6);
+  wheel.rotation.z = t * 0.018;
+  spokes.rotation.z = -t * 0.032;
+  wheelGlyphs.rotation.z = t * 0.046;
 
   /* the room tells you what you are standing next to */
   if (performance.now() > pinned) {
