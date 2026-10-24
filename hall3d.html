@@ -110,6 +110,12 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.84;
+/* ── SHADOWS. MEASURED 2026-10-24: `grep shadowMap|castShadow|receiveShadow` over this file returned
+   ZERO hits -- there were no shadows in the hall at all, so the angel FLOATED: no contact, no grounding,
+   no scale. One key light casts, the floor receives, and every opaque mesh does both. Additive/transparent
+   things (sprites, shafts, glyphs) are excluded by test, because a shadow of a glow is a stain. ------ */
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -168,6 +174,13 @@ composer.addPass(new OutputPass());
 const shaftLight = new THREE.SpotLight(0xfff4dc, 2400, 90, 0.34, 0.55, 1.5);
 shaftLight.position.set(0, 32, 1);
 shaftLight.target.position.set(0, 0, 0);
+shaftLight.castShadow = true;                       /* the one light that draws the room's shadows */
+shaftLight.shadow.mapSize.set(2048, 2048);
+shaftLight.shadow.camera.near = 2;
+shaftLight.shadow.camera.far = 60;
+shaftLight.shadow.bias = -0.0006;
+shaftLight.shadow.normalBias = 0.02;
+shaftLight.shadow.radius = 3;
 scene.add(shaftLight, shaftLight.target);
 const rimGold = new THREE.PointLight(0xffcf87, 300, 66, 2.0);
 rimGold.position.set(0, 7.5, 0);
@@ -460,6 +473,30 @@ const cubePlane = new THREE.Mesh(new THREE.PlaneGeometry(13.5, 13.5),
     blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffe3ac }));
 cubePlane.position.set(0, 11.6, -16.2);
 scene.add(cubePlane);
+
+/* ── THE COLLIDERS. Until now the hall was a painting you could walk through: the only limit was a
+   radius clamp, so the body went THROUGH the table, the columns and the seventy-two seats. These are the
+   real obstacles, as analytic circles -- cheap enough to test every frame, exact enough that a shoulder
+   stops at marble. The same list feeds the CAMERA's occlusion test, so it cannot clip through a column
+   while it follows him. ------------------------------------------------------------------------- */
+const OBSTACLES = [];
+for (let i = 0; i < 12; i++) {
+  const a = (i / 12) * Math.PI * 2;
+  OBSTACLES.push({ x: Math.cos(a) * 21, z: Math.sin(a) * 21, r: 1.25, h: 30 });  /* the columns */
+}
+OBSTACLES.push({ x: 0, z: 0, r: 5.05, h: 1.10 });                                 /* the table */
+for (let i = 0; i < 72; i++) {                                                    /* the seventy-two */
+  const a = (i / 72) * Math.PI * 2;
+  OBSTACLES.push({ x: Math.cos(a) * 12.6, z: Math.sin(a) * 12.6, r: 0.46, h: 0.60 });
+}
+/* a body (or a camera) is pushed OUT of a circle, never through it */
+function pushOutOfCircles(p, pad, y) {
+  for (const o of OBSTACLES) {
+    if (y !== undefined && y > o.h) continue;
+    const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), min = o.r + pad;
+    if (d < min && d > 1e-5) { p.x = o.x + (dx / d) * min; p.z = o.z + (dz / d) * min; }
+  }
+}
 
 /* ── THE LINTEL: the captain's plate, stood up. Above each of the twelve columns, a panel of stacked
    signs between hairlines -- the plate's own structure, one panel per column, facing INWARD so the ring
@@ -1317,9 +1354,39 @@ const mRedB   = new THREE.MeshStandardMaterial({ color: ACE_C.red, emissive: ACE
 const mHair   = new THREE.MeshPhysicalMaterial({ color: 0x2c2a27, roughness: 0.78, sheen: 0.5 });
 const mTeal   = new THREE.MeshStandardMaterial({ color: 0x2f8f92, emissive: 0x1d5f63,
   emissiveIntensity: 1.1, roughness: 0.7 });
+/* ── CLOTH HAS A SURFACE, NOT JUST A COLOUR. A normal map is the cheapest realism there is: at 8 repeats
+   the weave catches the key light and the robe stops looking like painted plastic. It is generated here
+   -- a two-axis sine crossed with an over-under weave -- so it is still ONE file and no download. ---- */
+function weaveNormal(S) {
+  const c = document.createElement("canvas");
+  c.width = c.height = S;
+  const k = c.getContext("2d");
+  const img = k.createImageData(S, S);
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const i = (y * S + x) * 4;
+      const over = ((Math.floor(x / 4) + Math.floor(y / 4)) % 2) ? 1 : -1;
+      const nx = Math.sin(x * 1.9) * 0.42 + over * 0.30;
+      const ny = Math.cos(y * 1.9) * 0.42 + over * 0.30;
+      img.data[i] = 128 + nx * 58;
+      img.data[i + 1] = 128 + ny * 58;
+      img.data[i + 2] = 255;
+      img.data[i + 3] = 255;
+    }
+  }
+  k.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(7, 7);
+  t.anisotropy = 2;
+  return t;
+}
+const WEAVE = weaveNormal(128);
 const WHITE   = clothMat(0xcfc9ba, { roughness: 0.95, sheen: 0.55, ribs: 26, gild: 0.10,
+  normalMap: WEAVE, normalScale: new THREE.Vector2(0.32, 0.32),
   sheenColor: new THREE.Color(0xf2e3bd) });
-const WHITE2  = clothMat(0xb9b3a5, { roughness: 0.93, sheen: 0.45, ribs: 18, gild: 0.08 });
+const WHITE2  = clothMat(0xb9b3a5, { roughness: 0.93, sheen: 0.45, ribs: 18, gild: 0.08,
+  normalMap: WEAVE, normalScale: new THREE.Vector2(0.42, 0.42) });
 /* the feathers carry their OWN light. MEASURED (shot 9, 2026-10-24): lit only by the room, a wing behind
    the body in a backlit hall renders DARK and reads as a plume of smoke -- so the vane gets a warm
    emissive floor. A feather is thin enough that real light passes through it; this is that, cheaply. */
@@ -1529,6 +1596,36 @@ neck.add(headG);
       new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p0, p1, p2]), 10, 0.0108, 6, false), mHair);
     hairG.add(tube);
     HUMAN.push(tube);
+  }
+  /* ── ALPHA-CARD HAIR. Geometry strands are honest and they cannot reach density: a real mane is tens of
+     thousands of hairs. The AAA trick is CARDS -- a handful of textured quads with soft edges -- and the
+     texture is drawn here (90 strokes on a canvas), so it is still one file and no download. Fourteen
+     cards around the skull, inside the same pivot as the mass, so they LAG with it. ---------------- */
+  {
+    const S = 512, c = document.createElement("canvas");
+    c.width = 256; c.height = S;
+    const k = c.getContext("2d");
+    for (let i = 0; i < 90; i++) {
+      const x0 = Math.random() * 256, len = S * (0.55 + Math.random() * 0.45);
+      k.strokeStyle = "rgba(10,10,14," + (0.30 + Math.random() * 0.6) + ")";
+      k.lineWidth = 0.6 + Math.random() * 2.2;
+      k.beginPath();
+      k.moveTo(x0, 0);
+      for (let y = 1; y <= 10; y++) k.lineTo(x0 + Math.sin(y * 0.8 + i) * 6, (len / 10) * y);
+      k.stroke();
+    }
+    const hairTex = new THREE.CanvasTexture(c);
+    for (let i = 0; i < 14; i++) {
+      const a = -Math.PI / 2 + (i / 13 - 0.5) * 4.1;
+      const card = new THREE.Mesh(new THREE.PlaneGeometry(0.135, 0.62),
+        new THREE.MeshStandardMaterial({ map: hairTex, transparent: true, alphaTest: 0.30,
+          side: THREE.DoubleSide, color: 0x111118, roughness: 0.52, metalness: 0.04 }));
+      card.position.set(Math.cos(a) * 0.085, -0.145, Math.sin(a) * 0.085);
+      card.rotation.y = -a + Math.PI / 2;
+      card.rotation.x = 0.05 + (i % 3) * 0.02;
+      hairG.add(card);
+      HUMAN.push(card);
+    }
   }
   /* FOUR LOCKS OVER THE FACE: two at the temples, two in front of the shoulders -- the ref's hair falls
      across the brow, and that is what stops a face reading as a mask. */
@@ -1909,6 +2006,16 @@ HUMAN.push(cape);
     ANGELV.push(ribbon);
   }
 }
+/* ── THE CONTACT SHADOW. A cast shadow is necessary and not sufficient: the eye reads CONTACT from a soft
+   dark pool directly under the feet. Without it a figure stands on nothing, however good the shadow map
+   is -- and he flies, so it has to fade and spread with altitude. ---------------------------------- */
+const contact = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7),
+  new THREE.MeshBasicMaterial({ map: softTex, color: 0x000000, transparent: true, opacity: 0.5,
+    depthWrite: false }));
+contact.rotation.x = -Math.PI / 2;
+contact.position.y = 0.022;
+scene.add(contact);
+
 /* THE WINGS — rooted LOWER than the shoulders and BEHIND the spine, so the head clears them. MEASURED
    (shot 8): at 1.62 the primaries swallowed the head and read as leaves; at 1.30 with the root 0.10
    below the shoulder the face is visible from a 3/4 view. ---------------------------------------- */
@@ -2406,7 +2513,30 @@ if (SHOT) {
   setForm(form);
 }
 if (NOBODY) player.visible = false;
+/* ── SOUND, WITHOUT A FILE. Half of "feel" is audio and this page had NONE. One WebAudio oscillator,
+   created on the first gesture (a browser refuses audio before one), makes the footstep and the landing
+   -- a shape of sound, not a sample, so nothing is downloaded and nothing is licensed. -------------- */
+let actx = null;
+function thud(gain, hz) {
+  if (!actx) return;
+  try {
+    const t0 = actx.currentTime;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(hz, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(38, hz * 0.55), t0 + 0.12);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0 + 0.2);
+  } catch (e) { /* audio is a luxury, never a failure */ }
+}
+
 canvas.addEventListener("pointerdown", e => {
+  if (!actx) {
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) { actx = null; }
+  }
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   dragging = true; px = e.clientX; py = e.clientY;
   canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
@@ -2557,6 +2687,10 @@ function frame() {
   char.pos.z += char.vel.z * dt;
   const rad = Math.hypot(char.pos.x, char.pos.z);    /* THE WALL IS THE COLUMNS */
   if (rad > 26) { char.pos.x *= 26 / rad; char.pos.z *= 26 / rad; }
+  /* …AND THE FURNITURE IS FURNITURE: the table, the twelve columns and the seventy-two seats are solid.
+     `pushOutOfCircles` only applies below each obstacle's height, so the angel flies OVER the table and
+     lands BESIDE it, which is the difference between a hall and a wallpaper. ---------------------- */
+  pushOutOfCircles(char.pos, 0.42, char.pos.y);
   /* THE VERTICAL: a target, a damped velocity, and a FLOOR. Never a teleport.
      SPACE is UP, SHIFT is DOWN (the captain's remap). C and Ctrl stay as a second sink, because a hand
      already on them should not have to learn a new key, and the ground is the only other place to go. */
@@ -2592,6 +2726,14 @@ function frame() {
   char.pitch = THREE.MathUtils.damp(char.pitch, flying ? -Math.min(0.5, char.vy * 0.10) : 0, 5, dt);
   player.position.copy(char.pos);
   player.rotation.set(char.pitch, char.yaw, char.bank);
+  /* the contact pool follows him on the floor and dies as he climbs -- grounding, in four lines */
+  {
+    const alt = Math.max(0, char.pos.y);
+    const k = Math.max(0, 1 - alt / 5.5);
+    contact.position.set(char.pos.x, 0.022, char.pos.z);
+    contact.material.opacity = 0.58 * k * k;
+    contact.scale.setScalar(1 + alt * 0.22);
+  }
   /* ── THE BODY: ONE skeleton, TWO gaits, BLENDED. The stiffness was never the detail -- it was the
      `if (flying) … else …` switch below: the pose TELEPORTED between two states with no time between
      them, and no joint in the body had a job it did continuously. Now:
@@ -2620,7 +2762,40 @@ function frame() {
     legLc.boot.rotation.x = (-0.30 * sw + 0.22 * Math.max(0, sw2)) * amp * G;
     legRc.boot.rotation.x = (0.30 * sw + 0.22 * Math.max(0, -sw2)) * amp * G;
   }
-  /* the pelvis: yaw with the stride, drop toward the swinging leg -- the thing that makes a walk a walk */
+  /* ── FOOT PLANT. A walk with no contact is a treadmill: the boots are allowed to rotate freely, so the
+     stance foot sank into the marble and the whole gait slid. Two correction steps per leg and the boot
+     is never under y = 0 -- cheap IK-lite, and it is what makes the steps look PLANTED. -------------- */
+  for (const lc of [legLc, legRc]) {
+    if (!lc.boot) continue;
+    for (let it = 0; it < 2; it++) {
+      lc.boot.updateWorldMatrix(true, false);
+      lc.boot.getWorldPosition(char._fv || (char._fv = new THREE.Vector3()));
+      const fy = char._fv.y - char.pos.y;
+      if (fy >= 0.004) break;
+      lc.knee.rotation.x = Math.min(1.65, lc.knee.rotation.x - fy * 2.4);
+    }
+  }
+  /* ── THE LANDING. A body that arrives without weight is a cursor. On touchdown the rig SQUASHES for a
+     tenth of a second, widens slightly, and a low thud is heard; the timer, not a tween, owns it. ---- */
+  if (char.pos.y <= 0.002 && (char._prevAlt || 0) > 0.35 && (char.vy || 0) < -1.0) {
+    char.land = 1;
+    thud(0.10, 92);
+  }
+  char._prevAlt = char.pos.y;
+  char.land = Math.max(0, (char.land || 0) - dt * 3.6);
+  {
+    const s = char.land * char.land * 0.11;          /* ease-out: the squash is gone in 280 ms */
+    rig.scale.set(1 + s * 0.55, 1 - s, 1 + s * 0.55);
+  }
+  /* ── FOOTSTEPS. The phase already knows when a foot lands; it only had no sound. One short triangle
+     ping per half-cycle on the ground, quieter at a walk, and nothing while flying. No asset, no file. */
+  {
+    const stepIdx = Math.floor(char.phase / Math.PI);
+    if (stepIdx !== char._stepIdx) {
+      char._stepIdx = stepIdx;
+      if (G > 0.5 && amp > 0.12) thud(0.035 + amp * 0.05, 140 - amp * 20);
+    }
+  }
   rig.rotation.y = sw * 0.075 * amp * G;
   rig.rotation.z = (-Math.cos(char.phase) * 0.022 * amp + idle * 0.010 * (1 - amp)) * G;
   /* the chest counters the pelvis, and both breathe */
@@ -2736,6 +2911,30 @@ function frame() {
   const cRad = Math.hypot(wantX, wantZ);
   const camWall = Math.max(18.6, Math.min(26.0, Math.hypot(char.pos.x, char.pos.z) + 3.2));
   if (cRad > camWall) { wantX *= camWall / cRad; wantZ *= camWall / cRad; }
+  /* ── THE CAMERA CANNOT SEE THROUGH MARBLE. Before this it could sit inside a column and fill the frame
+     with stone (MEASURED: the old comment cites "shot 3" doing exactly that). Now the segment from the
+     aim point to the wanted eye is walked in twelve steps; the first step that is inside an obstacle
+     pulls the eye back to just before it. Analytic circles, so it costs twelve distance checks. ---- */
+  {
+    const ax = cam.aim ? cam.aim.x : char.pos.x;
+    const az = cam.aim ? cam.aim.z : char.pos.z;
+    const ay = cam.aim ? cam.aim.y : char.pos.y + 1.3;
+    let keep = 1;
+    for (let s = 2; s <= 12; s++) {
+      const t = s / 12;
+      const sx = ax + (wantX - ax) * t, sy = ay + (wantY - ay) * t, sz = az + (wantZ - az) * t;
+      let hit = false;
+      for (const o of OBSTACLES) {
+        if (sy > o.h) continue;
+        if (Math.hypot(sx - o.x, sz - o.z) < o.r + 0.18) { hit = true; break; }
+      }
+      if (hit) { keep = (s - 1) / 12; break; }
+    }
+    if (keep < 1) {
+      wantX = ax + (wantX - ax) * keep;
+      wantZ = az + (wantZ - az) * keep;
+    }
+  }
   camera.position.x = THREE.MathUtils.damp(camera.position.x, wantX, 7, dt);
   camera.position.y = THREE.MathUtils.damp(camera.position.y, wantY, 7, dt);
   camera.position.z = THREE.MathUtils.damp(camera.position.z, wantZ, 7, dt);
