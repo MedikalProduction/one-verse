@@ -938,6 +938,7 @@ function wingPair(len, mat, rootX) {
     { n: 13, len: 1.00, w: 0.058, fan: -0.95, spread: 0.92, lift: 0.00, curl: 0.20 },
     { n: 11, len: 0.74, w: 0.070, fan: -0.80, spread: 0.74, lift: 0.07, curl: 0.15 },
     { n: 10, len: 0.46, w: 0.082, fan: -0.66, spread: 0.58, lift: 0.14, curl: 0.10 },
+    { n: 9,  len: 0.28, w: 0.090, fan: -0.52, spread: 0.44, lift: 0.21, curl: 0.07 },
   ];
   for (const sgn of [-1, 1]) {
     const side = new THREE.Group();
@@ -1036,10 +1037,16 @@ console.log("[council] ark angels bound: .:aRk:. .:nGl:. .:aGl:. — 3 rows of l
    a cone. uTime is shared, so one clock drives every garment in the room. ------------------------- */
 const U = { uTime: { value: 0 }, uWind: { value: 0 } };
 function clothMat(color, opts) {
-  const m = new THREE.MeshPhysicalMaterial(Object.assign({
+  const o = Object.assign({
     color, roughness: 0.94, metalness: 0.0, sheen: 0.85, sheenRoughness: 0.72,
     sheenColor: new THREE.Color(0xffffff), side: THREE.DoubleSide,
-  }, opts || {}));
+  }, opts || {});
+  /* GILDING: a robe with no ornament is a bathrobe. `ribs` draws fine gold ribs down the cloth and a
+     band at the hem, from the loft's OWN uv (u around the body, v from the first ring to the last), so
+     the ornament follows the garment instead of being painted on it. ---------------------------- */
+  const ribs = o.ribs || 0, gild = o.gild || 0;
+  delete o.ribs; delete o.gild;
+  const m = new THREE.MeshPhysicalMaterial(o);
   m.onBeforeCompile = function (sh) {
     sh.uniforms.uTime = U.uTime;
     sh.uniforms.uWind = U.uWind;
@@ -1050,10 +1057,21 @@ function clothMat(color, opts) {
         "         + sin(transformed.z * 3.7 - uTime * 2.1) * 0.020;\n" +
         "transformed.x += wx * hang * (0.35 + uWind);\n" +
         "transformed.z += cos(transformed.y * 4.1 + uTime * 1.85) * 0.026 * hang * (0.35 + uWind);");
-    sh.fragmentShader = sh.fragmentShader
+    let frag = sh.fragmentShader
       .replace("#include <dithering_fragment>", "#include <dithering_fragment>\n" +
         "float rim = pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 2.6);\n" +
         "gl_FragColor.rgb += vec3(0.46, 0.66, 0.92) * rim * 0.18;");
+    if (ribs > 0) {
+      frag = frag.replace("#include <dithering_fragment>", "#include <dithering_fragment>\n" +
+        "float rib = smoothstep(0.470, 0.500, abs(fract(vUv.x * " + ribs.toFixed(1) + ") - 0.5));\n" +
+        "float hemb = smoothstep(0.905, 0.935, vUv.y) * smoothstep(1.000, 0.975, vUv.y);\n" +
+        "float collar = smoothstep(0.045, 0.018, vUv.y);\n" +
+        "gl_FragColor.rgb += vec3(1.00, 0.80, 0.40) * (rib * 0.45 + hemb * 1.05 + collar * 0.9) * "
+        + gild.toFixed(2) + ";");
+      sh.fragmentShader = "#define USE_UV\n" + sh.fragmentShader;
+      sh.vertexShader = "#define USE_UV\n" + sh.vertexShader;
+    }
+    sh.fragmentShader = "#define USE_UV\n" + frag;
   };
   return m;
 }
@@ -1076,8 +1094,9 @@ const mRedB   = new THREE.MeshStandardMaterial({ color: ACE_C.red, emissive: ACE
 const mHair   = new THREE.MeshPhysicalMaterial({ color: 0x2c2a27, roughness: 0.78, sheen: 0.5 });
 const mTeal   = new THREE.MeshStandardMaterial({ color: 0x2f8f92, emissive: 0x1d5f63,
   emissiveIntensity: 1.1, roughness: 0.7 });
-const WHITE   = clothMat(0xcfc9ba, { roughness: 0.95, sheen: 0.55, sheenColor: new THREE.Color(0xf2e3bd) });
-const WHITE2  = clothMat(0xb9b3a5, { roughness: 0.93, sheen: 0.45 });
+const WHITE   = clothMat(0xcfc9ba, { roughness: 0.95, sheen: 0.55, ribs: 26, gild: 0.10,
+  sheenColor: new THREE.Color(0xf2e3bd) });
+const WHITE2  = clothMat(0xb9b3a5, { roughness: 0.93, sheen: 0.45, ribs: 18, gild: 0.08 });
 /* the feathers carry their OWN light. MEASURED (shot 9, 2026-10-24): lit only by the room, a wing behind
    the body in a backlit hall renders DARK and reads as a plume of smoke -- so the vane gets a warm
    emissive floor. A feather is thin enough that real light passes through it; this is that, cheaply. */
@@ -1383,6 +1402,21 @@ HUMAN.push(cape);
   rig.add(sk);
   ANGELV.push(sk);
 
+  /* a SECOND layer at the hem: cloth falls in layers, and the outer one is what catches the light */
+  const hemLayer = new THREE.Mesh(loft((function () {
+    const rings = [], N = 10;
+    const gap = 1.15;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, y = HIP - 0.02 - t * (HIP - 0.12);
+      const flare = 0.175 + Math.pow(t, 1.35) * 0.40;
+      rings.push({ y, rx: flare, rz: flare * 0.88,
+        span: Math.PI * 2 - gap, a0: Math.PI / 2 + gap / 2 });
+    }
+    return rings;
+  })(), 36), WHITE2);
+  rig.add(hemLayer);
+  ANGELV.push(hemLayer);
+
   /* the under-robe behind the split: one narrow panel, so the gap is a fold and not a hole */
   const panel = new THREE.Mesh(loft((function () {
     const rings = [], N = 12;
@@ -1474,6 +1508,19 @@ const haloRings = [];
     opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffe9bb }));
   glow.scale.set(1.9, 1.9, 1);
   haloG.add(glow);
+  /* THE TWELVE ROOT RUNES stand IN the halo, so the codex is on the head as well as under the feet:
+     a law worn, not only a law drawn. ------------------------------------------------------------ */
+  const RUNE_CH = ["\u27D0", "\u25B3", "\u25BD", "\u25CB", "\u25C9", "\u223F",
+                   "\u2318", "\u2727", "\u2299", "\u2295", "\u2301", "\u22A0"];
+  RUNE_CH.forEach(function (ch, i) {
+    const a = (i / RUNE_CH.length) * Math.PI * 2;
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.078, 0.078),
+      new THREE.MeshBasicMaterial({ map: glyphTex(ch, "#ffe7b0"), transparent: true, opacity: 0.9,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    plate.position.set(Math.cos(a) * 0.365, 0, Math.sin(a) * 0.365);
+    plate.rotation.y = -a + Math.PI / 2;          /* each plate faces OUT, along its own radius */
+    haloG.add(plate);
+  });
 }
 
 /* ── LUX — ".:wOw:." — THE REVELATION (the captain, 2026-10-24: "turn my char and the whole room into
