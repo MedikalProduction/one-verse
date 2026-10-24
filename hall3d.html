@@ -54,6 +54,15 @@
     border:0;color:#1a1408;padding:9px 18px;font:600 11px/1 var(--serif);letter-spacing:.24em;
     text-transform:uppercase;cursor:pointer;border-radius:2px;
     box-shadow:0 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.45)}
+  /* THE FLY CONTROL lives on screen, so a phone can take wing: a keyboard is not a body. */
+  #cmd{position:fixed;right:26px;bottom:30px;display:flex;flex-direction:column;gap:9px;z-index:7}
+  #cmd button{font:600 10px/1 var(--serif);letter-spacing:.22em;text-transform:uppercase;
+    padding:12px 18px;color:#1a1408;border:0;border-radius:2px;cursor:pointer;opacity:.94;
+    background:linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, #8a6f1c);
+    box-shadow:0 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.45)}
+  #cmd button.on{background:linear-gradient(180deg,#fff6d8,#f0d894 60%,#c9a227);
+    box-shadow:0 0 26px rgba(255,214,130,.6), inset 0 1px 0 #fff}
+  @media (max-width:640px){ #cmd{right:14px;bottom:96px} #cmd button{padding:14px 16px;font-size:11px} }
 </style>
 </head>
 <body>
@@ -61,6 +70,7 @@
 <div id="enter"><div><span>The Council</span><b>you are the ark angel</b> · click to enter<br><b>W A S D</b> move · <b>SPACE</b> rise · <b>C</b> sink · <b>SHIFT</b> boost · <b>V</b> wings · <b>J</b> cut · <b>R</b> replay a cut · <b>G</b> re-forge</div></div>
 <div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span><span id="hudGram">four grammars of the corpus — <b>♬</b> sound and image · <b>△</b> geometric emblems · <b>⊗</b> planetary squares and traced seals · <b>◎</b> concentric cosmograms</span></div>
 <div id="near"></div>
+<div id="cmd"><button id="flyBtn" type="button">take wing</button><button id="luxBtn" type="button">reveal</button></div>
 <form id="gate"><input id="body" placeholder="present a body" spellcheck="false" autocomplete="off"><button type="submit">PRESENT</button></form>
 <script type="importmap">
 { "imports": {
@@ -1466,6 +1476,119 @@ const haloRings = [];
   haloG.add(glow);
 }
 
+/* ── LUX — ".:wOw:." — THE REVELATION (the captain, 2026-10-24: "turn my char and the whole room into
+   something truly special and memorable"). His ARK-ALK codex is the source: twelve ROOT RUNES and seven
+   LAWS, stored verbatim in the Matrix bus (agent `captain`, kind `codex`). Pressed E -- or arriving in
+   the air -- the hall ANSWERS: the rune circle opens under him, the twelve root runes stand on it, the
+   72 spirits of the Lesser Key are engraved in a ring on the floor, embers rise, three shafts lean in
+   from the oculus, and the halo, the seam and the wings brighten together. ---------------------- */
+const LUX_RUNES = [
+  ["\u27D0", "ARK"], ["\u25B3", "PYRA"], ["\u25BD", "NERA"], ["\u25CB", "ORA"],
+  ["\u25C9", "AXIOM"], ["\u223F", "THAL"], ["\u2318", "SEAM"], ["\u2727", "LUX"],
+  ["\u2299", "SOLVE"], ["\u2295", "COAG"], ["\u2301", "MNEME"], ["\u22A0", "PRICE"],
+];
+const lux = { on: false, level: 0 };
+const runeRing = new THREE.Group();
+runeRing.position.y = 0.03;
+runeRing.visible = false;
+player.add(runeRing);
+const runeMats = [];
+LUX_RUNES.forEach(function (r, i) {
+  const a = (i / LUX_RUNES.length) * Math.PI * 2 - Math.PI / 2;
+  const m = new THREE.Mesh(new THREE.CircleGeometry(0.17, 32),
+    new THREE.MeshBasicMaterial({ map: glyphTex(r[0], "#ffd98a"), transparent: true,
+      opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  m.rotation.z = -a;
+  m.position.set(Math.cos(a) * 1.42, 0, Math.sin(a) * 1.42);
+  runeRing.add(m);
+  runeMats.push(m.material);
+});
+const luxRingMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0,
+  blending: THREE.AdditiveBlending, depthWrite: false });
+const luxRing = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.012, 6, 96), luxRingMat);
+luxRing.rotation.x = Math.PI / 2;
+luxRing.position.y = 0.035;
+runeRing.add(luxRing);
+
+/* THE 72 SPIRITS, ENGRAVED. The captain pasted the Lesser Key's list; it becomes a ring of names on the
+   floor -- the council's own roll call, drawn ONCE on a canvas and read by the light. ------------ */
+const SPIRITS = ["Bael", "Agares", "Vassago", "Samigina", "Marbas", "Valefor", "Amon", "Barbatos",
+  "Paimon", "Buer", "Gusion", "Sitri", "Beleth", "Leraie", "Eligos", "Zepar", "Botis", "Bathin",
+  "Sallos", "Purson", "Marax", "Ipos", "Aim", "Naberius", "Glasya-Labolas", "Bune", "Ronove",
+  "Berith", "Forneus", "Foras", "Asmoday", "Gaap", "Furfur", "Marchosias", "Stolas", "Phenex",
+  "Halphas", "Malphas", "Raum", "Focalor", "Vepar", "Sabnock", "Shax", "Vine", "Bifrons", "Vual",
+  "Haagenti", "Crocell", "Furcas", "Balam", "Alloces", "Camio", "Murmur", "Orobas", "Gremory",
+  "Ose", "Amy", "Orias", "Vapula", "Zagan", "Valac", "Andras", "Haures", "Andrealphus", "Cimeies",
+  "Amdusias", "Belial", "Decarabia", "Seere", "Dantalion", "Andromalius"];
+function namesTexture(names) {
+  const S = 2048, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const k = c.getContext("2d");
+  k.translate(S / 2, S / 2);
+  k.textAlign = "center";
+  k.textBaseline = "middle";
+  k.fillStyle = "rgba(240,206,130,0.92)";
+  k.shadowColor = "rgba(255,200,110,0.85)";
+  k.shadowBlur = 10;
+  const R = S * 0.415, step = (Math.PI * 2) / names.length;
+  names.forEach(function (n, i) {
+    k.save();
+    k.rotate(i * step);                          /* each name reads along the ring */
+    k.font = "600 " + Math.round(S / 105) + "px Georgia, serif";
+    k.fillText(n, 0, -R);
+    k.restore();
+  });
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+const namesMat = new THREE.MeshBasicMaterial({ map: namesTexture(SPIRITS), transparent: true,
+  opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+const namesRing = new THREE.Mesh(new THREE.CircleGeometry(24.5, 96), namesMat);
+namesRing.rotation.x = -Math.PI / 2;
+namesRing.position.y = 0.055;
+scene.add(namesRing);
+
+/* EMBERS: points that rise, so the AIR is part of the moment and not a backdrop. */
+const EMBER_N = 700;
+const emberPos = new Float32Array(EMBER_N * 3);
+const emberVel = new Float32Array(EMBER_N);
+for (let i = 0; i < EMBER_N; i++) {
+  const a = Math.random() * Math.PI * 2, r = 2 + Math.random() * 22;
+  emberPos[i * 3] = Math.cos(a) * r;
+  emberPos[i * 3 + 1] = Math.random() * 16;
+  emberPos[i * 3 + 2] = Math.sin(a) * r;
+  emberVel[i] = 0.25 + Math.random() * 0.85;
+}
+const emberGeo = new THREE.BufferGeometry();
+emberGeo.setAttribute("position", new THREE.Float32BufferAttribute(emberPos, 3));
+const emberMat = new THREE.PointsMaterial({ map: softTex, color: 0xffd9a0, size: 0.16,
+  transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+const embers = new THREE.Points(emberGeo, emberMat);
+embers.frustumCulled = false;
+scene.add(embers);
+
+/* THREE SHAFTS lean in from the oculus: the light gets a BODY, not only a colour. */
+const shaftMats = [];
+for (const s of [[0, 0, 0, 4.4], [-7, -5, 0.42, 2.6], [7, -5, -0.42, 2.6]]) {
+  const m = new THREE.Mesh(new THREE.ConeGeometry(s[3], 26, 24, 1, true),
+    new THREE.MeshBasicMaterial({ map: softTex, color: 0xffe6b8, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  m.position.set(s[0], 13, s[1]);
+  m.rotation.z = s[2];
+  m.rotation.x = Math.PI;                        /* the cone opens DOWNWARD from the ceiling */
+  scene.add(m);
+  shaftMats.push(m.material);
+}
+/* the AURA: a thin shell of light that follows the body -- a halo is a ring, an aura is a presence */
+const auraShell = new THREE.Mesh(new THREE.SphereGeometry(1.15, 24, 18),
+  new THREE.MeshBasicMaterial({ color: 0xffe2ac, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide }));
+auraShell.position.y = 1.0;
+auraShell.scale.set(0.85, 1.15, 0.85);
+player.add(auraShell);
+
 /* ── THE TWO FORMS ────────────────────────────────────────────────────────────────────────────────
    ONE body, two skins: the same joints drive both, so switching never teleports, never rebuilds, and
    can never desynchronise. `?form=foot` starts on foot; /council starts as the ARK ANGEL (the
@@ -1666,6 +1789,32 @@ const canvas = renderer.domElement;
 const enterEl = document.getElementById("enter");
 const nearEl = document.getElementById("near");
 const hudRows = document.getElementById("hudRows");
+/* THE FLY CONTROL: a real button, because a keyboard is not a body. TAKE WING also lights the
+   revelation -- the captain asked for both, and they belong together. ------------------------- */
+const flyBtn = document.getElementById("flyBtn");
+const luxBtn = document.getElementById("luxBtn");
+function syncCmd() {
+  if (!flyBtn) return;
+  flyBtn.textContent = char.fly ? "land" : "take wing";
+  flyBtn.classList.toggle("on", !!char.fly);
+  luxBtn.classList.toggle("on", !!lux.on);
+  luxBtn.textContent = lux.on ? "revelation · on" : "reveal";
+}
+function takeWing() {
+  if (form !== "angel") setForm("angel");
+  char.fly = !char.fly;
+  if (char.fly) {
+    char.vy = Math.max(char.vy, 3.0);      /* the first beat of the wings, not a teleport */
+    lux.on = true;                          /* arriving in the air IS the revelation */
+  }
+  syncCmd();
+}
+if (flyBtn) {
+  flyBtn.addEventListener("click", function (e) { e.preventDefault(); takeWing(); });
+  flyBtn.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+  luxBtn.addEventListener("click", function (e) { e.preventDefault(); lux.on = !lux.on; syncCmd(); });
+  luxBtn.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+}
 
 enterEl.addEventListener("click", () => {
   enterEl.classList.add("gone");
@@ -1692,10 +1841,14 @@ if (AUTO) {
 if (SHOT) {
   char.pos.set(0, 3.4, 6.4);
   char.fly = form === "angel";
+  lux.on = !/lux=0/.test(location.search);   /* the sheet is taken IN the revelation: that is the look */
   setForm(form);
 }
 if (NOBODY) player.visible = false;
-canvas.addEventListener("pointerdown", e => { dragging = true; px = e.clientX; py = e.clientY; });
+canvas.addEventListener("pointerdown", e => {
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  dragging = true; px = e.clientX; py = e.clientY;
+});
 addEventListener("pointerup", () => { dragging = false; });
 addEventListener("pointermove", e => {
   if (!dragging) return;
@@ -1711,8 +1864,11 @@ addEventListener("keydown", e => {
   keys.add(e.code);
   if (e.code === "Space") e.preventDefault();
   if (!first) return;
-  if (e.code === "Space" && form === "angel") char.fly = true;
-  if (e.code === "KeyV") setForm(form === "angel" ? "foot" : "angel");
+  if (e.code === "Space") {
+    if (form === "angel") { if (!char.fly) takeWing(); else char.vy = Math.max(char.vy, 2.6); }
+  }
+  if (e.code === "KeyE") { lux.on = !lux.on; syncCmd(); }
+  if (e.code === "KeyV") { setForm(form === "angel" ? "foot" : "angel"); syncCmd(); }
   if (e.code === "KeyJ") strike();
   if (e.code === "KeyR") replay();
   if (e.code === "KeyG") reforge(true);
@@ -1744,6 +1900,7 @@ function say(html) {
 }
 document.getElementById("gate").addEventListener("submit", function (e) {
   e.preventDefault();
+  document.getElementById("body").blur();          /* the body field must not eat SPACE (fly) or E (LUX) */
   const raw = (document.getElementById("body").value || "").trim();
   const body = raw.replace(/^\.:/, "").replace(/:\.$/, "");
   let hit = null;
@@ -1762,6 +1919,7 @@ document.getElementById("gate").addEventListener("submit", function (e) {
 });
 refreshHud();
 setForm(form);                                    /* the captain is the ARK ANGEL at /council, by default */
+syncCmd();
 let hudT = 0;
 
 const clock = new THREE.Clock();
@@ -1962,6 +2120,38 @@ function frame() {
       else nearEl.classList.remove("live");
     }
   }
+
+  /* ── LUX: ONE number drives the whole revelation, so the room can never half-light. Every element
+     below is a function of lux.level, and lux.level is a damp toward the switch. ---------------- */
+  lux.level = THREE.MathUtils.damp(lux.level, lux.on ? 1 : 0, 2.2, dt);
+  const L = lux.level;
+  runeRing.visible = L > 0.01;
+  if (runeRing.visible) {
+    runeRing.rotation.y = t * 0.22;
+    for (let i = 0; i < runeMats.length; i++) {
+      runeMats[i].opacity = L * (0.50 + 0.50 * Math.sin(t * 2.4 + i * 0.52));
+    }
+    luxRingMat.opacity = L * 0.75;
+  }
+  namesMat.opacity = L * 0.32;
+  namesRing.rotation.z = -t * 0.010;
+  emberMat.opacity = L * 0.85;
+  if (L > 0.01) {                        /* the embers rise; they are the only thing that costs cpu here */
+    const ep = emberGeo.attributes.position;
+    for (let i = 0; i < EMBER_N; i++) {
+      ep.array[i * 3 + 1] += emberVel[i] * dt * (0.6 + L);
+      if (ep.array[i * 3 + 1] > 18) ep.array[i * 3 + 1] = 0.3;
+    }
+    ep.needsUpdate = true;
+  }
+  for (const m of shaftMats) m.opacity = L * 0.10;
+  auraShell.material.opacity = L * 0.09 + (flying ? 0.05 : 0);
+  mWing.emissiveIntensity = 0.55 + 0.75 * L;
+  bloom.strength = 0.22 + 0.26 * L;
+  renderer.toneMappingExposure = 0.88 + 0.06 * L;
+  haloRings.forEach(function (r, i) {
+    r.scale.setScalar(1 + L * (0.10 + 0.03 * i) * (0.6 + 0.4 * Math.sin(t * 1.6 + i)));
+  });
 
   composer.render();
   /* ?grid: the body's silhouette as TEXT. Four maps, so a limb cannot hide inside another: the head and
