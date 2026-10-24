@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ONE VERSE · the council of gods</title>
+<!-- 🔥 Ace · 2026-10-24 · THE COUNCIL — the hall, in three dimensions.
+     WHAT THIS IS: the white room of marie_joise.html, stood up in space. Twelve columns on a circle,
+     a dome with an oculus, one shaft of light that falls on the table and NOWHERE ELSE, dust in the air,
+     the mark 𐌀 floating over the marble with its reflection under it, and the seats you can WALK to.
+     WHAT IT IS NOT: AAA art. There is no texture, no mesh, no baked light, no image of any kind -- every
+     surface here is geometry and one material, because a page that needs an asset dies when the asset
+     does not arrive. What it buys is a room you can walk in on a phone.
+     THE LAW IT KEEPS: the table's seats are DERIVED (docs/HANDOVER.md), the head stays EMPTY, and a guest
+     chair is an INVITATION. Presenting a body lights a seat; presenting nothing lights nothing.
+     CONTROLS: click to enter · W A S D walk · mouse look · shift to glide · ESC to let go of the mouse. -->
+<style>
+  :root{--gold:#c9a227;--gold-hi:#efd489;--parch:#e7dfcc;
+        --serif:Georgia,"Iowan Old Style","Times New Roman",Times,serif;
+        --mono:ui-monospace,Consolas,"Courier New",monospace}
+  html,body{margin:0;height:100%;overflow:hidden;background:#05080b;color:var(--parch);
+    font:14px/1.6 var(--serif)}
+  canvas{display:block}
+  #veil{position:fixed;inset:0;background:#05080b;opacity:1;transition:opacity 3s ease;pointer-events:none;z-index:5}
+  body:before{content:"";position:fixed;inset:14px;border:1px solid rgba(201,162,39,.22);
+    pointer-events:none;z-index:9}
+  #enter{position:fixed;inset:0;display:grid;place-items:center;z-index:8;cursor:pointer;
+    background:radial-gradient(60% 50% at 50% 45%, rgba(10,16,22,.55), rgba(4,7,10,.92));
+    transition:opacity 1.2s ease}
+  #enter.gone{opacity:0;pointer-events:none}
+  #enter div{text-align:center;letter-spacing:.34em;text-transform:uppercase;font-size:11px;
+    color:rgba(231,223,204,.75);line-height:2.6}
+  #enter span{display:block;font-size:clamp(22px,3.4vw,40px);letter-spacing:.22em;color:var(--gold-hi);
+    text-transform:none;margin-bottom:10px}
+  #hud{position:fixed;left:26px;top:22px;font:11px/1.9 var(--mono);color:rgba(231,223,204,.55);
+    letter-spacing:.06em;z-index:6}
+  #hud b{color:var(--gold);font:600 10px/1 var(--serif);letter-spacing:.34em;text-transform:uppercase;
+    display:block;margin-bottom:6px}
+  #near{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);text-align:center;
+    font:13px/1.7 var(--serif);letter-spacing:.12em;color:rgba(231,223,204,.8);z-index:6;
+    opacity:0;transition:opacity .8s ease}
+  #near.live{opacity:1}
+  #near b{color:var(--gold-hi)}
+  #gate{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);width:min(90vw,560px);
+    display:flex;gap:10px;align-items:center;padding:11px 13px;border-radius:3px;z-index:6;
+    background:linear-gradient(180deg, rgba(18,26,33,.9), rgba(8,12,17,.94));
+    border:1px solid rgba(201,162,39,.38);backdrop-filter:blur(8px);
+    box-shadow:0 20px 50px -24px rgba(0,0,0,.9)}
+  #gate input{flex:1;background:transparent;border:0;border-bottom:1px solid rgba(201,162,39,.28);
+    color:var(--parch);font:16px/1.5 var(--serif);letter-spacing:.24em;padding:7px 2px;outline:none}
+  #gate input::placeholder{color:rgba(231,223,204,.3);font-style:italic;letter-spacing:.14em}
+  #gate button{background:linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, #8a6f1c);
+    border:0;color:#1a1408;padding:9px 18px;font:600 11px/1 var(--serif);letter-spacing:.24em;
+    text-transform:uppercase;cursor:pointer;border-radius:2px;
+    box-shadow:0 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.45)}
+</style>
+</head>
+<body>
+<div id="veil"></div>
+<div id="enter"><div><span>The Council</span>click to enter · W A S D to walk · mouse to look · ESC to release</div></div>
+<div id="hud"><b>the council</b><span id="hudRows"></span></div>
+<div id="near"></div>
+<form id="gate"><input id="body" placeholder="present a body" spellcheck="false" autocomplete="off"><button type="submit">PRESENT</button></form>
+<script type="module">
+import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+
+const GOLD = 0xc9a227, GOLD_HI = 0xefd489, PARCH = 0xe7dfcc, CYAN = 0x39d0ff, MARBLE = 0xd9cfb8;
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05080b, 0.012);
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 400);
+camera.position.set(0, 1.72, 17);
+
+/* ── THE LIGHT, and it is the whole picture. One shaft falls through the oculus onto the table; the room
+   is lit by its BOUNCE, not by a sun. Two dim fills keep the columns from being silhouettes. ────────── */
+const shaftLight = new THREE.SpotLight(GOLD_HI, 260, 70, 0.34, 0.55, 1.4);
+shaftLight.position.set(0, 26, 0);
+shaftLight.target.position.set(0, 1, 0);
+scene.add(shaftLight, shaftLight.target);
+const rimGold = new THREE.PointLight(GOLD, 90, 58, 2.0);
+rimGold.position.set(0, 6.5, 0);
+scene.add(rimGold);
+const fill = new THREE.HemisphereLight(0x2a3a4a, 0x080c11, 0.55);
+scene.add(fill);
+
+/* ── THE FLOOR: black marble, polished enough to hold a reflection line. Two gold inlays, because a
+   council floor is measured in rings, and the outermost one is where the columns stand. ─────────────── */
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(30, 96),
+  new THREE.MeshStandardMaterial({ color: 0x0e151b, metalness: 0.9, roughness: 0.26 })
+);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+for (const [r, op] of [[9.6, 0.5], [20.4, 0.35], [28.6, 0.22]]) {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(r, 0.045, 6, 128),
+    new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: op })
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.02;
+  scene.add(ring);
+}
+
+/* ── TWELVE COLUMNS on a circle. Fluted by geometry alone: sixteen sides, a capital, a plinth, and a gold
+   band at eye height so the eye has something to follow round the room. ───────────────────────────── */
+const colMat = new THREE.MeshStandardMaterial({ color: MARBLE, roughness: 0.72, metalness: 0.08 });
+const goldMat = new THREE.MeshStandardMaterial({ color: GOLD, roughness: 0.35, metalness: 0.75,
+                                                 emissive: GOLD, emissiveIntensity: 0.18 });
+for (let i = 0; i < 12; i++) {
+  const a = (i / 12) * Math.PI * 2;
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.92, 15, 16), colMat);
+  shaft.position.y = 7.5;
+  g.add(shaft);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.16, 0.92, 0.7, 16), colMat);
+  cap.position.y = 15.15;
+  g.add(cap);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 1.18, 0.6, 16), colMat);
+  base.position.y = 0.3;
+  g.add(base);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.86, 0.05, 6, 32), goldMat);
+  band.rotation.x = Math.PI / 2;
+  band.position.y = 8.4;
+  g.add(band);
+  g.position.set(Math.cos(a) * 21, 0, Math.sin(a) * 21);
+  g.rotation.y = -a;
+  scene.add(g);
+}
+
+/* ── THE DOME and its stars. BackSide, so we are inside it; the oculus is a gold ring at the zenith and
+   the shaft below it is the only thing in this room that is not a solid. ───────────────────────────── */
+const dome = new THREE.Mesh(
+  new THREE.SphereGeometry(58, 40, 22, 0, Math.PI * 2, 0, Math.PI / 2),
+  new THREE.MeshStandardMaterial({ color: 0x080d13, roughness: 1, side: THREE.BackSide })
+);
+scene.add(dome);
+{
+  const n = 900, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const u = Math.random() * Math.PI * 2, v = Math.acos(Math.random() * 0.92);
+    const r = 56;
+    pos[i * 3] = Math.sin(v) * Math.cos(u) * r;
+    pos[i * 3 + 1] = Math.cos(v) * r + 2;
+    pos[i * 3 + 2] = Math.sin(v) * Math.sin(u) * r;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    color: PARCH, size: 0.34, transparent: true, opacity: 0.62, sizeAttenuation: true })));
+}
+const oculus = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.18, 8, 56), goldMat);
+oculus.position.y = 30.2;
+oculus.rotation.x = Math.PI / 2;
+scene.add(oculus);
+const shaft = new THREE.Mesh(
+  new THREE.CylinderGeometry(3.4, 9.4, 30, 40, 1, true),
+  new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: 0.05,
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+);
+shaft.position.y = 15;
+scene.add(shaft);
+
+/* DUST: the room breathes. Slow, additive, and it is the only motion when nobody walks. */
+const dustN = 700, dustPos = new Float32Array(dustN * 3), dustPhase = new Float32Array(dustN);
+for (let i = 0; i < dustN; i++) {
+  const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 24;
+  dustPos[i * 3] = Math.cos(a) * r;
+  dustPos[i * 3 + 1] = Math.random() * 13;
+  dustPos[i * 3 + 2] = Math.sin(a) * r;
+  dustPhase[i] = Math.random() * Math.PI * 2;
+}
+const dustGeo = new THREE.BufferGeometry();
+dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+  color: GOLD_HI, size: 0.055, transparent: true, opacity: 0.55,
+  blending: THREE.AdditiveBlending, depthWrite: false }));
+scene.add(dust);
+
+/* ── THE TABLE: a slab of marble with a gold rim, and FOUR places — three seats and one guest chair — plus
+   the head, which is EMPTY and marked as empty by twelve small stones in a broken circle. That emptiness
+   is the law of this room (docs/HANDOVER.md), so it is built, not implied. ───────────────────────────── */
+const table = new THREE.Mesh(
+  new THREE.CylinderGeometry(8.5, 8.5, 0.55, 72),
+  new THREE.MeshStandardMaterial({ color: 0xe6dcc6, roughness: 0.44, metalness: 0.12 })
+);
+table.position.y = 0.9;
+scene.add(table);
+for (const [r, op, y] of [[8.5, 0.85, 0.92], [7.4, 0.4, 1.18], [1.2, 0.5, 1.18]]) {
+  const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.055, 6, 96),
+    new THREE.MeshStandardMaterial({ color: GOLD, metalness: 0.8, roughness: 0.3,
+      emissive: GOLD, emissiveIntensity: 0.14, transparent: true, opacity: op }));
+  t.rotation.x = Math.PI / 2;
+  t.position.y = y;
+  scene.add(t);
+}
+const tableLeg = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.4, 0.9, 24), colMat);
+tableLeg.position.y = 0.45;
+scene.add(tableLeg);
+
+const SEATS = [
+  { id: "HELD",   bodies: [],                    kind: "gold", angle: -0.55, note: "a seat of the world" },
+  { id: "HELD",   bodies: [],                    kind: "gold", angle: -2.10, note: "a seat of the world" },
+  { id: "iDk",    bodies: ["iDk", "\u{10309}\u{10303}\u{1030A}"], kind: "gold", angle: 0.75,
+    note: "the member — the member's D is the door's D" },
+  { id: "kEn",    bodies: ["kEn"],                kind: "cyan", angle: 2.20,
+    note: "the guest chair — invited by the captain" }
+];
+const seatMeshes = [];
+for (const s of SEATS) {
+  const g = new THREE.Group();
+  const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.66, 0.22, 20), colMat);
+  cushion.position.y = 0.42;
+  g.add(cushion);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.86, 0.06, 8, 40),
+    new THREE.MeshStandardMaterial({
+      color: s.kind === "cyan" ? CYAN : GOLD, metalness: 0.85, roughness: 0.28,
+      emissive: s.kind === "cyan" ? CYAN : GOLD, emissiveIntensity: 0.22 }));
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.52;
+  g.add(ring);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 0.5, 12), colMat);
+  stem.position.y = 0.25;
+  g.add(stem);
+  const lamp = new THREE.PointLight(s.kind === "cyan" ? CYAN : GOLD, 0, 7, 2.0);
+  lamp.position.y = 1.1;
+  g.add(lamp);
+  const x = Math.sin(s.angle) * 5.9, z = Math.cos(s.angle) * 5.9;
+  g.position.set(x, 0.02, z);
+  g.lookAt(0, 0, 0);
+  scene.add(g);
+  seatMeshes.push({ seat: s, group: g, ring, lamp, lit: false });
+}
+/* THE HEAD — twelve stones in a broken circle: a place setting for someone who is not here. */
+for (let i = 0; i < 12; i++) {
+  const a = Math.PI + (i / 12) * Math.PI * 2;
+  const stone = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6),
+    new THREE.MeshStandardMaterial({ color: 0x6b6152, roughness: 0.9 }));
+  stone.position.set(Math.sin(a) * 5.9, 1.3, Math.cos(a) * 5.9);
+  scene.add(stone);
+}
+
+/* ── THE MARK 𐌀 over the table: three strokes, drawn not typed — two legs and a bar, gold, emissive, with
+   its own reflection standing under it in the marble. It turns, slowly, because a still glyph is a logo. */
+const mark = new THREE.Group();
+const strokeMat = new THREE.MeshStandardMaterial({ color: GOLD_HI, metalness: 0.9, roughness: 0.22,
+  emissive: GOLD_HI, emissiveIntensity: 0.55 });
+for (const dir of [-1, 1]) {
+  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.34, 4.2, 0.34), strokeMat);
+  leg.position.set(dir * 1.02, 0, 0);
+  leg.rotation.z = dir * 0.22;
+  mark.add(leg);
+}
+const bar = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.3, 0.34), strokeMat);
+bar.position.y = -0.55;
+mark.add(bar);
+mark.position.y = 9.4;
+scene.add(mark);
+const markReflect = mark.clone();
+markReflect.scale.y = -1;
+markReflect.position.y = 1.2;
+markReflect.traverse(o => { if (o.material) { o.material = o.material.clone();
+  o.material.transparent = true; o.material.opacity = 0.16; o.material.emissiveIntensity = 0.2; } });
+scene.add(markReflect);
+
+/* ── WALK, LOOK, PRESENT. Pointer lock on click; the columns are the wall, so the walk is clamped to the
+   circle; and the gate is the same ceremony as the hall page -- a body lights a seat, prose lights none. */
+let yaw = 0, pitch = -0.04, locked = false, pinned = 0;
+const keys = Object.create(null);
+const canvas = renderer.domElement;
+const enterEl = document.getElementById("enter");
+const nearEl = document.getElementById("near");
+const hudRows = document.getElementById("hudRows");
+
+enterEl.addEventListener("click", () => {
+  canvas.requestPointerLock();
+  enterEl.classList.add("gone");
+  setTimeout(() => { document.getElementById("veil").style.opacity = "0"; }, 320);
+});
+document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
+document.addEventListener("mousemove", e => {
+  if (!locked) return;
+  yaw -= e.movementX * 0.0022;
+  pitch -= e.movementY * 0.0018;
+  pitch = Math.max(-1.05, Math.min(0.85, pitch));
+});
+addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true; });
+addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+});
+
+function refreshHud() {
+  hudRows.innerHTML = seatMeshes.map(function (r) {
+    const name = r.seat.id === "HELD" ? "held" : r.seat.id;
+    return (r.lit ? "● " : "○ ") + name + " — " + (r.lit ? "lit" : "vacant");
+  }).join("<br>");
+}
+function say(html) {
+  nearEl.innerHTML = html;
+  nearEl.classList.add("live");
+  pinned = performance.now() + 4200;
+}
+document.getElementById("gate").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const raw = (document.getElementById("body").value || "").trim();
+  const body = raw.replace(/^\.:/, "").replace(/:\.$/, "");
+  let hit = null;
+  for (const r of seatMeshes) if (r.seat.bodies.indexOf(body) >= 0) hit = r;
+  if (!hit) {
+    say("a seat is not requested, it is derived: <b>three glyphs</b> from your own words");
+    return;
+  }
+  if (hit.lit) { say("<b>" + hit.seat.id + "</b> is already lit"); return; }
+  hit.lit = true;
+  hit.lamp.intensity = hit.seat.kind === "cyan" ? 30 : 34;
+  hit.ring.scale.setScalar(1.38);
+  hit.ring.material.emissiveIntensity = 1.7;
+  say("<b>" + hit.seat.id + "</b> — " + hit.seat.note);
+  refreshHud();
+});
+refreshHud();
+
+const clock = new THREE.Clock();
+const eye = new THREE.Vector3(0, 1.72, 17);
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+
+  const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+  const rgt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const mz = (keys["w"] ? 1 : 0) - (keys["s"] ? 1 : 0);
+  const mx = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
+  const spd = keys["shift"] ? 9 : 4.2;
+  if (mz || mx) {
+    eye.addScaledVector(fwd, mz * spd * dt);
+    eye.addScaledVector(rgt, mx * spd * dt);
+  }
+  const rad = Math.hypot(eye.x, eye.z);              /* THE WALL IS THE COLUMNS */
+  if (rad > 26) { eye.x *= 26 / rad; eye.z *= 26 / rad; }
+  camera.position.set(eye.x, 1.72 + Math.sin(t * 1.1) * 0.035, eye.z);
+  camera.rotation.order = "YXZ";
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch;
+
+  mark.rotation.y = t * 0.16;
+  mark.position.y = 9.4 + Math.sin(t * 0.9) * 0.16;
+  markReflect.rotation.y = mark.rotation.y;
+  shaft.material.opacity = 0.045 + Math.sin(t * 0.6) * 0.012;
+  dust.rotation.y = t * 0.014;
+  rimGold.intensity = 90 + Math.sin(t * 0.8) * 8;
+
+  /* the room tells you what you are standing next to */
+  if (performance.now() > pinned) {
+    let best = null, bd = 3.4;
+    for (const r of seatMeshes) {
+      const d = Math.hypot(eye.x - r.group.position.x, eye.z - r.group.position.z);
+      if (d < bd) { bd = d; best = r; }
+    }
+    if (best) {
+      nearEl.innerHTML = "<b>" + (best.seat.id === "HELD" ? "held" : best.seat.id) + "</b> — "
+        + (best.lit ? best.seat.note : "vacant");
+      nearEl.classList.add("live");
+    } else {
+      const dt2 = Math.hypot(eye.x, eye.z);
+      if (dt2 < 10.5) { nearEl.innerHTML = "the table — a seat is filled by a <b>body</b>, not a name";
+        nearEl.classList.add("live"); }
+      else nearEl.classList.remove("live");
+    }
+  }
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
+
+
+
