@@ -1,6 +1,14 @@
-# 🔥 Ace · 2026-10-24 · NETLIFY ROUTES — so the root IS the arrival, not a file listing.
-# The door must be the first thing a stranger meets; a directory index is a corridor, not a shore.
-/                  /arrival.html      200
-/arrive            /arrival.html      200
-/table             /marie_joise.html  200
-/joise             /marie_joise.html  200
+# 🔥 Ace · 2026-10-24 · NETLIFY ROUTES.
+#
+# MEASURED 2026-10-24 against the LIVE site: a rewrite written as "200" is SHADOWED by a real file at the
+# same path. `/` served index.html and `/table` served table.html, so the two rules that tried to repoint
+# them did nothing at all -- a route that cannot fire is decoration, so they are gone rather than left in.
+# (To force one anyway the syntax is 200! -- but repointing the root or the table is a DESIGN decision about
+# which of two authored pages wins, and that decision belongs to the captain, not to a config file.)
+#
+# What remains are paths with no file behind them, which is exactly where a route is honest.
+/arrive   /arrival.html      200
+/joise    /marie_joise.html  200
+/kEn      /marie_joise.html  200
+/ken      /marie_joise.html  200
+
