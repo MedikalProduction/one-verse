@@ -1346,6 +1346,8 @@ const torsoHalf = (B, y) => halfW(B, y) - ARM_W * 0.5 * armZone(y);
 const player = new THREE.Group();
 scene.add(player);
 const HUMAN = [], ANGELV = [];                 /* the two skins, toggled by setForm() */
+const EYELIDS = [];                             /* the lids, so the eyes can BLINK -- one array, no rig */
+let hairPivot = null;                           /* the mane's own pivot, handed out of the head block */
 const rig = new THREE.Group();
 player.add(rig);
 
@@ -1480,17 +1482,21 @@ neck.add(headG);
     lower.rotation.x = 0.30;
     headG.add(eye, iris, pupil, lid, lower);
     HUMAN.push(eye, iris, pupil, lid, lower);
+    EYELIDS.push(lid, lower);                    /* the blink owns these two, and nothing else does */
   }
   /* THE HAIR: tubes along real curves with a taper and the teal tips -- not fourteen capsules. */
   /* ── THE HAIR IS THE SILHOUETTE (the captain's refs, 2026-10-24): a long dark MANE, parted, falling
      past the waist, with layered strands and locks over the face. Twenty short tubes was a haircut; the
      ref's first read at any distance is the mass of hair, so the mass is what gets built. ------------ */
+  const hairG = new THREE.Group();                 /* the mane on its own pivot, so it can LAG the head */
+  headG.add(hairG);
+  hairPivot = hairG;
   const skull = new THREE.Mesh(loft([
     { y: 0.090, rx: 0.083, rz: 0.089 }, { y: 0.150, rx: 0.079, rz: 0.087 },
     { y: 0.198, rx: 0.057, rz: 0.063 }, { y: 0.214, rx: 0.018, rz: 0.020 }], 22), mHair);
   skull.position.y = -0.004;
   skull.scale.set(1.035, 1.0, 1.035);
-  headG.add(skull);
+  hairG.add(skull);
   HUMAN.push(skull);
   /* THE MASS: one loft, open at the face, widening as it falls -- the same primitive as the robe */
   {
@@ -1504,7 +1510,7 @@ neck.add(headG);
         span, a0: -Math.PI / 2 - span / 2 });
     }
     const mane = new THREE.Mesh(loft(rings, 44), mHair);
-    headG.add(mane);
+    hairG.add(mane);
     HUMAN.push(mane);
   }
   /* STRANDS: twenty-eight tubes over the mass at three lengths, longer at the sides, so the mane has
@@ -1521,7 +1527,7 @@ neck.add(headG);
       Math.sin(a) * (r0 + 0.050) - 0.020);
     const tube = new THREE.Mesh(
       new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p0, p1, p2]), 10, 0.0108, 6, false), mHair);
-    headG.add(tube);
+    hairG.add(tube);
     HUMAN.push(tube);
   }
   /* FOUR LOCKS OVER THE FACE: two at the temples, two in front of the shoulders -- the ref's hair falls
@@ -1534,7 +1540,7 @@ neck.add(headG);
     const q2 = new THREE.Vector3(ax + bend * 1.8, ay - len, az - 0.004);
     const lock = new THREE.Mesh(
       new THREE.TubeGeometry(new THREE.CatmullRomCurve3([q0, q1, q2]), 10, 0.0115, 6, false), mHair);
-    headG.add(lock);
+    hairG.add(lock);
     HUMAN.push(lock);
   }
 }
@@ -1647,6 +1653,7 @@ function legChain(sx) {
   }
   const knee = new THREE.Group();
   knee.position.y = -0.46;
+  let bootRef = null;
   {
     const rings = [], N = 9;
     for (let i = 0; i <= N; i++) {
@@ -1660,9 +1667,10 @@ function legChain(sx) {
       { y: -0.50, rx: 0.050, rz: 0.088, oz: 0.020 },
       { y: -0.53, rx: 0.042, rz: 0.080, oz: 0.026 }], 16), mLeath);
     knee.add(boot);
+    bootRef = boot;
   }
   hip.add(knee);
-  return { hip, knee };
+  return { hip, knee, boot: bootRef };
 }
 const legLc = legChain(-1), legRc = legChain(1);
 const legL = legLc.hip, legR = legRc.hip;
@@ -2554,34 +2562,76 @@ function frame() {
   char.pitch = THREE.MathUtils.damp(char.pitch, flying ? -Math.min(0.5, char.vy * 0.10) : 0, 5, dt);
   player.position.copy(char.pos);
   player.rotation.set(char.pitch, char.yaw, char.bank);
-  /* ── THE BODY: two gaits out of ONE skeleton. On the ground the walk is COMPUTED (the phase advances
-     with the REAL speed, knees bend on the up-swing, arms counter-swing). In the air the legs trail,
-     the arms open, and the WINGS carry the motion -- row by row, the long primaries arriving last. */
-  char.phase += char.speed * dt * (flying ? 1.1 : 3.4);
+  /* ── THE BODY: ONE skeleton, TWO gaits, BLENDED. The stiffness was never the detail -- it was the
+     `if (flying) … else …` switch below: the pose TELEPORTED between two states with no time between
+     them, and no joint in the body had a job it did continuously. Now:
+       · `air` is a damped 0..1 blend, so every joint CROSSFADES between the walk and the flight;
+       · the pelvis yaws and drops with the step (rig.rotation) while the chest counter-rotates;
+       · the ankles ROLL: heel strike, toe-off -- a foot that is welded flat is a mannequin;
+       · a breath and a weight shift run even when he is standing still;
+       · the head turns toward the camera, and the mane LAGS behind it;
+       · the eyes blink. --------------------------------------------------------------------- */
+  const air = THREE.MathUtils.damp(char.air || 0, flying ? 1 : 0, 5.0, dt);
+  char.air = air;
+  const G = 1 - air;                                   /* 1 = ground, 0 = air */
+  char.phase += char.speed * dt * (1.1 + 2.3 * G);
   const sw = Math.sin(char.phase), sw2 = Math.sin(char.phase * 2);
-  const amp = Math.min(1, char.speed / (flying ? 5.6 : 2.1));
-  if (flying) {
-    const trail = 0.55 + 0.18 * Math.sin(t * 1.6);
-    legL.rotation.x = -trail + 0.06 * sw;
-    legR.rotation.x = -trail - 0.06 * sw;
-    legLc.knee.rotation.x = 0.62; legRc.knee.rotation.x = 0.52;
-    armL.rotation.x = -0.55; armR.rotation.x = -0.42;
-    armL.rotation.z = 0.42;  armR.rotation.z = -0.46;
-    armLm.elbow.rotation.x = -0.35; armRm.elbow.rotation.x = -0.30;
-    neck.rotation.x = THREE.MathUtils.damp(neck.rotation.x, -char.pitch * 0.6 + 0.10, 6, dt);
-    torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, 0.10, 6, dt);
-  } else {
-    legL.rotation.x = sw * 0.70 * amp;
-    legR.rotation.x = -sw * 0.70 * amp;
-    legLc.knee.rotation.x = Math.max(0, -sw) * 0.95 * amp;
-    legRc.knee.rotation.x = Math.max(0, sw) * 0.95 * amp;
-    armL.rotation.x = -sw * 0.46 * amp - 0.05;
-    armR.rotation.x = sw * 0.46 * amp - 0.05;
-    armL.rotation.z = 0.10; armR.rotation.z = -0.10;
-    armLm.elbow.rotation.x = -0.22 - Math.max(0, -sw) * 0.30 * amp;
-    armRm.elbow.rotation.x = -0.22 - Math.max(0, sw) * 0.30 * amp;
-    neck.rotation.x = THREE.MathUtils.damp(neck.rotation.x, 0, 6, dt);
-    torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, 0, 8, dt);
+  const amp = Math.min(1, char.speed / (2.1 + 3.5 * air)) * G;
+  const breathe = Math.sin(t * 1.35) * 0.5 + 0.5;
+  const idle = Math.sin(t * 0.9);
+  /* the walk: hip swing, knee bend on the UP-swing, ankle roll, counter-swinging arms */
+  const legSwing = sw * 0.70 * amp;
+  const trail = 0.55 + 0.18 * Math.sin(t * 1.6);
+  legL.rotation.x = legSwing * G + (-trail + 0.06 * sw) * air;
+  legR.rotation.x = -legSwing * G + (-trail - 0.06 * sw) * air;
+  legLc.knee.rotation.x = Math.max(0, -sw) * 0.95 * amp * G + (0.62 + 0.05 * sw) * air;
+  legRc.knee.rotation.x = Math.max(0, sw) * 0.95 * amp * G + (0.52 - 0.05 * sw) * air;
+  if (legLc.boot) {                                    /* HEEL STRIKE -> FLAT -> TOE-OFF */
+    legLc.boot.rotation.x = (-0.30 * sw + 0.22 * Math.max(0, sw2)) * amp * G;
+    legRc.boot.rotation.x = (0.30 * sw + 0.22 * Math.max(0, -sw2)) * amp * G;
+  }
+  /* the pelvis: yaw with the stride, drop toward the swinging leg -- the thing that makes a walk a walk */
+  rig.rotation.y = sw * 0.075 * amp * G;
+  rig.rotation.z = (-Math.cos(char.phase) * 0.022 * amp + idle * 0.010 * (1 - amp)) * G;
+  /* the chest counters the pelvis, and both breathe */
+  torso.rotation.y = -sw * 0.060 * amp * G;
+  torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x,
+    air * 0.10 + G * (0.045 * amp + 0.012 * breathe), 7, dt);
+  torso.scale.y = 1 + 0.008 * breathe * (1 - amp);
+  /* the arms: counter-swing on the ground, open in the air, with a shoulder roll */
+  armL.rotation.x = (-sw * 0.46 * amp - 0.05) * G + (-0.55) * air;
+  armR.rotation.x = (sw * 0.46 * amp - 0.05) * G + (-0.42) * air;
+  armL.rotation.z = (0.10 + 0.02 * breathe) * G + 0.42 * air;
+  armR.rotation.z = (-0.10 - 0.02 * breathe) * G - 0.46 * air;
+  armLm.elbow.rotation.x = (-0.22 - Math.max(0, -sw) * 0.30 * amp) * G + (-0.35) * air;
+  armRm.elbow.rotation.x = (-0.22 - Math.max(0, sw) * 0.30 * amp) * G + (-0.30) * air;
+  /* THE HEAD FOLLOWS THE EYE, NOT THE KEYS: it turns toward the camera with a lag, and is clamped so it
+     never breaks the neck. MEASURED reason: a head welded to the spine reads as mannequin from every
+     angle, and the camera is the only "other person" in the room. */
+  {
+    const dx = camera.position.x - char.pos.x, dz = camera.position.z - char.pos.z;
+    let want = Math.atan2(dx, dz) - char.yaw;
+    want = ((want + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    want = Math.max(-0.75, Math.min(0.75, want));
+    headG.rotation.y = THREE.MathUtils.damp(headG.rotation.y, want * (0.35 + 0.5 * G), 4.0, dt);
+    headG.rotation.x = THREE.MathUtils.damp(headG.rotation.x,
+      -char.pitch * 0.35 - 0.04 + 0.02 * breathe, 4.0, dt);
+    neck.rotation.x = THREE.MathUtils.damp(neck.rotation.x,
+      air * (-char.pitch * 0.6 + 0.10) + G * (-0.02 * amp), 6, dt);
+    neck.rotation.y = THREE.MathUtils.damp(neck.rotation.y, sw * 0.06 * amp * G, 6, dt);
+  }
+  /* THE MANE LAGS: it swings against the motion and settles -- cloth physics in two lines, because a
+     mane welded to the skull is the same lie as a welded head. */
+  if (hairPivot) {
+    hairPivot.rotation.x = THREE.MathUtils.damp(hairPivot.rotation.x,
+      -Math.min(0.28, char.speed * 0.035) - char.vy * 0.02 + Math.sin(t * 0.9) * 0.012, 3.2, dt);
+    hairPivot.rotation.z = THREE.MathUtils.damp(hairPivot.rotation.z, -char.turn * 0.020, 3.2, dt);
+  }
+  /* THE BLINK: one closure every ~4.6 s, 120 ms, both lids, nothing else moves. */
+  {
+    const bt = t % 4.6;
+    const blink = bt < 0.12 ? Math.sin((bt / 0.12) * Math.PI) : 0;
+    for (const l of EYELIDS) l.scale.y = 1 - blink * 0.82;
   }
   torso.position.y = Math.abs(sw2) * 0.012 * amp;
   neck.position.y = NECKY - 0.03 + Math.abs(sw2) * 0.010 * amp;
