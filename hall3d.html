@@ -13,7 +13,7 @@
      does not arrive. What it buys is a room you can walk in on a phone.
      THE LAW IT KEEPS: the table's seats are DERIVED (docs/HANDOVER.md), the head stays EMPTY, and a guest
      chair is an INVITATION. Presenting a body lights a seat; presenting nothing lights nothing.
-     CONTROLS: click to enter · W A S D walk · mouse look · shift to glide · ESC to let go of the mouse. -->
+     CONTROLS: click to enter · drag to look · W A S D walk · SHIFT run (the dojo's controller, damped). -->
 <style>
   :root{--gold:#c9a227;--gold-hi:#efd489;--parch:#e7dfcc;
         --serif:Georgia,"Iowan Old Style","Times New Roman",Times,serif;
@@ -36,6 +36,7 @@
     letter-spacing:.06em;z-index:6}
   #hud b{color:var(--gold);font:600 10px/1 var(--serif);letter-spacing:.34em;text-transform:uppercase;
     display:block;margin-bottom:6px}
+  #hudLaw{display:block;margin-top:9px;opacity:.62;max-width:240px;line-height:1.7}
   #near{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);text-align:center;
     font:13px/1.7 var(--serif);letter-spacing:.12em;color:rgba(231,223,204,.8);z-index:6;
     opacity:0;transition:opacity .8s ease}
@@ -57,8 +58,8 @@
 </head>
 <body>
 <div id="veil"></div>
-<div id="enter"><div><span>The Council</span>click to enter · W A S D to walk · mouse to look · ESC to release</div></div>
-<div id="hud"><b>the council</b><span id="hudRows"></span></div>
+<div id="enter"><div><span>The Council</span>click to enter · <b>drag</b> to look · <b>W A S D</b> to walk · <b>SHIFT</b> to run</div></div>
+<div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span></div>
 <div id="near"></div>
 <form id="gate"><input id="body" placeholder="present a body" spellcheck="false" autocomplete="off"><button type="submit">PRESENT</button></form>
 <script type="module">
@@ -266,31 +267,300 @@ markReflect.scale.y = -1;
 markReflect.position.y = 1.2;
 markReflect.traverse(o => { if (o.material) { o.material = o.material.clone();
   o.material.transparent = true; o.material.opacity = 0.16; o.material.emissiveIntensity = 0.2; } });
-scene.add(markReflect);
+/* ── THE ALCHEMICAL RING — the ship's own codex loaded into the room: the seven planetary metals on the
+   floor (☉ Sol/gold · ☽ Luna/silver · ☿ Mercurius/quicksilver · ♀ Venus/copper · ♂ Mars/iron · ♃ Iupiter/tin
+   · ♄ Saturnus/lead). Every glyph is DRAWN on a canvas, so the room carries no font and no image file —
+   the archive is codepoints, and a codepoint is free. ────────────────────────────────────────────────── */
+function glyphTex(ch, colour) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 192;
+  const k = c.getContext("2d");
+  k.strokeStyle = colour; k.lineWidth = 3; k.globalAlpha = 0.5;
+  k.beginPath(); k.arc(96, 96, 84, 0, Math.PI * 2); k.stroke();
+  k.globalAlpha = 1; k.fillStyle = colour;
+  k.font = "900 110px 'Segoe UI Symbol','DejaVu Sans','Noto Sans Symbols 2',serif";
+  k.textAlign = "center"; k.textBaseline = "middle";
+  k.shadowColor = colour; k.shadowBlur = 20;
+  k.fillText(ch, 96, 102);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+const PLANETARY = ["\u2609", "\u263D", "\u263F", "\u2640", "\u2642", "\u2643", "\u2644"];
+const planets = new THREE.Group();
+PLANETARY.forEach(function (ch, i) {
+  const a = (i / 7) * Math.PI * 2 - Math.PI / 2;
+  const m = new THREE.Mesh(new THREE.CircleGeometry(1.25, 40),
+    new THREE.MeshBasicMaterial({ map: glyphTex(ch, "#f0c667"), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  m.rotation.z = -a;
+  m.position.set(Math.cos(a) * 11.8, 0.045, Math.sin(a) * 11.8);
+  planets.add(m);
+});
+scene.add(planets);
 
-/* ── WALK, LOOK, PRESENT. Pointer lock on click; the columns are the wall, so the walk is clamped to the
-   circle; and the gate is the same ceremony as the hall page -- a body lights a seat, prose lights none. */
-let yaw = 0, pitch = -0.04, locked = false, pinned = 0;
-const keys = Object.create(null);
+/* ── THE THRONES: black lacquer, a gold ogee arch, a winged shoulder and a medallion — the chair of the
+   picture, built from a box, a half torus, two blades and a disc. ───────────────────────────────────── */
+const lacquer = new THREE.MeshStandardMaterial({ color: 0x070b10, roughness: 0.32, metalness: 0.6 });
+for (const r of seatMeshes) {
+  const seatGold = r.ring.material;
+  const back = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.9, 0.16), lacquer);
+  back.position.set(0, 1.5, -0.92);
+  r.group.add(back);
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.05, 6, 40, Math.PI), seatGold);
+  arch.position.set(0, 2.45, -0.92);
+  r.group.add(arch);
+  for (const sgn of [-1, 1]) {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.075, 0.09), seatGold);
+    wing.position.set(sgn * 1.42, 2.92, -0.92);
+    wing.rotation.z = sgn * 0.46;
+    r.group.add(wing);
+    const stile = new THREE.Mesh(new THREE.BoxGeometry(0.075, 1.9, 0.09), seatGold);
+    stile.position.set(sgn * 0.98, 1.5, -0.92);
+    r.group.add(stile);
+  }
+  const glyph = r.seat.id === "kEn" ? "\u263D" : (r.seat.id === "iDk" ? "\u2609" : "\u25CB");
+  const medal = new THREE.Mesh(new THREE.CircleGeometry(0.34, 28),
+    new THREE.MeshBasicMaterial({ map: glyphTex(glyph, r.seat.kind === "cyan" ? "#7fe3dd" : "#f0c667"),
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  medal.position.set(0, 1.72, -0.83);
+  r.group.add(medal);
+  r.medal = medal;
+}
+
+/* ── THE FLOOR OF CLOUD and the star that hangs over the table. A stretched radial glow IS a lens flare,
+   and forty of them at the horizon ARE a sea of cloud — additive, procedural, no textures shipped. ──── */
+function glowTex(mid) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const k = c.getContext("2d");
+  const g = k.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.28, mid);
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  k.fillStyle = g; k.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+const softTex = glowTex("rgba(255,244,214,0.55)");
+const cloudTex = glowTex("rgba(226,238,248,0.26)");
+const clouds = new THREE.Group();
+for (let i = 0; i < 46; i++) {
+  const a = Math.random() * Math.PI * 2, rad = 30 + Math.random() * 22;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, transparent: true,
+    opacity: 0.09 + Math.random() * 0.13, depthWrite: false, blending: THREE.AdditiveBlending,
+    color: 0xdfeaf6 }));
+  sp.position.set(Math.cos(a) * rad, 0.8 + Math.random() * 7.5, Math.sin(a) * rad);
+  const s = 12 + Math.random() * 17;
+  sp.scale.set(s, s * 0.55, 1);
+  clouds.add(sp);
+}
+scene.add(clouds);
+
+const starG = new THREE.Group();
+starG.position.set(0, 16.5, -13);
+function flare(sx, sy, op) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, transparent: true, opacity: op,
+    blending: THREE.AdditiveBlending, depthWrite: false, color: 0xfff0c8 }));
+  s.scale.set(sx, sy, 1);
+  starG.add(s);
+  return s;
+}
+const coreStar = flare(9, 9, 0.85);
+flare(50, 1.9, 0.5);
+flare(1.9, 54, 0.62);
+scene.add(starG);
+for (const [rad, op] of [[10.4, 0.42], [13.4, 0.22]]) {
+  const h = new THREE.Mesh(new THREE.TorusGeometry(rad, 0.05, 6, 96),
+    new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: op }));
+  h.position.copy(starG.position);
+  scene.add(h);
+}
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.52, 16.5, 12, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0xfff4d2, transparent: true, opacity: 0.42,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+beam.position.set(0, 8.25, -13);
+scene.add(beam);
+
+/* ── THE SEALS — not ornament, ARITHMETIC. scripts/planetary_seals.py builds the seven classical squares
+   and checks every row, column and BOTH diagonals against S_n = n(n²+1)/2 (15 · 34 · 65 · 111 · 175 · 260
+   · 369). The page builds the SAME squares with the SAME constructions — Siamese/De la Loubère for odd n,
+   the complement method for n = 4k, Agrippa's Sun square for n = 6 (which has no one-line construction) —
+   and re-proves them HERE with isMagic(). The line through 1 → 2 → … → n² is the planetary character. ── */
+function siamese(n) {
+  const m = Array.from({ length: n }, () => new Array(n).fill(0));
+  let i = 0, j = n >> 1;
+  for (let v = 1; v <= n * n; v++) {
+    m[i][j] = v;
+    let ni = (i - 1 + n) % n, nj = (j + 1) % n;
+    if (m[ni][nj]) { ni = (i + 1) % n; nj = j; }
+    i = ni; j = nj;
+  }
+  return m;
+}
+function doublyEven(n) {
+  const m = [];
+  for (let i = 0; i < n; i++) {
+    m.push([]);
+    for (let j = 0; j < n; j++) m[i].push(i * n + j + 1);
+  }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const a = (i % 4 === 0 || i % 4 === 3), b = (j % 4 === 0 || j % 4 === 3);
+    if (a === b) m[i][j] = n * n + 1 - m[i][j];
+  }
+  return m;
+}
+const SUN_SQ = [[6, 32, 3, 34, 35, 1], [7, 11, 27, 28, 8, 30], [19, 14, 16, 15, 23, 24],
+                [18, 20, 22, 21, 17, 13], [25, 29, 10, 9, 26, 12], [36, 5, 33, 4, 2, 31]];
+const SEVEN = [
+  { n: 3, metal: "lead" }, { n: 4, metal: "tin" }, { n: 5, metal: "iron" },
+  { n: 6, metal: "gold" }, { n: 7, metal: "copper" }, { n: 8, metal: "quicksilver" },
+  { n: 9, metal: "silver" }
+];
+function squareFor(n) { return n === 6 ? SUN_SQ : (n % 2 ? siamese(n) : doublyEven(n)); }
+function isMagic(m, n) {
+  const c = n * (n * n + 1) / 2;
+  const rows = m.map(r => r.reduce((a, b) => a + b, 0));
+  const cols = m.map((_, j) => m.reduce((a, r) => a + r[j], 0));
+  const d1 = m.reduce((a, r, i) => a + r[i], 0);
+  const d2 = m.reduce((a, r, i) => a + r[n - 1 - i], 0);
+  return [...rows, ...cols, d1, d2].every(v => v === c);
+}
+function sealTex(sq, n, ok) {
+  const S = 512, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const k = c.getContext("2d");
+  const span = S * 0.70, cell = span / n, x0 = (S - span) / 2;
+  k.fillStyle = "rgba(7,11,16,0.6)";
+  k.beginPath(); k.arc(S / 2, S / 2, S * 0.487, 0, Math.PI * 2); k.fill();
+  k.strokeStyle = ok ? "rgba(240,198,103,0.5)" : "rgba(220,60,60,0.9)";
+  k.lineWidth = 3; k.stroke();
+  k.strokeStyle = "rgba(240,198,103,0.22)"; k.lineWidth = 1.5;
+  for (let i = 0; i <= n; i++) {
+    k.beginPath(); k.moveTo(x0 + i * cell, x0); k.lineTo(x0 + i * cell, x0 + span); k.stroke();
+    k.beginPath(); k.moveTo(x0, x0 + i * cell); k.lineTo(x0 + span, x0 + i * cell); k.stroke();
+  }
+  k.fillStyle = "rgba(240,198,103,0.72)";
+  k.font = "600 " + Math.round(cell * 0.40) + "px 'Segoe UI',serif";
+  k.textAlign = "center"; k.textBaseline = "middle";
+  const at = {};
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    k.fillText(String(sq[i][j]), x0 + j * cell + cell / 2, x0 + i * cell + cell / 2);
+    at[sq[i][j]] = [x0 + j * cell + cell / 2, x0 + i * cell + cell / 2];
+  }
+  k.strokeStyle = "#fff3cf"; k.lineWidth = 3; k.lineJoin = "round";
+  k.shadowColor = "#ffdf9e"; k.shadowBlur = 14;
+  k.beginPath();
+  for (let v = 1; v <= n * n; v++) {
+    const p = at[v];
+    if (v === 1) k.moveTo(p[0], p[1]); else k.lineTo(p[0], p[1]);
+  }
+  k.stroke(); k.shadowBlur = 0;
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 8;
+  return tex;
+}
+const sealRing = new THREE.Group();
+const sealsOk = [];
+SEVEN.forEach(function (s, i) {
+  const sq = squareFor(s.n), ok = isMagic(sq, s.n);
+  sealsOk.push(ok);
+  const a = (i / 7) * Math.PI * 2 + Math.PI / 7 - Math.PI / 2;
+  const m = new THREE.Mesh(new THREE.CircleGeometry(1.85, 48),
+    new THREE.MeshBasicMaterial({ map: sealTex(sq, s.n, ok), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 }));
+  m.rotation.x = -Math.PI / 2;
+  m.rotation.z = -a;
+  m.position.set(Math.cos(a) * 15.6, 0.05, Math.sin(a) * 15.6);
+  sealRing.add(m);
+});
+scene.add(sealRing);
+console.log("[council] seals " + (sealsOk.every(Boolean) ? "VERIFIED" : "WRONG") + " "
+  + sealsOk.map((b, i) => SEVEN[i].n + ":" + (b ? "ok" : "BAD")).join(" "));
+
+/* ── THE SHELF: the archive's own index, engraved one chapter per lectern round the colonnade — 09 down to
+   0, in the captain's words and in his order. The room states what it is standing in; nothing is
+   prettified and no title is paraphrased. ─────────────────────────────────────────────────────────────── */
+const SHELF = [
+  ["09", "The Ripley Scrolls"],
+  ["08", "Newton's Hieroglyphica Planetarum"],
+  ["07", "Ancient, alchemical and magical alphabets"],
+  ["06", "Miscellanea Alchemica X"],
+  ["05", "Aurora Consurgens"],
+  ["04", "The silent alchemical book"],
+  ["03", "The macrocosm and microcosm"],
+  ["02", "Planetary seals and matrices"],
+  ["01", "Geometry of the alchemist"],
+  ["00", "Sammlung Alchymistischer Schriften"]
+];
+function plateTex(num, title) {
+  const W = 768, H = 192, c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const k = c.getContext("2d");
+  k.fillStyle = "rgba(6,10,14,0.9)";
+  k.fillRect(0, 0, W, H);
+  k.strokeStyle = "rgba(201,162,39,0.5)"; k.lineWidth = 3;
+  k.strokeRect(6, 6, W - 12, H - 12);
+  k.strokeStyle = "rgba(201,162,39,0.9)"; k.lineWidth = 5;
+  k.beginPath(); k.moveTo(40, 34); k.lineTo(40, H - 34); k.stroke();
+  k.fillStyle = "#f0c667";
+  k.font = "700 60px Georgia,'Times New Roman',serif";
+  k.textBaseline = "middle"; k.textAlign = "left";
+  k.fillText(num, 66, H / 2 + 3);
+  k.fillStyle = "#e7dfcc";
+  let size = 34;
+  k.font = size + "px Georgia,'Times New Roman',serif";
+  while (k.measureText(title).width > W - 210 && size > 15) {
+    size -= 2;
+    k.font = size + "px Georgia,'Times New Roman',serif";
+  }
+  k.fillText(title, 170, H / 2 + 3);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 8;
+  return tex;
+}
+SHELF.forEach(function (row, i) {
+  const a = Math.PI * 0.5 + (i + 0.5) / SHELF.length * Math.PI * 2;
+  const x = Math.cos(a) * 19.3, z = Math.sin(a) * 19.3;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.85),
+    new THREE.MeshBasicMaterial({ map: plateTex(row[0], row[1]), transparent: true }));
+  m.position.set(x, 1.55, z);
+  m.lookAt(0, 1.55, 0);
+  scene.add(m);
+  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.1, 0.14), lacquer);
+  leg.position.set(x, 0.55, z);
+  scene.add(leg);
+});
+
+
+
+
+/* ── THE CONTROLLER — COPIED FROM THE DOJO (the captain's order, 2026-10-24: "same control setting for
+   char and mov"). Nothing snaps: every value chases its target with MathUtils.damp (1 - e^(-λ·dt)), so the
+   feel is identical at 30 or 240 fps. Drag to look, WASD (or arrows) to walk, SHIFT to run. */
+let yaw = 0, pitch = -0.02, pinned = 0, dragging = false, px = 0, py = 0;
+const keys = new Set();
+const vel = new THREE.Vector3();
 const canvas = renderer.domElement;
 const enterEl = document.getElementById("enter");
 const nearEl = document.getElementById("near");
 const hudRows = document.getElementById("hudRows");
 
 enterEl.addEventListener("click", () => {
-  canvas.requestPointerLock();
   enterEl.classList.add("gone");
   setTimeout(() => { document.getElementById("veil").style.opacity = "0"; }, 320);
 });
-document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
-document.addEventListener("mousemove", e => {
-  if (!locked) return;
-  yaw -= e.movementX * 0.0022;
-  pitch -= e.movementY * 0.0018;
-  pitch = Math.max(-1.05, Math.min(0.85, pitch));
+canvas.addEventListener("pointerdown", e => { dragging = true; px = e.clientX; py = e.clientY; });
+addEventListener("pointerup", () => { dragging = false; });
+addEventListener("pointermove", e => {
+  if (!dragging) return;
+  yaw -= (e.clientX - px) * 0.0032;
+  pitch -= (e.clientY - py) * 0.0022;
+  pitch = Math.max(-0.95, Math.min(0.75, pitch));
+  px = e.clientX; py = e.clientY;
 });
-addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true; });
-addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+addEventListener("keydown", e => { keys.add(e.code); });
+addEventListener("keyup", e => { keys.delete(e.code); });
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
@@ -331,21 +601,39 @@ refreshHud();
 
 const clock = new THREE.Clock();
 const eye = new THREE.Vector3(0, 1.72, 17);
+let walkPhase = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
 
-  const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-  const rgt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-  const mz = (keys["w"] ? 1 : 0) - (keys["s"] ? 1 : 0);
-  const mx = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
-  const spd = keys["shift"] ? 9 : 4.2;
-  if (mz || mx) {
-    eye.addScaledVector(fwd, mz * spd * dt);
-    eye.addScaledVector(rgt, mx * spd * dt);
+  /* ── THE DOJO'S WALK, verbatim in spirit: wish in CAMERA space, damped velocity, clamped house ── */
+  let fwd = 0, side = 0;
+  if (keys.has("KeyW") || keys.has("ArrowUp")) fwd += 1;
+  if (keys.has("KeyS") || keys.has("ArrowDown")) fwd -= 1;
+  if (keys.has("KeyA") || keys.has("ArrowLeft")) side -= 1;
+  if (keys.has("KeyD") || keys.has("ArrowRight")) side += 1;
+  const run = keys.has("ShiftLeft") || keys.has("ShiftRight");
+  const maxSpeed = run ? 4.0 : 1.85;
+
+  let wx = 0, wz = 0;
+  if (fwd || side) {
+    const s = Math.sin(yaw), c = Math.cos(yaw);
+    wx = -s * fwd + c * side;
+    wz = -c * fwd - s * side;
+    const n = Math.hypot(wx, wz) || 1;
+    wx = wx / n * maxSpeed;
+    wz = wz / n * maxSpeed;
   }
+  vel.x = THREE.MathUtils.damp(vel.x, wx, 9, dt);
+  vel.z = THREE.MathUtils.damp(vel.z, wz, 9, dt);
+  const speed = Math.hypot(vel.x, vel.z);
+  eye.x += vel.x * dt;
+  eye.z += vel.z * dt;
   const rad = Math.hypot(eye.x, eye.z);              /* THE WALL IS THE COLUMNS */
   if (rad > 26) { eye.x *= 26 / rad; eye.z *= 26 / rad; }
-  camera.position.set(eye.x, 1.72 + Math.sin(t * 1.1) * 0.035, eye.z);
+  /* the stride, felt in the first person: the head rises on each footfall, scaled by REAL speed */
+  walkPhase += speed * dt * 3.4;
+  const bob = Math.sin(walkPhase * 2) * 0.022 * Math.min(1, speed / 2.1);
+  camera.position.set(eye.x, 1.72 + bob + Math.sin(t * 1.1) * 0.02, eye.z);
   camera.rotation.order = "YXZ";
   camera.rotation.y = yaw;
   camera.rotation.x = pitch;
@@ -356,6 +644,10 @@ function frame() {
   shaft.material.opacity = 0.045 + Math.sin(t * 0.6) * 0.012;
   dust.rotation.y = t * 0.014;
   rimGold.intensity = 90 + Math.sin(t * 0.8) * 8;
+  planets.rotation.y = t * 0.02;
+  sealRing.rotation.y = -t * 0.01;
+  clouds.rotation.y = t * 0.008;
+  coreStar.scale.setScalar(9 + Math.sin(t * 1.7) * 0.6);
 
   /* the room tells you what you are standing next to */
   if (performance.now() > pinned) {
