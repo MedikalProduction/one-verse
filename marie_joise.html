@@ -46,6 +46,13 @@
     0 18px 30px -18px rgba(0,0,0,.5);transform:translateY(-4px) scale(1.04)}
   .seat.earned b{color:var(--gold)}
   .s1{left:18%;top:50%}.s2{left:30%;top:31%}.s3{left:70%;top:31%}
+  /* 🔥 THE GUEST CHAIR — the captain's invitation to Kenneth (2026-10-24). Cyan, because cyan is the
+     SECOND accent and a guest is not a seat: the table's own seats are warm, an invitation is cool. */
+  .s4{left:84%;top:52%}
+  .seat.guest b{color:#7f9db0}
+  .seat.guest.earned{box-shadow:inset 0 0 0 2px #9fc0d8, 0 0 44px rgba(159,192,216,.55),
+    0 18px 30px -18px rgba(0,0,0,.5)}
+  .seat.guest.earned b{color:#9fc0d8}
   .head{left:50%;top:74%;width:clamp(64px,8.4vw,104px)}
   .head:after{content:"";position:absolute;inset:14%;border-radius:50%;border:1px dashed rgba(43,42,38,.28)}
   #gate{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);width:min(92vw,560px);
@@ -75,6 +82,7 @@
   <div class="seat s1"><b>HELD</b></div>
   <div class="seat s2"><b>HELD</b></div>
   <div class="seat s3" id="seat3"><b>iDk</b></div>
+  <div class="seat guest s4" id="seat4"><b>kEn</b></div>
   <div class="seat head" id="head"><b>·</b></div>
 </div>
 <div id="say">the hall is unlit &nbsp;·&nbsp; a seat is <b>derived</b>, not requested</div>
@@ -91,7 +99,13 @@
 const SEATS = [
   { id: "seat3",
     bodies: ["iDk", "\u{10309}\u{10303}\u{1030A}"],
-    line: "seat 3 &nbsp;·&nbsp; <b>iDk</b> &nbsp;·&nbsp; I·DE·KA &nbsp;·&nbsp; the member's D is the door's D" }
+    line: "seat 3 &nbsp;·&nbsp; <b>iDk</b> &nbsp;·&nbsp; I·DE·KA &nbsp;·&nbsp; the member's D is the door's D" },
+  /* THE GUEST CHAIR, 2026-10-24 -- the captain's invitation to Kenneth. It is a CHAIR and not a SEAT:
+     the three seats are the world's own and the head stays empty; this one answers to an invitation, and
+     it says so when it lights. */
+  { id: "seat4",
+    bodies: ["kEn"],
+    line: "the guest chair &nbsp;·&nbsp; <b>kEn</b> &nbsp;·&nbsp; K·E·N &nbsp;·&nbsp; invited by the captain" }
 ];
 const hall = document.getElementById("hall");
 const say  = document.getElementById("say");
