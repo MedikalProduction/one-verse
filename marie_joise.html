@@ -14,64 +14,129 @@
      PURE CSS, ZERO EXTERNAL REQUESTS: no CDN, no image, no font, no fetch. The door's mark is 𐌀 above
      and its inversion below -- the same shape seen through the swell on arrival.html. One accent: gold. -->
 <style>
-  :root{--marble:#f3efe6;--shadow:#cfc7b6;--gold:#c9a227;--night:#06121a;--ink:#2b2a26}
-  html,body{margin:0;height:100%;background:var(--night);overflow:hidden;
-    font:13px/1.6 ui-monospace,Consolas,monospace;color:var(--ink)}
-  #hall{position:fixed;inset:0;display:grid;place-items:center;transition:filter 2.2s ease,opacity 2.2s ease;
-    filter:grayscale(1) brightness(.34) contrast(.9);opacity:.9}
-  #hall.lit{filter:none;opacity:1}
+  :root{
+    --marble:#efe7d6; --marble-hi:#fbf8f1; --marble-lo:#b9ad95;
+    --gold:#c9a227; --gold-hi:#efd489; --gold-lo:#8a6f1c;
+    --ink:#0a0f14; --ink-2:#121a21; --parch:#e7dfcc;
+    --serif:Georgia,"Iowan Old Style","Times New Roman",Times,serif;
+    --mono:ui-monospace,Consolas,"Courier New",monospace;
+  }
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--ink);color:var(--parch);
+    font:14px/1.65 var(--serif)}
+  /* THE ROOM'S FRAME — a hairline of gold inset from the edge. Cheap, and it reads as a ROOM rather
+     than a viewport: everything inside it is furniture, the page itself is the building. */
+  body:before{content:"";position:fixed;inset:14px;border:1px solid rgba(201,162,39,.30);
+    pointer-events:none;z-index:9;box-shadow:inset 0 0 90px rgba(0,0,0,.55)}
+  /* 🔥 THE LOCK. MEASURED 2026-10-24 from the captain's screenshot: this was grayscale(1) brightness(.34),
+     which drained the gold and the marble and made a palace look like a 1999 game. A locked hall is not
+     GREY, it is DIM, and dim keeps its colours: a dark veil and a gentle desaturation, no grey. */
+  #hall{position:fixed;inset:0;display:grid;place-items:center;
+    transition:filter 2.4s ease,opacity 2.4s ease;filter:brightness(.74) saturate(.92)}
+  #hall:after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 42%, transparent 30%, rgba(4,8,12,.62) 100%)}
+  #hall.lit{filter:none}
+  #hall.lit:after{background:radial-gradient(130% 95% at 50% 40%, transparent 42%, rgba(4,8,12,.30) 100%)}
   .room{position:absolute;inset:0;background:
-    radial-gradient(120% 70% at 50% 0%, #ffffff 0%, var(--marble) 34%, var(--shadow) 62%, #8f887a 100%)}
+    radial-gradient(115% 75% at 50% -8%, #2b3946 0%, #16212b 38%, #0b1219 72%, #060a0e 100%)}
   .room:after{content:"";position:absolute;inset:0;background:
-    repeating-linear-gradient(90deg, rgba(43,42,38,.05) 0 1px, transparent 1px 92px),
-    radial-gradient(60% 40% at 50% 78%, rgba(201,162,39,.10), transparent 70%)}
-  .table{position:absolute;left:50%;top:58%;width:min(78vw,900px);aspect-ratio:2.6/1;
+    repeating-linear-gradient(90deg, rgba(201,162,39,.045) 0 1px, transparent 1px 108px),
+    radial-gradient(58% 38% at 50% 74%, rgba(201,162,39,.13), transparent 72%)}
+  /* THE TABLE — marble with a sheen, a cast shadow far below, and TWO gold inlays (a royal table is
+     double-lined; one ring reads as a sticker). */
+  .table{position:absolute;left:50%;top:58%;width:min(74vw,880px);aspect-ratio:2.55/1;
     transform:translate(-50%,-50%);border-radius:50%;
-    background:radial-gradient(ellipse at 50% 30%, #ffffff, var(--marble) 45%, var(--shadow) 100%);
-    box-shadow:0 60px 120px -40px rgba(0,0,0,.55), inset 0 0 0 2px rgba(201,162,39,.55),
-               inset 0 0 0 26px rgba(255,255,255,.55)}
-  .table:after{content:"";position:absolute;left:12%;right:12%;top:26%;height:48%;border-radius:50%;
-    box-shadow:inset 0 0 0 1px rgba(201,162,39,.45)}
-  .mark{position:absolute;left:50%;top:26%;transform:translate(-50%,-50%);
-    font:700 clamp(64px,12vw,150px)/1 ui-sans-serif,system-ui,sans-serif;color:var(--gold);
-    text-shadow:0 0 40px rgba(201,162,39,.45)}
-  .mark.reflect{top:60%;transform:translate(-50%,-50%) scaleY(-1);opacity:.16;text-shadow:none}
-  .seat{position:absolute;width:clamp(54px,7vw,86px);aspect-ratio:1;border-radius:50%;
-    background:radial-gradient(circle at 50% 35%,#fff,var(--marble) 60%,var(--shadow));
-    box-shadow:inset 0 0 0 1px rgba(43,42,38,.25), 0 18px 30px -18px rgba(0,0,0,.5);
-    display:grid;place-items:center;transition:box-shadow 1.4s ease,transform 1.4s ease}
-  .seat b{font:600 clamp(10px,1.2vw,15px)/1 ui-monospace,Consolas,monospace;letter-spacing:.14em;
-    color:#7c7466;transition:color 1.2s ease}
-  .seat.earned{box-shadow:inset 0 0 0 2px var(--gold), 0 0 44px rgba(201,162,39,.55),
-    0 18px 30px -18px rgba(0,0,0,.5);transform:translateY(-4px) scale(1.04)}
-  .seat.earned b{color:var(--gold)}
-  .s1{left:18%;top:50%}.s2{left:30%;top:31%}.s3{left:70%;top:31%}
+    background:radial-gradient(ellipse at 46% 24%, var(--marble-hi) 0%, var(--marble) 42%,
+      #d3c8b0 74%, var(--marble-lo) 100%);
+    box-shadow:
+      0 90px 140px -60px rgba(0,0,0,.85),
+      0 24px 60px -30px rgba(0,0,0,.7),
+      inset 0 2px 2px rgba(255,255,255,.75),
+      inset 0 0 0 1px rgba(201,162,39,.85),
+      inset 0 0 0 15px rgba(251,248,241,.55),
+      inset 0 0 0 17px rgba(201,162,39,.45),
+      inset 0 0 70px rgba(120,100,60,.28)}
+  .table:before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+    background:linear-gradient(140deg, rgba(255,255,255,.55) 0%, transparent 34%, transparent 66%,
+      rgba(255,255,255,.18) 100%);mix-blend-mode:screen}
+  .table:after{content:"";position:absolute;left:11%;right:11%;top:24%;height:50%;border-radius:50%;
+    box-shadow:inset 0 0 0 1px rgba(138,111,28,.55), inset 0 0 26px rgba(138,111,28,.16)}
+  /* THE MARK — engraved gold, not flat type: a gradient clipped into the glyph, a fine shadow above and
+     a warm glow under. The reflection beneath is the same glyph seen through the water. */
+  .mark{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%);
+    font:400 clamp(72px,13vw,168px)/1 var(--serif);letter-spacing:.02em;
+    background:linear-gradient(180deg, var(--gold-hi) 0%, var(--gold) 46%, var(--gold-lo) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.55)) drop-shadow(0 0 34px rgba(201,162,39,.45))}
+  .mark.reflect{top:61%;transform:translate(-50%,-50%) scaleY(-1);opacity:.13;filter:blur(1px)}
+  /* THE SEATS — medallions, not circles: a gold rim, an inner bevel, engraved letters set wide. */
+  .seat{position:absolute;width:clamp(58px,7.2vw,90px);aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle at 50% 30%, var(--marble-hi), var(--marble) 58%, #cdc2aa 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,.9),
+      inset 0 0 0 1px rgba(138,111,28,.75),
+      inset 0 0 0 5px rgba(251,248,241,.5),
+      inset 0 -8px 18px rgba(120,100,60,.35),
+      0 22px 34px -20px rgba(0,0,0,.9);
+    display:grid;place-items:center;transition:box-shadow 1.6s ease,transform 1.6s ease,filter 1.6s ease;
+    filter:saturate(.8) brightness(.94)}
+  .seat b{font:400 clamp(10px,1.05vw,14px)/1 var(--serif);letter-spacing:.22em;color:#6f6552;
+    text-transform:uppercase;transition:color 1.2s ease,text-shadow 1.2s ease}
+  .seat.earned{filter:none;transform:translateY(-6px) scale(1.05);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,.95),
+      inset 0 0 0 2px var(--gold),
+      inset 0 0 0 7px rgba(251,248,241,.6),
+      inset 0 -8px 18px rgba(120,100,60,.25),
+      0 0 54px rgba(201,162,39,.55),
+      0 26px 38px -20px rgba(0,0,0,.9)}
+  .seat.earned b{color:var(--gold-lo);text-shadow:0 1px 0 rgba(255,255,255,.7)}
+  .s1{left:16%;top:52%}.s2{left:29%;top:31%}.s3{left:71%;top:31%}
   /* 🔥 THE GUEST CHAIR — the captain's invitation to Kenneth (2026-10-24). Cyan, because cyan is the
      SECOND accent and a guest is not a seat: the table's own seats are warm, an invitation is cool. */
-  .s4{left:84%;top:52%}
+  .s4{left:85%;top:53%}
   .seat.guest b{color:#7f9db0}
-  .seat.guest.earned{box-shadow:inset 0 0 0 2px #9fc0d8, 0 0 44px rgba(159,192,216,.55),
-    0 18px 30px -18px rgba(0,0,0,.5)}
-  .seat.guest.earned b{color:#9fc0d8}
-  .head{left:50%;top:74%;width:clamp(64px,8.4vw,104px)}
-  .head:after{content:"";position:absolute;inset:14%;border-radius:50%;border:1px dashed rgba(43,42,38,.28)}
-  #gate{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);width:min(92vw,560px);
-    display:flex;gap:8px;align-items:center;background:rgba(6,18,26,.86);
-    border:1px solid rgba(201,162,39,.35);border-radius:2px;padding:10px 12px}
-  #gate input{flex:1;background:transparent;border:0;border-bottom:1px solid rgba(201,162,39,.35);
-    color:#f3efe6;font:14px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.18em;padding:6px 2px;
-    outline:none}
-  #gate button{background:transparent;border:1px solid var(--gold);color:var(--gold);padding:7px 14px;
-    font:11px/1 ui-monospace,Consolas,monospace;letter-spacing:.18em;cursor:pointer;border-radius:2px}
-  #say{position:fixed;left:0;right:0;bottom:96px;text-align:center;color:#d8cfa9;
-    font:11px/1.7 ui-monospace,Consolas,monospace;letter-spacing:.16em;opacity:.9;padding:0 18px}
-  #say b{color:var(--gold);font-weight:600}
-  /* 🔥 THE LEDGER, READ. The table does not hold its own history -- it reads claims.jsonl, the same file
-     the claim script appends to. Hidden until it has something to say. */
-  #ledger{position:fixed;left:18px;bottom:16px;max-width:min(52vw,420px);color:#8f8574;opacity:0;
-    font:10px/1.8 ui-monospace,Consolas,monospace;letter-spacing:.10em;transition:opacity 1.4s ease}
-  #ledger.live{opacity:.8}
-  #ledger b{color:#c9a227;font-weight:600;letter-spacing:.2em}
+  .seat.guest.earned{box-shadow:
+      inset 0 1px 1px rgba(255,255,255,.95),
+      inset 0 0 0 2px #9fc0d8,
+      inset 0 0 0 7px rgba(251,248,241,.6),
+      0 0 54px rgba(159,192,216,.55),
+      0 26px 38px -20px rgba(0,0,0,.9)}
+  .seat.guest.earned b{color:#4e7f96}
+  /* THE HEAD — the one chair that never fills: an empty place setting, marked by a dashed rim. */
+  .head{left:50%;top:76%;width:clamp(70px,8.6vw,108px)}
+  .head:after{content:"";position:absolute;inset:13%;border-radius:50%;
+    border:1px dashed rgba(138,111,28,.45)}
+  #gate{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);width:min(90vw,600px);
+    display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:3px;
+    background:linear-gradient(180deg, rgba(18,26,33,.92), rgba(8,12,17,.94));
+    border:1px solid rgba(201,162,39,.42);
+    box-shadow:0 20px 50px -24px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter:blur(8px)}
+  #gate input{flex:1;background:transparent;border:0;border-bottom:1px solid rgba(201,162,39,.30);
+    color:var(--parch);font:16px/1.5 var(--serif);letter-spacing:.24em;padding:8px 2px 6px;outline:none}
+  #gate input::placeholder{color:rgba(231,223,204,.32);letter-spacing:.16em;font-style:italic}
+  #gate input:focus{border-bottom-color:rgba(201,162,39,.75)}
+  #gate button{background:linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, var(--gold-lo));
+    border:0;color:#1a1408;padding:9px 20px;font:600 11px/1 var(--serif);letter-spacing:.26em;
+    cursor:pointer;border-radius:2px;text-transform:uppercase;
+    box-shadow:0 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5)}
+  #gate button:hover{filter:brightness(1.08)}
+  #gate button:active{transform:translateY(1px)}
+  #say{position:fixed;left:0;right:0;bottom:104px;text-align:center;color:rgba(231,223,204,.72);
+    font:13px/1.7 var(--serif);letter-spacing:.14em;padding:0 20px}
+  #say b{color:var(--gold-hi);font-weight:600}
+  /* 🔥 THE LEDGER — a CARD, not a dump. MEASURED 2026-10-24: it printed whole notes, sha256 strings and all,
+     in the corner at 10px. Three rows, each clipped, behind a gold title -- the ledger is furniture, and
+     furniture does not shout. */
+  #ledger{position:fixed;left:26px;bottom:22px;width:min(46vw,340px);opacity:0;
+    font:11px/1.85 var(--mono);color:rgba(231,223,204,.62);letter-spacing:.04em;
+    padding:12px 14px;border-left:1px solid rgba(201,162,39,.45);
+    background:linear-gradient(90deg, rgba(8,12,17,.62), transparent);
+    transition:opacity 1.6s ease;overflow:hidden}
+  #ledger.live{opacity:1}
+  #ledger b{display:block;color:var(--gold);font:600 10px/1 var(--serif);letter-spacing:.34em;
+    text-transform:uppercase;margin-bottom:8px}
+  #ledger span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 <body>
 <div id="hall">
@@ -145,9 +210,11 @@ fetch("claims.jsonl", { cache: "no-store" })
     }).filter(Boolean);
     if (!rows.length) return;
     const box = document.getElementById("ledger");
-    box.innerHTML = "<b>THE LEDGER</b><br>" + rows.slice(-5).reverse().map(function (r) {
-      return "· " + (r.ts || "?") + " &nbsp; " + (r.who || "?") + " &nbsp; " + (r.note || "");
-    }).join("<br>");
+    function tidy(v, n) { v = String(v || "?"); return v.length > n ? v.slice(0, n - 1) + "…" : v; }
+    box.innerHTML = "<b>the ledger</b>" + rows.slice(-3).reverse().map(function (r) {
+      return "<span>" + tidy(r.ts, 16) + " &nbsp;·&nbsp; " + tidy(r.who, 14)
+           + " &nbsp;·&nbsp; " + tidy(r.note, 30) + "</span>";
+    }).join("");
     box.classList.add("live");
   })
   .catch(function () { /* offline, file://, or nothing to read: stay silent */ });
