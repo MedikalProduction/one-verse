@@ -2194,6 +2194,151 @@ ISLE.forEach(function (d, i) {
 });
 scene.add(islands);
 
+/* ── THE SKY ARENA (the captain, 2026-10-25): "a big coliseum in the clouds,, a sky arena" near the
+   council. A stone bowl on a cloud deck, a bridge of slabs from the colonnade, forty pilasters, and the
+   captain's own hieroglyph band carried round the outer wall. It is a PLACE, not a backdrop: the body's
+   wall opens to 84 m and the bridge lands at y = 0, so you can walk out of the council and stand in it.
+   Everything is the same loft law as the body -- rings, an offset, a fold. ------------------------- */
+const ARENA = { x: 64, z: 0, r: 23 };
+{
+  const arena = new THREE.Group();
+  arena.position.set(ARENA.x, 0, ARENA.z);
+  scene.add(arena);
+  const stone = new THREE.MeshStandardMaterial({ color: 0xbcb19a, roughness: 0.88, metalness: 0.04 });
+  const seatMatA = new THREE.MeshStandardMaterial({ color: 0x8d8676, roughness: 0.92, metalness: 0.03 });
+  /* the platform: a cut disc under everything, so the bowl has a base and not a paper edge */
+  arena.add(new THREE.Mesh(loft([
+    { y: -1.10, rx: ARENA.r * 0.88, rz: ARENA.r * 0.88 },
+    { y: -0.55, rx: ARENA.r * 0.99, rz: ARENA.r * 0.99, fold: 0.010, foldN: 30 },
+    { y: -0.10, rx: ARENA.r * 1.03, rz: ARENA.r * 1.03, fold: 0.014, foldN: 30 },
+    { y: 0.00, rx: ARENA.r * 1.00, rz: ARENA.r * 1.00 }], 72), stone));
+  /* THE BOWL: rings that climb and widen, which is what a colosseum's seating actually is */
+  arena.add(new THREE.Mesh(loft((function () {
+    const r = [], N = 16;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      r.push({ y: t * 9.6, rx: ARENA.r * (0.74 + 0.26 * t), rz: ARENA.r * (0.74 + 0.26 * t),
+        fold: 0.006, foldN: 42 });
+    }
+    return r;
+  })(), 96), seatMatA));
+  /* the sand */
+  const sand = new THREE.Mesh(new THREE.CircleGeometry(ARENA.r * 0.745, 72),
+    new THREE.MeshStandardMaterial({ color: 0x9b8a68, roughness: 0.985, metalness: 0.0 }));
+  sand.rotation.x = -Math.PI / 2;
+  sand.position.y = 0.03;
+  sand.receiveShadow = true;
+  arena.add(sand);
+  /* the outer wall, and forty pilasters standing on it */
+  arena.add(new THREE.Mesh(loft([
+    { y: 0.0, rx: ARENA.r * 1.02, rz: ARENA.r * 1.02 },
+    { y: 10.2, rx: ARENA.r * 1.05, rz: ARENA.r * 1.05 },
+    { y: 11.0, rx: ARENA.r * 1.02, rz: ARENA.r * 1.02 }], 84), stone));
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    const pil = new THREE.Mesh(loft([
+      { y: 0.00, rx: 0.34, rz: 0.26 }, { y: 3.4, rx: 0.30, rz: 0.23 },
+      { y: 9.4, rx: 0.28, rz: 0.21 }, { y: 9.9, rx: 0.40, rz: 0.30 }], 8, 0.25), stone);
+    pil.position.set(Math.cos(a) * ARENA.r * 1.015, 0.5, Math.sin(a) * ARENA.r * 1.015);
+    pil.rotation.y = -a;
+    arena.add(pil);
+  }
+  /* the captain's hieroglyph band, carried round the OUTSIDE, facing out to the clouds */
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2;
+    const band = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.5),
+      new THREE.MeshBasicMaterial({ map: hieroFrieze(900 + i * 13, 3, 200, 130),
+        transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, color: 0xffe3ac }));
+    band.position.set(Math.cos(a) * ARENA.r * 1.06, 6.4, Math.sin(a) * ARENA.r * 1.06);
+    band.lookAt(Math.cos(a) * ARENA.r * 3, 6.4, Math.sin(a) * ARENA.r * 3);
+    arena.add(band);
+  }
+  /* THE BRIDGE: ten slabs from the colonnade to the bowl, at the body's own floor height */
+  for (let i = 0; i < 10; i++) {
+    const x = 24 + i * ((ARENA.x - ARENA.r - 24) / 9);
+    const slab = new THREE.Mesh(loft([
+      { y: -0.34, rx: 1.55, rz: 2.6 }, { y: 0.00, rx: 1.72, rz: 2.9 }], 12, 0.35), stone);
+    slab.position.set(x, 0, 0);
+    slab.receiveShadow = true;
+    slab.castShadow = true;
+    scene.add(slab);
+  }
+  arena.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+}
+
+/* ── THE SEA, THE SUN, THE TREES. The hall floats on a cloud deck; below it there is WATER now, and out
+   past the arena the day: a sun disc with a core, and trees on the slabs. Same law as the body -- a
+   tapered trunk with a bend, three clumps of leaf on offset rings. Nothing downloaded. -------------- */
+{
+  const cloudDeck = new THREE.Mesh(new THREE.CircleGeometry(96, 96),
+    new THREE.MeshBasicMaterial({ map: cloudTex, color: 0xdfe8f4, transparent: true, opacity: 0.20,
+      depthWrite: false }));
+  cloudDeck.rotation.x = -Math.PI / 2;
+  cloudDeck.position.y = -0.06;
+  scene.add(cloudDeck);
+  const seaTex = (function () {
+    const S = 256, c = document.createElement("canvas");
+    c.width = c.height = S;
+    const k = c.getContext("2d");
+    const img = k.createImageData(S, S);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const i = (y * S + x) * 4;
+      const nx = Math.sin((x + y) * 0.12) * Math.cos(x * 0.05) * 0.5;
+      const ny = Math.cos((x - y) * 0.11) * Math.sin(y * 0.06) * 0.5;
+      img.data[i] = 128 + nx * 40; img.data[i + 1] = 128 + ny * 40; img.data[i + 2] = 255; img.data[i + 3] = 255;
+    }
+    k.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(26, 26);
+    return t;
+  })();
+  const sea = new THREE.Mesh(new THREE.CircleGeometry(320, 96),
+    new THREE.MeshStandardMaterial({ color: 0x12293c, roughness: 0.16, metalness: 0.55,
+      normalMap: seaTex, normalScale: new THREE.Vector2(0.55, 0.55), envMapIntensity: 1.4 }));
+  sea.rotation.x = -Math.PI / 2;
+  sea.position.y = -34;
+  scene.add(sea);
+  scene.userData.sea = sea;
+  const sunG = new THREE.Group();
+  sunG.position.set(150, 34, -250);
+  sunG.add(new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, color: 0xfff0c0,
+    transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })));
+  sunG.children[0].scale.set(46, 46, 1);
+  const sunCore = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, color: 0xffffff,
+    transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sunCore.scale.set(15, 15, 1);
+  sunG.add(sunCore);
+  scene.add(sunG);
+  scene.userData.sun = sunG;
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3b2a, roughness: 0.95 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f5b3a, roughness: 0.85, metalness: 0.02 });
+  const TREES = [[38, 3.0, 0.6, 9.0], [52, 9.0, 12.5, 14], [58, 1.5, 26.0, 16]];
+  for (const [rad, ty, ta, size] of TREES) {
+    for (let t = 0; t < 4; t++) {
+      const aa = ta + (t - 1.5) * 0.10, rr = rad + (t - 1.5) * size * 0.16;
+      const bx = Math.cos(aa) * rr, bz = Math.sin(aa) * rr, by = ty + size * 0.16;
+      const h = 3.2 + (t % 3) * 0.7;
+      const trunk = new THREE.Mesh(loft([
+        { y: 0.00, rx: 0.20, rz: 0.20 }, { y: h * 0.55, rx: 0.15, rz: 0.15, ox: 0.16 },
+        { y: h, rx: 0.09, rz: 0.09, ox: 0.34 }], 10), trunkMat);
+      trunk.position.set(bx, by, bz);
+      scene.add(trunk);
+      for (let c2 = 0; c2 < 3; c2++) {
+        const rr2 = 0.95 - c2 * 0.20;
+        const clump = new THREE.Mesh(loft([
+          { y: -rr2, rx: rr2 * 0.55, rz: rr2 * 0.55 },
+          { y: 0.00, rx: rr2, rz: rr2 * 0.92, fold: 0.06, foldN: 7 },
+          { y: rr2 * 0.9, rx: rr2 * 0.42, rz: rr2 * 0.40 }], 18), leafMat);
+        clump.position.set(bx + 0.34 + (c2 - 1) * 0.34, by + h * (0.72 + c2 * 0.16),
+          bz + (c2 % 2 ? 0.22 : -0.18));
+        scene.add(clump);
+      }
+    }
+  }
+}
+
 /* ── A SEAT FOR EACH OF THE SEVENTY-TWO. The names were already written on the floor; a name on a floor is
    a LABEL, a plinth is a CHAIR. Seventy-two stone stools in one ring, ONE draw call (InstancedMesh): the
    council now has somewhere for its members to sit, and the room stops reading as a lobby. ------- */
@@ -2685,8 +2830,8 @@ function frame() {
   char.speed = Math.hypot(char.vel.x, char.vel.z);
   char.pos.x += char.vel.x * dt;
   char.pos.z += char.vel.z * dt;
-  const rad = Math.hypot(char.pos.x, char.pos.z);    /* THE WALL IS THE COLUMNS */
-  if (rad > 26) { char.pos.x *= 26 / rad; char.pos.z *= 26 / rad; }
+  const rad = Math.hypot(char.pos.x, char.pos.z);    /* THE WALL IS THE COLUMNS -- and now the bridge */
+  if (rad > 84) { char.pos.x *= 84 / rad; char.pos.z *= 84 / rad; }
   /* …AND THE FURNITURE IS FURNITURE: the table, the twelve columns and the seventy-two seats are solid.
      `pushOutOfCircles` only applies below each obstacle's height, so the angel flies OVER the table and
      lands BESIDE it, which is the difference between a hall and a wallpaper. ---------------------- */
@@ -2909,7 +3054,7 @@ function frame() {
      report. The camera's ring now FOLLOWS the body's radius (body + 3.2 m), and only the outer wall at
      26 m is absolute. */
   const cRad = Math.hypot(wantX, wantZ);
-  const camWall = Math.max(18.6, Math.min(26.0, Math.hypot(char.pos.x, char.pos.z) + 3.2));
+  const camWall = Math.max(18.6, Math.min(86.0, Math.hypot(char.pos.x, char.pos.z) + 3.2));
   if (cRad > camWall) { wantX *= camWall / cRad; wantZ *= camWall / cRad; }
   /* ── THE CAMERA CANNOT SEE THROUGH MARBLE. Before this it could sit inside a column and fill the frame
      with stone (MEASURED: the old comment cites "shot 3" doing exactly that). Now the segment from the
@@ -2985,6 +3130,11 @@ function frame() {
   clouds.rotation.y = t * 0.008;
   columnClouds.rotation.y = t * 0.004;
   islands.rotation.y = t * 0.0032;                 /* the world turns slowly; the hall does not */
+  if (scene.userData.sea) {                         /* the water moves even when nothing else does */
+    const nt = scene.userData.sea.material.normalMap;
+    nt.offset.x = t * 0.0055;
+    nt.offset.y = t * 0.0038;
+  }
   cubePlane.rotation.z = t * 0.012;                /* thirteen circles, seventy-eight chords, turning */
   floorMandala.rotation.z = -t * 0.006;
   coreStar.scale.setScalar(7 + Math.sin(t * 1.7) * 0.5);
