@@ -62,42 +62,139 @@
 <div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span><span id="hudGram">four grammars of the corpus — <b>♬</b> sound and image · <b>△</b> geometric emblems · <b>⊗</b> planetary squares and traced seals · <b>◎</b> concentric cosmograms</span></div>
 <div id="near"></div>
 <form id="gate"><input id="body" placeholder="present a body" spellcheck="false" autocomplete="off"><button type="submit">PRESENT</button></form>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
 <script type="module">
-import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+import * as THREE from "three";
+import { Reflector } from "three/addons/objects/Reflector.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 const GOLD = 0xc9a227, GOLD_HI = 0xefd489, PARCH = 0xe7dfcc, CYAN = 0x39d0ff, MARBLE = 0xd9cfb8;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.06;
+renderer.toneMappingExposure = 0.98;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x05080b, 0.012);
-const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 400);
-camera.position.set(0, 1.72, 17);
+scene.fog = new THREE.FogExp2(0x070b11, 0.0055);
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 600);
 
-/* ── THE LIGHT, and it is the whole picture. One shaft falls through the oculus onto the table; the room
-   is lit by its BOUNCE, not by a sun. Two dim fills keep the columns from being silhouettes. ────────── */
-const shaftLight = new THREE.SpotLight(GOLD_HI, 260, 70, 0.34, 0.55, 1.4);
-shaftLight.position.set(0, 26, 0);
-shaftLight.target.position.set(0, 1, 0);
+/* ── THE ENVIRONMENT IS THE PICTURE. MEASURED with my own eyes (headless shot, 2026-10-24): a room full of
+   metalness and NO environment map renders every metal BLACK — the gold was beige because it had nothing
+   to reflect. So the sky is built here on a canvas: night at the zenith, a warm band at the horizon where
+   the cloud sea glows, stars everywhere. PMREM turns it into the room's reflection. ─────────────────── */
+function envCanvas() {
+  const W = 1024, H = 512, c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const k = c.getContext("2d");
+  const g = k.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0.00, "#0a1018");
+  g.addColorStop(0.30, "#16202e");
+  g.addColorStop(0.46, "#4a3a1e");
+  g.addColorStop(0.54, "#a8853a");
+  g.addColorStop(0.62, "#2b2013");
+  g.addColorStop(1.00, "#06080c");
+  k.fillStyle = g; k.fillRect(0, 0, W, H);
+  for (let i = 0; i < 320; i++) {
+    const x = Math.random() * W, y = Math.random() * H * 0.55;
+    k.fillStyle = "rgba(255,247,228," + (0.12 + Math.random() * 0.55) + ")";
+    k.fillRect(x, y, 1.8, 1.8);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const raw = envCanvas();
+  scene.environment = pmrem.fromEquirectangular(raw).texture;
+  raw.dispose();
+  pmrem.dispose();
+}
+
+/* ── BLOOM — gold that BLEEDS into the dark. The renderer alone clips at white; the bloom pass lets the light
+   spill past the stroke, and that spill is the single largest difference between "a 3D scene" and "a
+   photograph of a place". OutputPass does the tone map + sRGB once, after the bloom. ─────────────────── */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+/* MEASURED (shot 5, 2026-10-24): strength 0.46 + threshold 0.70 over a lit SKY turned the whole frame to
+   milk — bloom eats area, not detail. 0.30 / 0.88 lets the gold bleed and leaves the air alone. */
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.30, 0.62, 0.88);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ── THE LIGHT. One shaft through the oculus lands on the table; a warm bounce lifts the marble; a cold rim
+   separates the columns from the void; a hemisphere keeps the black from being a hole. ──────────────── */
+const shaftLight = new THREE.SpotLight(0xfff2d2, 1400, 90, 0.46, 0.72, 1.5);
+shaftLight.position.set(0, 32, 1);
+shaftLight.target.position.set(0, 0, 0);
 scene.add(shaftLight, shaftLight.target);
-const rimGold = new THREE.PointLight(GOLD, 90, 58, 2.0);
-rimGold.position.set(0, 6.5, 0);
+const rimGold = new THREE.PointLight(0xffcf87, 420, 66, 2.0);
+rimGold.position.set(0, 7.5, 0);
 scene.add(rimGold);
-const fill = new THREE.HemisphereLight(0x2a3a4a, 0x080c11, 0.55);
+const rimCool = new THREE.PointLight(0x7fb4e0, 260, 80, 2.0);
+rimCool.position.set(-16, 13, -14);
+scene.add(rimCool);
+const fill = new THREE.HemisphereLight(0x9db6d4, 0x1b1509, 1.25);
 scene.add(fill);
+/* four perimeter lamps in the planetary colours, so the colonnade is a ring of light and not a silhouette */
+for (const [lx, lz, col] of [[-15, -15, 0x6f8ff0], [15, -15, 0x7fe0dc],
+                             [-15, 15, 0xe0553f], [15, 15, 0x4fd39a]]) {
+  const lamp = new THREE.PointLight(col, 150, 46, 2.0);
+  lamp.position.set(lx, 5.5, lz);
+  scene.add(lamp);
+}
+
 
 /* ── THE FLOOR: black marble, polished enough to hold a reflection line. Two gold inlays, because a
    council floor is measured in rings, and the outermost one is where the columns stand. ─────────────── */
 const floor = new THREE.Mesh(
   new THREE.CircleGeometry(30, 96),
-  new THREE.MeshStandardMaterial({ color: 0x0e151b, metalness: 0.9, roughness: 0.26 })
+  new THREE.MeshStandardMaterial({ color: 0x141d27, metalness: 0.45, roughness: 0.38,
+    envMapIntensity: 1.15 })
 );
 floor.rotation.x = -Math.PI / 2;
+floor.position.y = 0.008;                 /* the marble sits ON the mirror as a 55 % veil */
+floor.material.transparent = true;
+floor.material.opacity = 0.42;
 scene.add(floor);
+
+/* ── THE MIRROR — .:aRn:. — the closest thing to ray tracing that runs at 60 fps: a planar REFLECTOR, a real
+   second render from the mirrored camera. The table, the columns, the angels and the master seal are
+   genuinely reflected, and they move correctly as you walk. The marble above it is a 55 % veil, which is
+   what polished black stone actually is: a mirror with a stain on it. ────────────────────────────────── */
+const mirror = new Reflector(new THREE.CircleGeometry(30, 96), {
+  clipBias: 0.004,
+  textureWidth: Math.min(1280, Math.floor(innerWidth * 0.85)),
+  textureHeight: Math.min(720, Math.floor(innerHeight * 0.85)),
+  color: 0x33404f
+});
+mirror.rotation.x = -Math.PI / 2;
+mirror.position.y = 0.002;
+scene.add(mirror);
+
+/* ── .:éNo:. — REFLEXION · FLEXION · INFLEXION. A perfect mirror is a dead surface: real polished marble
+   bends the light it returns. The Reflector's own fragment shader is patched here, at the one line that
+   samples the reflection, so every sample is displaced by a slow sine wave in SCREEN space — the table's
+   reflection ripples, the columns flex, and the seal's reflection breathes. 0.0022 is the whole difference
+   between glass and water. ─────────────────────────────────────────────────────────────────────────────── */
+mirror.material.uniforms.uTime = { value: 0 };
+mirror.material.fragmentShader = mirror.material.fragmentShader
+  .replace("uniform sampler2D tDiffuse;", "uniform sampler2D tDiffuse;\nuniform float uTime;")
+  .replace("texture2DProj( tDiffuse, vUv )",
+    "texture2DProj( tDiffuse, vec4( vUv.xy + vec2( sin( vUv.y * 16.0 + uTime * 0.85 ), "
+    + "cos( vUv.x * 16.0 + uTime * 0.65 ) ) * 0.0024 * vUv.w, vUv.zw ) )");
+mirror.material.needsUpdate = true;
 for (const [r, op] of [[9.6, 0.5], [20.4, 0.35], [28.6, 0.22]]) {
   const ring = new THREE.Mesh(
     new THREE.TorusGeometry(r, 0.045, 6, 128),
@@ -110,24 +207,51 @@ for (const [r, op] of [[9.6, 0.5], [20.4, 0.35], [28.6, 0.22]]) {
 
 /* ── TWELVE COLUMNS on a circle. Fluted by geometry alone: sixteen sides, a capital, a plinth, and a gold
    band at eye height so the eye has something to follow round the room. ───────────────────────────── */
-const colMat = new THREE.MeshStandardMaterial({ color: MARBLE, roughness: 0.72, metalness: 0.08 });
+/* ── MARBLE, made not painted: a canvas of cream stone with grey veins walked by quadratic curves, repeated
+   up the shaft. A plain colour at this scale reads as plastic; a vein reads as stone from any distance. ── */
+function marbleTex(rep) {
+  const S = 512, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const k = c.getContext("2d");
+  k.fillStyle = "#e3dac6"; k.fillRect(0, 0, S, S);
+  for (let i = 0; i < 110; i++) {
+    k.strokeStyle = "rgba(112,112,110," + (0.04 + Math.random() * 0.17) + ")";
+    k.lineWidth = 0.5 + Math.random() * 3.2;
+    k.beginPath();
+    let x = Math.random() * S, y = Math.random() * S;
+    k.moveTo(x, y);
+    for (let s = 0; s < 6; s++) {
+      const nx = x + (Math.random() - 0.5) * 170, ny = y + (Math.random() - 0.5) * 170;
+      k.quadraticCurveTo(x + (Math.random() - 0.5) * 80, y + (Math.random() - 0.5) * 80, nx, ny);
+      x = nx; y = ny;
+    }
+    k.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, rep);
+  tex.anisotropy = 4;
+  return tex;
+}
+const colMat = new THREE.MeshStandardMaterial({ color: 0xe9e0cc, map: marbleTex(7),
+  roughness: 0.42, metalness: 0.05, envMapIntensity: 1.25 });
 const goldMat = new THREE.MeshStandardMaterial({ color: GOLD, roughness: 0.35, metalness: 0.75,
                                                  emissive: GOLD, emissiveIntensity: 0.18 });
 for (let i = 0; i < 12; i++) {
   const a = (i / 12) * Math.PI * 2;
   const g = new THREE.Group();
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.92, 15, 16), colMat);
-  shaft.position.y = 7.5;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.94, 30, 18), colMat);
+  shaft.position.y = 15;
   g.add(shaft);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.16, 0.92, 0.7, 16), colMat);
-  cap.position.y = 15.15;
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 0.90, 0.8, 18), colMat);
+  cap.position.y = 30.1;
   g.add(cap);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 1.18, 0.6, 16), colMat);
-  base.position.y = 0.3;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 1.22, 0.7, 18), colMat);
+  base.position.y = 0.35;
   g.add(base);
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.86, 0.05, 6, 32), goldMat);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.88, 0.05, 6, 32), goldMat);
   band.rotation.x = Math.PI / 2;
-  band.position.y = 8.4;
+  band.position.y = 16.8;
   g.add(band);
   g.position.set(Math.cos(a) * 21, 0, Math.sin(a) * 21);
   g.rotation.y = -a;
@@ -136,9 +260,47 @@ for (let i = 0; i < 12; i++) {
 
 /* ── THE DOME and its stars. BackSide, so we are inside it; the oculus is a gold ring at the zenith and
    the shaft below it is the only thing in this room that is not a solid. ───────────────────────────── */
+const domeMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms: {
+    uTime: { value: 0 },
+    uSky: { value: new THREE.Color(0x0a1322) },
+    uGlow: { value: new THREE.Color(0x6b5424) }
+  },
+  vertexShader: [
+    "varying vec3 vP;",
+    "void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }"
+  ].join("\n"),
+  fragmentShader: [
+    "precision highp float;",
+    "uniform float uTime; uniform vec3 uSky; uniform vec3 uGlow;",
+    "varying vec3 vP;",
+    "float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }",
+    "float noise(vec2 p){",
+    "  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);",
+    "  float a = hash(i), b = hash(i + vec2(1.0, 0.0));",
+    "  float c = hash(i + vec2(0.0, 1.0)), d = hash(i + vec2(1.0, 1.0));",
+    "  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);",
+    "}",
+    "float fbm(vec2 p){ float v = 0.0, a = 0.5;",
+    "  for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; } return v; }",
+    "void main(){",
+    "  vec3 d = normalize(vP);",
+    "  float h = clamp(d.y * 0.5 + 0.5, 0.0, 1.0);",
+    "  vec3 col = mix(uGlow * 0.32, uSky, smoothstep(0.26, 0.92, h));",
+    "  vec2 uv = vec2(atan(d.z, d.x) * 0.55, d.y * 2.4);",
+    "  float c = fbm(uv * 2.3 + vec2(uTime * 0.020, uTime * 0.006));",
+    "  float band = smoothstep(0.52, 0.02, h);",
+    "  col += vec3(0.50, 0.58, 0.70) * pow(c, 2.6) * band * 0.72;",
+    "  float st = pow(hash(floor(d.xz * 420.0)), 64.0);",
+    "  col += vec3(1.0, 0.96, 0.88) * st * smoothstep(0.52, 0.95, h) * 1.7;",
+    "  gl_FragColor = vec4(col, 1.0);",
+    "}"
+  ].join("\n")
+});
 const dome = new THREE.Mesh(
-  new THREE.SphereGeometry(58, 40, 22, 0, Math.PI * 2, 0, Math.PI / 2),
-  new THREE.MeshStandardMaterial({ color: 0x080d13, roughness: 1, side: THREE.BackSide })
+  new THREE.SphereGeometry(58, 48, 26, 0, Math.PI * 2, 0, Math.PI / 2),
+  domeMat
 );
 scene.add(dome);
 {
@@ -248,19 +410,36 @@ for (let i = 0; i < 12; i++) {
 
 /* ── THE MARK 𐌀 over the table: three strokes, drawn not typed — two legs and a bar, gold, emissive, with
    its own reflection standing under it in the marble. It turns, slowly, because a still glyph is a logo. */
+/* ── THE MASTER SEAL — "more powerful" (the captain, 2026-10-24). It is no longer three flat boxes: each
+   stroke is an EXTRUDED, BEVELLED slab (rounded shape → extrude → three bevel segments) in polished gold
+   that finally has an environment to reflect, and the seal carries its OWN light, so it is a source in
+   this room instead of a sticker on the sky. ──────────────────────────────────────────────────────────── */
+function bevelSlab(w, h, d) {
+  const r = Math.min(w, h) * 0.16, s = new THREE.Shape();
+  s.moveTo(-w / 2 + r, -h / 2);
+  s.lineTo(w / 2 - r, -h / 2); s.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+  s.lineTo(w / 2, h / 2 - r);  s.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+  s.lineTo(-w / 2 + r, h / 2); s.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
+  s.lineTo(-w / 2, -h / 2 + r); s.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+  return new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: d * 0.4,
+    bevelSize: Math.min(w, h) * 0.07, bevelSegments: 3, curveSegments: 8 });
+}
 const mark = new THREE.Group();
-const strokeMat = new THREE.MeshStandardMaterial({ color: GOLD_HI, metalness: 0.9, roughness: 0.22,
-  emissive: GOLD_HI, emissiveIntensity: 0.55 });
+const strokeMat = new THREE.MeshStandardMaterial({ color: 0xffe8a8, metalness: 0.98, roughness: 0.12,
+  emissive: 0xffb43a, emissiveIntensity: 0.6, envMapIntensity: 2.6 });
 for (const dir of [-1, 1]) {
-  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.34, 4.2, 0.34), strokeMat);
-  leg.position.set(dir * 1.02, 0, 0);
-  leg.rotation.z = dir * 0.22;
+  const leg = new THREE.Mesh(bevelSlab(0.52, 5.2, 0.34), strokeMat);
+  leg.position.set(dir * 1.18, 0, 0);
+  leg.rotation.z = dir * 0.21;
   mark.add(leg);
 }
-const bar = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.3, 0.34), strokeMat);
-bar.position.y = -0.55;
+const bar = new THREE.Mesh(bevelSlab(2.9, 0.46, 0.34), strokeMat);
+bar.position.set(0, -0.75, 0);
 mark.add(bar);
-mark.position.y = 9.4;
+const sealLight = new THREE.PointLight(0xffc85e, 190, 44, 2.0);
+sealLight.position.y = -0.4;
+mark.add(sealLight);
+mark.position.y = 7.6;
 scene.add(mark);
 const markReflect = mark.clone();
 markReflect.scale.y = -1;
@@ -287,11 +466,15 @@ function glyphTex(ch, colour) {
   return tex;
 }
 const PLANETARY = ["\u2609", "\u263D", "\u263F", "\u2640", "\u2642", "\u2643", "\u2644"];
+/* .:rGb:. — THE PLANETARY COLOURS, from the tradition (the ONE part of the metal correspondence that is
+   visible): Sol gold · Luna silver · Mercurius turquoise · Venus green · Mars red · Iupiter cornflower ·
+   Saturnus slate. A room where everything is gold has no planets in it. */
+const P_COL = ["#f5c95e", "#dfe9f2", "#7fe0dc", "#4fd39a", "#e0553f", "#6f8ff0", "#8fa0b4"];
 const planets = new THREE.Group();
 PLANETARY.forEach(function (ch, i) {
   const a = (i / 7) * Math.PI * 2 - Math.PI / 2;
   const m = new THREE.Mesh(new THREE.CircleGeometry(1.25, 40),
-    new THREE.MeshBasicMaterial({ map: glyphTex(ch, "#f0c667"), transparent: true,
+    new THREE.MeshBasicMaterial({ map: glyphTex(ch, P_COL[i]), transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false }));
   m.rotation.x = -Math.PI / 2;
   m.rotation.z = -a;
@@ -357,6 +540,26 @@ for (let i = 0; i < 46; i++) {
 }
 scene.add(clouds);
 
+/* ── THE PILLARS DISSOLVE INTO CLOUD (the captain, 2026-10-24: "so high up they blend with clouds, not those
+   half made pillars"). Thirty metres of marble, and the last eight are eaten by vapour: four additive puffs
+   per column, so the capital never presents a clean edge against the sky. ─────────────────────────────── */
+const columnClouds = new THREE.Group();
+for (let i = 0; i < 12; i++) {
+  const a = (i / 12) * Math.PI * 2;
+  for (let k = 0; k < 4; k++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, transparent: true,
+      opacity: 0.15 + Math.random() * 0.17, depthWrite: false, blending: THREE.AdditiveBlending,
+      color: 0xeaf2fb }));
+    sp.position.set(Math.cos(a) * 21 + (Math.random() - 0.5) * 3.2,
+                    21 + Math.random() * 11,
+                    Math.sin(a) * 21 + (Math.random() - 0.5) * 3.2);
+    const s = 7 + Math.random() * 9;
+    sp.scale.set(s, s * 0.8, 1);
+    columnClouds.add(sp);
+  }
+}
+scene.add(columnClouds);
+
 const starG = new THREE.Group();
 starG.position.set(0, 16.5, -13);
 function flare(sx, sy, op) {
@@ -366,9 +569,9 @@ function flare(sx, sy, op) {
   starG.add(s);
   return s;
 }
-const coreStar = flare(9, 9, 0.85);
-flare(50, 1.9, 0.5);
-flare(1.9, 54, 0.62);
+const coreStar = flare(7, 7, 0.8);
+flare(34, 1.3, 0.34);
+flare(1.3, 24, 0.28);
 scene.add(starG);
 for (const [rad, op] of [[10.4, 0.42], [13.4, 0.22]]) {
   const h = new THREE.Mesh(new THREE.TorusGeometry(rad, 0.05, 6, 96),
@@ -376,8 +579,8 @@ for (const [rad, op] of [[10.4, 0.42], [13.4, 0.22]]) {
   h.position.copy(starG.position);
   scene.add(h);
 }
-const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.52, 16.5, 12, 1, true),
-  new THREE.MeshBasicMaterial({ color: 0xfff4d2, transparent: true, opacity: 0.42,
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.34, 16.5, 12, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0xfff4d2, transparent: true, opacity: 0.13,
     blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
 beam.position.set(0, 8.25, -13);
 scene.add(beam);
@@ -413,9 +616,13 @@ function doublyEven(n) {
 const SUN_SQ = [[6, 32, 3, 34, 35, 1], [7, 11, 27, 28, 8, 30], [19, 14, 16, 15, 23, 24],
                 [18, 20, 22, 21, 17, 13], [25, 29, 10, 9, 26, 12], [36, 5, 33, 4, 2, 31]];
 const SEVEN = [
-  { n: 3, metal: "lead" }, { n: 4, metal: "tin" }, { n: 5, metal: "iron" },
-  { n: 6, metal: "gold" }, { n: 7, metal: "copper" }, { n: 8, metal: "quicksilver" },
-  { n: 9, metal: "silver" }
+  { n: 3, metal: "lead",        c: "#8fa0b4" },
+  { n: 4, metal: "tin",         c: "#6f8ff0" },
+  { n: 5, metal: "iron",        c: "#e0553f" },
+  { n: 6, metal: "gold",        c: "#f5c95e" },
+  { n: 7, metal: "copper",      c: "#4fd39a" },
+  { n: 8, metal: "quicksilver", c: "#7fe0dc" },
+  { n: 9, metal: "silver",      c: "#dfe9f2" }
 ];
 function squareFor(n) { return n === 6 ? SUN_SQ : (n % 2 ? siamese(n) : doublyEven(n)); }
 function isMagic(m, n) {
@@ -426,21 +633,21 @@ function isMagic(m, n) {
   const d2 = m.reduce((a, r, i) => a + r[n - 1 - i], 0);
   return [...rows, ...cols, d1, d2].every(v => v === c);
 }
-function sealTex(sq, n, ok) {
+function sealTex(sq, n, ok, col) {
   const S = 512, c = document.createElement("canvas");
   c.width = c.height = S;
   const k = c.getContext("2d");
   const span = S * 0.70, cell = span / n, x0 = (S - span) / 2;
   k.fillStyle = "rgba(7,11,16,0.6)";
   k.beginPath(); k.arc(S / 2, S / 2, S * 0.487, 0, Math.PI * 2); k.fill();
-  k.strokeStyle = ok ? "rgba(240,198,103,0.5)" : "rgba(220,60,60,0.9)";
-  k.lineWidth = 3; k.stroke();
-  k.strokeStyle = "rgba(240,198,103,0.22)"; k.lineWidth = 1.5;
+  k.strokeStyle = ok ? col : "rgba(220,60,60,0.9)";
+  k.globalAlpha = 0.6; k.lineWidth = 3; k.stroke();
+  k.strokeStyle = col; k.globalAlpha = 0.22; k.lineWidth = 1.5;
   for (let i = 0; i <= n; i++) {
     k.beginPath(); k.moveTo(x0 + i * cell, x0); k.lineTo(x0 + i * cell, x0 + span); k.stroke();
     k.beginPath(); k.moveTo(x0, x0 + i * cell); k.lineTo(x0 + span, x0 + i * cell); k.stroke();
   }
-  k.fillStyle = "rgba(240,198,103,0.72)";
+  k.fillStyle = col; k.globalAlpha = 0.5;
   k.font = "600 " + Math.round(cell * 0.40) + "px 'Segoe UI',serif";
   k.textAlign = "center"; k.textBaseline = "middle";
   const at = {};
@@ -448,8 +655,9 @@ function sealTex(sq, n, ok) {
     k.fillText(String(sq[i][j]), x0 + j * cell + cell / 2, x0 + i * cell + cell / 2);
     at[sq[i][j]] = [x0 + j * cell + cell / 2, x0 + i * cell + cell / 2];
   }
-  k.strokeStyle = "#fff3cf"; k.lineWidth = 3; k.lineJoin = "round";
-  k.shadowColor = "#ffdf9e"; k.shadowBlur = 14;
+  k.globalAlpha = 1;
+  k.strokeStyle = col; k.lineWidth = 3; k.lineJoin = "round";
+  k.shadowColor = col; k.shadowBlur = 14;
   k.beginPath();
   for (let v = 1; v <= n * n; v++) {
     const p = at[v];
@@ -467,7 +675,7 @@ SEVEN.forEach(function (s, i) {
   sealsOk.push(ok);
   const a = (i / 7) * Math.PI * 2 + Math.PI / 7 - Math.PI / 2;
   const m = new THREE.Mesh(new THREE.CircleGeometry(1.85, 48),
-    new THREE.MeshBasicMaterial({ map: sealTex(sq, s.n, ok), transparent: true,
+    new THREE.MeshBasicMaterial({ map: sealTex(sq, s.n, ok, s.c), transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 }));
   m.rotation.x = -Math.PI / 2;
   m.rotation.z = -a;
@@ -577,16 +785,183 @@ PLANETARY.forEach(function (ch, i) {
 wheel.add(wheelGlyphs);
 scene.add(wheel);
 
+/* ── THE MASTER SEAL'S AURA: twelve drawn glyph-plates in a ring around it, two additive glows behind, and a
+   core that breathes. That is what makes it a SEAL and not a letter. ────────────────────────────────── */
+const AURA = ["\u2609", "\u263D", "\u263F", "\u2640", "\u2642", "\u2643", "\u2644", "\u2641",
+              "\u2295", "\u2297", "\u25B3", "\u25BD"];
+const auraRing = new THREE.Group();
+AURA.forEach(function (ch, i) {
+  const a = (i / AURA.length) * Math.PI * 2;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.66),
+    new THREE.MeshBasicMaterial({ map: glyphTex(ch, "#ffe3a0"), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9 }));
+  m.position.set(Math.cos(a) * 4.2, Math.sin(a) * 4.2, -0.55);
+  auraRing.add(m);
+});
+mark.add(auraRing);
+const sealGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, transparent: true,
+  opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffd98a }));
+sealGlow.scale.set(15, 15, 1);
+sealGlow.position.z = -0.7;
+mark.add(sealGlow);
+const sealCore = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, transparent: true,
+  opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xfff6dd }));
+sealCore.scale.set(4.2, 4.2, 1);
+sealCore.position.z = 0.25;
+mark.add(sealCore);
+
+/* ── THE ARK ANGELS — .:aRk:. .:nGl:. .:aGl:. — three guardians at the back of the hall, holding the seal's
+   axis. Gold-plated, faceless, winged: a tapered robe, a capsule core, a halo, and two extruded feather-wings
+   whose outline is a quadratic curve, so the leading edge is a curve and not a step. ─────────────────── */
+const angelGold = new THREE.MeshStandardMaterial({ color: 0xf7e6bb, metalness: 0.95, roughness: 0.23,
+  emissive: 0xffb84a, emissiveIntensity: 0.22, envMapIntensity: 2.2 });
+const angelDark = new THREE.MeshStandardMaterial({ color: 0x090d13, metalness: 0.55, roughness: 0.4 });
+const wingShape = new THREE.Shape();
+wingShape.moveTo(0, 0);
+wingShape.quadraticCurveTo(1.15, 1.25, 2.55, 2.85);
+wingShape.quadraticCurveTo(1.35, 1.15, 0.50, 0.18);
+wingShape.lineTo(0, 0);
+const wingGeo = new THREE.ExtrudeGeometry(wingShape, { depth: 0.07, bevelEnabled: true,
+  bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 1, curveSegments: 10 });
+const ARK = [["aRk", -9.4, -10.8, 0.34], ["nGl", 9.4, -10.8, -0.34], ["aGl", 0, -15.8, 0]];
+for (const ANG of ARK) {
+  const g = new THREE.Group();
+  g.name = ANG[0];
+  const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 1.55, 3.5, 26, 1, true), angelDark);
+  robe.position.y = 1.75;
+  g.add(robe);
+  const core = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 1.5, 8, 16), angelGold);
+  core.position.y = 3.35;
+  g.add(core);
+  const headA = new THREE.Mesh(new THREE.SphereGeometry(0.30, 20, 16), angelGold);
+  headA.position.y = 4.60;
+  g.add(headA);
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.045, 8, 48), angelGold);
+  halo.position.y = 4.66;
+  g.add(halo);
+  for (const sgn of [-1, 1]) {
+    const wing = new THREE.Mesh(wingGeo, angelGold);
+    wing.position.set(sgn * 0.34, 3.10, -0.24);
+    wing.scale.x = sgn;
+    wing.rotation.z = sgn * 0.22;
+    g.add(wing);
+  }
+  g.position.set(ANG[1], 0, ANG[2]);
+  g.rotation.y = ANG[3];
+  scene.add(g);
+}
+console.log("[council] ark angels bound: .:aRk:. .:nGl:. .:aGl:.");
 
 
 
+
+
+/* ── THE BODY — Ace, on the dojo's own rig (five pivots: two hips, two shoulders, one neck) and the palette
+   read from the captain's sheet: cream frayed cape, olive hoodie, charcoal pants, leather, the CYAN machine
+   arm, one RED patch. Third person is not a camera mode here: it is the same character who walks the dojo. */
+const ACE_C = { cream: 0xe4dbc2, olive: 0x565440, char: 0x2b2b2e, leather: 0x6b4a2f,
+                cyan: 0x6fe9e4, red: 0xff3f5c, skin: 0xcbb49a, metal: 0xcfd6d8 };
+const mCream = new THREE.MeshStandardMaterial({ color: ACE_C.cream, roughness: 0.94 });
+const mOlive = new THREE.MeshStandardMaterial({ color: ACE_C.olive, roughness: 0.96 });
+const mChar = new THREE.MeshStandardMaterial({ color: ACE_C.char, roughness: 0.95 });
+const mLeath = new THREE.MeshStandardMaterial({ color: ACE_C.leather, roughness: 0.86 });
+const mSkin = new THREE.MeshStandardMaterial({ color: ACE_C.skin, roughness: 0.78 });
+const mMetal = new THREE.MeshStandardMaterial({ color: ACE_C.metal, roughness: 0.34, metalness: 0.72 });
+const mCyanB = new THREE.MeshStandardMaterial({ color: ACE_C.cyan, emissive: ACE_C.cyan,
+                                                emissiveIntensity: 2.4, roughness: 0.4 });
+const mRedB = new THREE.MeshStandardMaterial({ color: ACE_C.red, emissive: ACE_C.red,
+                                               emissiveIntensity: 1.4, roughness: 0.5 });
+const mHair = new THREE.MeshStandardMaterial({ color: 0x33302c, roughness: 0.9 });
+const mTeal = new THREE.MeshStandardMaterial({ color: 0x2f8f92, emissive: 0x1d5f63,
+                                               emissiveIntensity: 0.9, roughness: 0.8 });
+const HIP = 0.90, SHOULDER = 0.46, LEG = 0.46, ARM = 0.40;
+const player = new THREE.Group();
+scene.add(player);
+const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.160, 0.40, 6, 14), mOlive);
+torso.position.y = HIP + 0.22;
+player.add(torso);
+const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.115, 0.07, 12), mChar);
+collar.position.y = HIP + 0.44;
+player.add(collar);
+const neck = new THREE.Group();
+neck.position.y = HIP + 0.44;
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.122, 18, 14), mSkin);
+head.position.y = 0.10;
+neck.add(head);
+for (const sx of [-1, 1]) {                       /* two eyes on +z: the rig faces +z, yaw = atan2(vx, vz) */
+  const eyeM = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 6), mChar);
+  eyeM.position.set(sx * 0.045, 0.112, 0.113);
+  neck.add(eyeM);
+}
+for (let i = 0; i < 14; i++) {                    /* the dreads, with the teal tips */
+  const a = (i / 14) * Math.PI * 2 + 0.3, len = 0.17 + ((i * 37) % 11) / 100;
+  const d = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, len, 4, 6), mHair);
+  d.position.set(Math.cos(a) * 0.085, 0.20 - len * 0.34, Math.sin(a) * 0.085);
+  d.rotation.set(Math.cos(a) * 0.7, 0, -Math.sin(a) * 0.7);
+  neck.add(d);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 5), mTeal);
+  tip.position.set(d.position.x * 1.35, d.position.y - len * 0.52, d.position.z * 1.35);
+  neck.add(tip);
+}
+player.add(neck);
+
+function limbMesh(len, rad, mat) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(rad, Math.max(0.04, len - rad * 2), 4, 10), mat);
+  m.position.y = -len / 2;
+  g.add(m);
+  return g;
+}
+/* LEFT ARM = THE MACHINE (pale plating + two cyan rings) · RIGHT ARM = sleeve + glove */
+const armL = limbMesh(ARM, 0.048, mMetal);
+const armR = limbMesh(ARM, 0.056, mOlive);
+armL.position.set(-0.235, HIP + SHOULDER, 0);
+armR.position.set(0.235, HIP + SHOULDER, 0);
+[-0.10, -0.33].forEach(function (yy, i) {
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(i ? 0.042 : 0.050, 0.010, 6, 16), mCyanB);
+  ring.position.y = yy;
+  ring.rotation.x = Math.PI / 2;
+  armL.add(ring);
+});
+const glove = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), mChar);
+glove.position.y = -ARM + 0.02;
+armR.add(glove);
+const legL = limbMesh(LEG, 0.082, mChar);
+const legR = limbMesh(LEG, 0.082, mChar);
+legL.position.set(-0.088, HIP, 0);
+legR.position.set(0.088, HIP, 0);
+player.add(armL, armR, legL, legR);
+/* the CREAM CAPE: truncated cone, open, with a FRAYED hem pushed by hand */
+const capeGeo = new THREE.CylinderGeometry(0.135, 0.30, 0.48, 18, 1, true);
+{
+  const p = capeGeo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    if (p.getY(i) < -0.22) p.setY(i, p.getY(i) - (((i * 71) % 13) / 13) * 0.07);
+  }
+  p.needsUpdate = true;
+  capeGeo.computeVertexNormals();
+}
+const cape = new THREE.Mesh(capeGeo, new THREE.MeshStandardMaterial({
+  color: ACE_C.cream, roughness: 0.97, side: THREE.DoubleSide }));
+cape.position.y = HIP + 0.06;
+player.add(cape);
+const belt = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.020, 6, 20), mLeath);
+belt.position.y = HIP + 0.02;
+belt.rotation.x = Math.PI / 2;
+player.add(belt);
+const patch = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.10, 0.012), mRedB);
+patch.position.set(0.02, HIP + 0.30, -0.152);
+player.add(patch);
 
 /* ── THE CONTROLLER — COPIED FROM THE DOJO (the captain's order, 2026-10-24: "same control setting for
    char and mov"). Nothing snaps: every value chases its target with MathUtils.damp (1 - e^(-λ·dt)), so the
    feel is identical at 30 or 240 fps. Drag to look, WASD (or arrows) to walk, SHIFT to run. */
-let yaw = 0, pitch = -0.02, pinned = 0, dragging = false, px = 0, py = 0;
+let pinned = 0, dragging = false, px = 0, py = 0;
 const keys = new Set();
-const vel = new THREE.Vector3();
+/* the CAMERA is an ORBIT round the body: yaw around it, pitch above it, distance behind it. Arrows drive it. */
+const cam = { yaw: 0, pitch: 0.30, dist: 6.4 };
+const char = { pos: new THREE.Vector3(0, 0, 10.2), vel: new THREE.Vector3(), yaw: Math.PI,
+               speed: 0, phase: 0, turn: 0 };
 const canvas = renderer.domElement;
 const enterEl = document.getElementById("enter");
 const nearEl = document.getElementById("near");
@@ -596,13 +971,21 @@ enterEl.addEventListener("click", () => {
   enterEl.classList.add("gone");
   setTimeout(() => { document.getElementById("veil").style.opacity = "0"; }, 320);
 });
+/* ── MY OWN EYES: with ?auto (or #auto) the veil lifts without a click, so a headless browser can photograph
+   the room. It is also a legitimate "cinema" mode: no click, straight in. ───────────────────────────── */
+const AUTO = /(\?|&)auto\b/.test(location.search) || location.hash === "#auto";
+if (AUTO) {
+  document.getElementById("veil").style.transition = "none";
+  document.getElementById("veil").style.opacity = "0";
+  enterEl.classList.add("gone");
+}
 canvas.addEventListener("pointerdown", e => { dragging = true; px = e.clientX; py = e.clientY; });
 addEventListener("pointerup", () => { dragging = false; });
 addEventListener("pointermove", e => {
   if (!dragging) return;
-  yaw -= (e.clientX - px) * 0.0032;
-  pitch -= (e.clientY - py) * 0.0022;
-  pitch = Math.max(-0.95, Math.min(0.75, pitch));
+  cam.yaw -= (e.clientX - px) * 0.0032;
+  cam.pitch -= (e.clientY - py) * 0.0022;
+  cam.pitch = Math.max(-0.10, Math.min(0.95, cam.pitch));
   px = e.clientX; py = e.clientY;
 });
 addEventListener("keydown", e => { keys.add(e.code); });
@@ -612,6 +995,7 @@ addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  composer.setSize(innerWidth, innerHeight);
 });
 
 function refreshHud() {
@@ -646,43 +1030,77 @@ document.getElementById("gate").addEventListener("submit", function (e) {
 refreshHud();
 
 const clock = new THREE.Clock();
-const eye = new THREE.Vector3(0, 1.72, 17);
-let walkPhase = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
 
-  /* ── THE DOJO'S WALK, verbatim in spirit: wish in CAMERA space, damped velocity, clamped house ── */
+  /* ── THE CAMERA ON THE ARROWS (the captain, 2026-10-24: "camera moov: with arrows") — ←→ orbit the body,
+     ↑↓ raise and lower the eye. Damped like everything else, so it glides instead of stepping. ──────── */
+  const TURN = 2.0 * dt;
+  if (keys.has("ArrowLeft")) cam.yaw -= TURN;
+  if (keys.has("ArrowRight")) cam.yaw += TURN;
+  if (keys.has("ArrowUp")) cam.pitch = Math.min(0.98, cam.pitch + TURN * 0.55);
+  if (keys.has("ArrowDown")) cam.pitch = Math.max(-0.08, cam.pitch - TURN * 0.55);
+
+  /* ── THE DOJO'S WALK: wish in CAMERA space, damped velocity, the body clamped to the house ─────────── */
   let fwd = 0, side = 0;
-  if (keys.has("KeyW") || keys.has("ArrowUp")) fwd += 1;
-  if (keys.has("KeyS") || keys.has("ArrowDown")) fwd -= 1;
-  if (keys.has("KeyA") || keys.has("ArrowLeft")) side -= 1;
-  if (keys.has("KeyD") || keys.has("ArrowRight")) side += 1;
+  if (keys.has("KeyW")) fwd += 1;
+  if (keys.has("KeyS")) fwd -= 1;
+  if (keys.has("KeyA")) side -= 1;
+  if (keys.has("KeyD")) side += 1;
   const run = keys.has("ShiftLeft") || keys.has("ShiftRight");
   const maxSpeed = run ? 4.0 : 1.85;
-
   let wx = 0, wz = 0;
   if (fwd || side) {
-    const s = Math.sin(yaw), c = Math.cos(yaw);
+    const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw);
     wx = -s * fwd + c * side;
     wz = -c * fwd - s * side;
     const n = Math.hypot(wx, wz) || 1;
     wx = wx / n * maxSpeed;
     wz = wz / n * maxSpeed;
   }
-  vel.x = THREE.MathUtils.damp(vel.x, wx, 9, dt);
-  vel.z = THREE.MathUtils.damp(vel.z, wz, 9, dt);
-  const speed = Math.hypot(vel.x, vel.z);
-  eye.x += vel.x * dt;
-  eye.z += vel.z * dt;
-  const rad = Math.hypot(eye.x, eye.z);              /* THE WALL IS THE COLUMNS */
-  if (rad > 26) { eye.x *= 26 / rad; eye.z *= 26 / rad; }
-  /* the stride, felt in the first person: the head rises on each footfall, scaled by REAL speed */
-  walkPhase += speed * dt * 3.4;
-  const bob = Math.sin(walkPhase * 2) * 0.022 * Math.min(1, speed / 2.1);
-  camera.position.set(eye.x, 1.72 + bob + Math.sin(t * 1.1) * 0.02, eye.z);
-  camera.rotation.order = "YXZ";
-  camera.rotation.y = yaw;
-  camera.rotation.x = pitch;
+  char.vel.x = THREE.MathUtils.damp(char.vel.x, wx, 9, dt);
+  char.vel.z = THREE.MathUtils.damp(char.vel.z, wz, 9, dt);
+  char.speed = Math.hypot(char.vel.x, char.vel.z);
+  char.pos.x += char.vel.x * dt;
+  char.pos.z += char.vel.z * dt;
+  const rad = Math.hypot(char.pos.x, char.pos.z);    /* THE WALL IS THE COLUMNS */
+  if (rad > 26) { char.pos.x *= 26 / rad; char.pos.z *= 26 / rad; }
+  /* face the way you MOVE, not the way you press — shortest arc, damped */
+  if (char.speed > 0.12) {
+    const want = Math.atan2(char.vel.x, char.vel.z);
+    const dd = ((want - char.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    char.turn = dd / Math.max(dt, 1e-4);
+    char.yaw += dd * (1 - Math.exp(-14 * dt));
+  } else {
+    char.turn *= 0.86;
+  }
+  player.position.copy(char.pos);
+  player.rotation.y = char.yaw;
+  /* the walk is COMPUTED: the phase advances with the REAL speed, so it slows when you do */
+  char.phase += char.speed * dt * 3.4;
+  const sw = Math.sin(char.phase), sw2 = Math.sin(char.phase * 2);
+  const amp = Math.min(1, char.speed / 2.1);
+  legL.rotation.x = sw * 0.70 * amp;
+  legR.rotation.x = -sw * 0.70 * amp;
+  armL.rotation.x = -sw * 0.46 * amp - 0.05;
+  armR.rotation.x = sw * 0.46 * amp - 0.05;
+  torso.position.y = HIP + 0.22 + Math.abs(sw2) * 0.017 * amp;
+  neck.position.y = HIP + 0.44 + Math.abs(sw2) * 0.013 * amp;
+  cape.position.y = HIP + 0.06 + Math.abs(sw2) * 0.010 * amp;
+  player.rotation.z = THREE.MathUtils.damp(player.rotation.z, -char.turn * 0.018, 6, dt);
+  /* the camera is a body too: it FOLLOWS with damp, it never snaps */
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  let wantX = char.pos.x + Math.sin(cam.yaw) * cp * cam.dist;
+  let wantZ = char.pos.z + Math.cos(cam.yaw) * cp * cam.dist;
+  const wantY = 1.75 + sp * cam.dist;
+  /* THE CAMERA IS INSIDE THE HOUSE TOO: MEASURED (shot 3, 2026-10-24) it walked into a column and filled
+     the frame with marble. So it is clamped to the colonnade ring like the body is. */
+  const cRad = Math.hypot(wantX, wantZ);
+  if (cRad > 18.6) { wantX *= 18.6 / cRad; wantZ *= 18.6 / cRad; }
+  camera.position.x = THREE.MathUtils.damp(camera.position.x, wantX, 8, dt);
+  camera.position.y = THREE.MathUtils.damp(camera.position.y, wantY, 8, dt);
+  camera.position.z = THREE.MathUtils.damp(camera.position.z, wantZ, 8, dt);
+  camera.lookAt(char.pos.x, char.pos.y + 1.55, char.pos.z);
 
   mark.rotation.y = t * 0.16;
   mark.position.y = 9.4 + Math.sin(t * 0.9) * 0.16;
@@ -693,7 +1111,12 @@ function frame() {
   planets.rotation.y = t * 0.02;
   sealRing.rotation.y = -t * 0.01;
   clouds.rotation.y = t * 0.008;
-  coreStar.scale.setScalar(9 + Math.sin(t * 1.7) * 0.6);
+  columnClouds.rotation.y = t * 0.004;
+  coreStar.scale.setScalar(7 + Math.sin(t * 1.7) * 0.5);
+  domeMat.uniforms.uTime.value = t;
+  mirror.material.uniforms.uTime.value = t;
+  auraRing.rotation.z = -t * 0.22;
+  sealCore.scale.setScalar(4.2 + Math.sin(t * 2.2) * 0.45);
   wheel.rotation.z = t * 0.018;
   spokes.rotation.z = -t * 0.032;
   wheelGlyphs.rotation.z = t * 0.046;
@@ -702,7 +1125,7 @@ function frame() {
   if (performance.now() > pinned) {
     let best = null, bd = 3.4;
     for (const r of seatMeshes) {
-      const d = Math.hypot(eye.x - r.group.position.x, eye.z - r.group.position.z);
+      const d = Math.hypot(char.pos.x - r.group.position.x, char.pos.z - r.group.position.z);
       if (d < bd) { bd = d; best = r; }
     }
     if (best) {
@@ -710,14 +1133,14 @@ function frame() {
         + (best.lit ? best.seat.note : "vacant");
       nearEl.classList.add("live");
     } else {
-      const dt2 = Math.hypot(eye.x, eye.z);
+      const dt2 = Math.hypot(char.pos.x, char.pos.z);
       if (dt2 < 10.5) { nearEl.innerHTML = "the table — a seat is filled by a <b>body</b>, not a name";
         nearEl.classList.add("live"); }
       else nearEl.classList.remove("live");
     }
   }
 
-  renderer.render(scene, camera);
+  composer.render();
   requestAnimationFrame(frame);
 }
 frame();
