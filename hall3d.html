@@ -240,6 +240,113 @@ for (const [r, op] of [[9.6, 0.5], [20.4, 0.35], [28.6, 0.22]]) {
   scene.add(ring);
 }
 
+/* ── THE HIEROGLYPH FRIEZE — from the captain's plate (2026-10-24): a column-plate of Egyptian signs,
+   "Berl. Mus. Nr. 1474", pasted with no words. I will NOT transliterate a dead script off a photograph:
+   that would be invention with a straight face. What the plate HONESTLY gives is its STRUCTURE — signs
+   stacked in columns between hairlines, a cartouche now and then — and that structure is what is drawn
+   here, in STROKES, deterministically (seeded), so it is an ORNAMENT and never pretends to be a text.
+   Same law as the rest of this file: one drawing routine, many numbers. ------------------------------ */
+function rng32(seed) {
+  let s = seed >>> 0;
+  return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+function hieroSign(kind, x, y, s, c) {
+  const L = (a, b, d, e) => { c.beginPath(); c.moveTo(x + a * s, y + b * s); c.lineTo(x + d * s, y + e * s); c.stroke(); };
+  const A = (cx, cy, r) => { c.beginPath(); c.arc(x + cx * s, y + cy * s, r * s, 0, Math.PI * 2); c.stroke(); };
+  switch (kind % 10) {
+    case 0:                                        /* ankh: the loop, the stem, the arms */
+      A(0.50, 0.27, 0.14); L(0.50, 0.41, 0.50, 0.94); L(0.20, 0.55, 0.80, 0.55); break;
+    case 1:                                        /* the eye: lens, brow, pupil, the trailing stroke */
+      c.beginPath(); c.moveTo(x + 0.10 * s, y + 0.52 * s);
+      c.quadraticCurveTo(x + 0.50 * s, y + 0.28 * s, x + 0.88 * s, y + 0.52 * s);
+      c.quadraticCurveTo(x + 0.50 * s, y + 0.74 * s, x + 0.10 * s, y + 0.52 * s); c.stroke();
+      A(0.50, 0.51, 0.09);
+      L(0.12, 0.30, 0.86, 0.30); L(0.76, 0.60, 0.88, 0.88); break;
+    case 2:                                        /* the reed leaf: two curves and a spine */
+      c.beginPath(); c.moveTo(x + 0.50 * s, y + 0.94 * s);
+      c.quadraticCurveTo(x + 0.16 * s, y + 0.52 * s, x + 0.52 * s, y + 0.08 * s); c.stroke();
+      c.beginPath(); c.moveTo(x + 0.50 * s, y + 0.94 * s);
+      c.quadraticCurveTo(x + 0.62 * s, y + 0.48 * s, x + 0.52 * s, y + 0.08 * s); c.stroke();
+      L(0.50, 0.94, 0.50, 0.30); break;
+    case 3:                                        /* water: four zigzags */
+      for (let i = 0; i < 4; i++) {
+        const yy = 0.26 + i * 0.17;
+        c.beginPath(); c.moveTo(x + 0.08 * s, y + yy * s);
+        for (let t = 0; t <= 4; t++) c.lineTo(x + (0.08 + t * 0.21) * s, y + (yy + (t % 2 ? -0.055 : 0.055)) * s);
+        c.stroke();
+      }
+      break;
+    case 4:                                        /* sun disc in its ring */
+      A(0.50, 0.50, 0.30); A(0.50, 0.50, 0.055); break;
+    case 5:                                        /* the seated figure: head, shoulder, lap, shin */
+      A(0.42, 0.16, 0.10);
+      L(0.40, 0.26, 0.34, 0.58); L(0.34, 0.58, 0.82, 0.58); L(0.82, 0.58, 0.82, 0.90);
+      L(0.46, 0.26, 0.70, 0.44); L(0.40, 0.38, 0.24, 0.52); break;
+    case 6:                                        /* the bird: body, neck, head, beak, legs, tail */
+      c.beginPath(); c.ellipse(x + 0.46 * s, y + 0.50 * s, 0.22 * s, 0.15 * s, -0.25, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.moveTo(x + 0.60 * s, y + 0.40 * s);
+      c.quadraticCurveTo(x + 0.74 * s, y + 0.26 * s, x + 0.70 * s, y + 0.12 * s); c.stroke();
+      A(0.68, 0.11, 0.055); L(0.72, 0.11, 0.86, 0.13);
+      L(0.42, 0.62, 0.40, 0.90); L(0.54, 0.62, 0.56, 0.90);
+      L(0.26, 0.46, 0.08, 0.36); break;
+    case 7:                                        /* the staff: a shaft with a hook and a foot */
+      L(0.46, 0.08, 0.46, 0.90); A(0.58, 0.16, 0.13); L(0.30, 0.90, 0.66, 0.90); break;
+    case 8:                                        /* the horned viper: one S-curve, one head */
+      c.beginPath(); c.moveTo(x + 0.18 * s, y + 0.84 * s);
+      c.bezierCurveTo(x + 0.70 * s, y + 0.80 * s, x + 0.24 * s, y + 0.30 * s, x + 0.76 * s, y + 0.22 * s);
+      c.stroke();
+      A(0.78, 0.22, 0.06); c.beginPath();
+      c.moveTo(x + 0.80 * s, y + 0.14 * s); c.lineTo(x + 0.90 * s, y + 0.06 * s); c.stroke(); break;
+    default:                                       /* the djed pillar: four bands on a shaft */
+      L(0.50, 0.06, 0.50, 0.94);
+      for (let i = 0; i < 4; i++) L(0.28, 0.20 + i * 0.19, 0.72, 0.20 + i * 0.19);
+      L(0.36, 0.94, 0.64, 0.94);
+  }
+}
+function hieroFrieze(seed, cols, w, h, ink) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const k = c.getContext("2d");
+  const R = rng32(seed);
+  const cw = w / cols;
+  k.strokeStyle = ink || "rgba(244,212,140,0.95)";
+  k.lineCap = "round";
+  k.lineJoin = "round";
+  for (let i = 0; i <= cols; i++) {               /* the hairlines ARE the column structure */
+    k.globalAlpha = 0.55;
+    k.lineWidth = Math.max(1, w / 900);
+    k.beginPath(); k.moveTo(i * cw, h * 0.02); k.lineTo(i * cw, h * 0.98); k.stroke();
+  }
+  k.globalAlpha = 0.9;
+  k.lineWidth = Math.max(1, w / 700);
+  k.beginPath(); k.moveTo(0, h * 0.02); k.lineTo(w, h * 0.02); k.stroke();
+  k.beginPath(); k.moveTo(0, h * 0.98); k.lineTo(w, h * 0.98); k.stroke();
+  k.globalAlpha = 1;
+  for (let i = 0; i < cols; i++) {
+    const x0 = i * cw;
+    let y = h * 0.06;
+    while (y < h * 0.84) {
+      const s = Math.min(cw * 0.62, h * 0.30) * (0.72 + R() * 0.42);
+      const px = x0 + cw * 0.5 - s * 0.5;
+      k.lineWidth = Math.max(1.2, w / 520);
+      hieroSign(Math.floor(R() * 10), px, y, s, k);
+      if (R() < 0.16) {                            /* a cartouche: the oval and its baseline */
+        k.lineWidth = Math.max(1, w / 800);
+        k.beginPath();
+        k.ellipse(px + s * 0.5, y + s * 0.52, s * 0.62, s * 0.56, 0, 0, Math.PI * 2);
+        k.stroke();
+        k.beginPath(); k.moveTo(px + s * 0.5 - s * 0.46, y + s * 1.02);
+        k.lineTo(px + s * 0.5 + s * 0.46, y + s * 1.02); k.stroke();
+      }
+      y += s * 1.10 + h * 0.012;
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 4;
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+}
+
 /* ── TWELVE COLUMNS on a circle. Fluted by geometry alone: sixteen sides, a capital, a plinth, and a gold
    band at eye height so the eye has something to follow round the room. ───────────────────────────── */
 /* ── MARBLE, made not painted: a canvas of cream stone with grey veins walked by quadratic curves, repeated
@@ -291,6 +398,83 @@ for (let i = 0; i < 12; i++) {
   g.position.set(Math.cos(a) * 21, 0, Math.sin(a) * 21);
   g.rotation.y = -a;
   scene.add(g);
+}
+
+/* ── THE ALK BOARDS, REDRAWN. The captain dropped `outputs/ALK` (2026-10-24): ten screenshots -- alchemical
+   tables, the 72 seals, the flower-of-life bundle, the Kabbalah tree, a power-control array. They are
+   ~5 MB of watermarked COMPILATIONS, so they are REFERENCE, never assets. What is drawn here is the
+   mathematics those boards point at, and all of it is exact: SEVEN circles through one centre (Seed of
+   Life), NINETEEN on the hexagonal lattice (Flower of Life), THIRTEEN joined by every chord (Metatron's
+   Cube). A motif that can be CONSTRUCTED is worth more than one that must be downloaded. ------------- */
+function mandalaCanvas(kind, S, ink) {
+  const c = document.createElement("canvas");
+  c.width = c.height = S;
+  const k = c.getContext("2d");
+  const R = S * 0.47, cx = S / 2, cy = S / 2;
+  k.strokeStyle = ink || "rgba(246,214,146,0.95)";
+  k.lineWidth = Math.max(1, S / 430);
+  k.lineCap = "round";
+  const circle = (x, y, r) => { k.beginPath(); k.arc(x, y, r, 0, Math.PI * 2); k.stroke(); };
+  const line = (x1, y1, x2, y2) => { k.beginPath(); k.moveTo(x1, y1); k.lineTo(x2, y2); k.stroke(); };
+  if (kind === "seed") {
+    const r = R * 0.52;
+    circle(cx, cy, r);
+    for (let i = 0; i < 6; i++) circle(cx + Math.cos(i * Math.PI / 3) * r, cy + Math.sin(i * Math.PI / 3) * r, r);
+  } else if (kind === "flower") {
+    /* the hexagonal lattice: a = (r, 0), b = (r/2, r*sqrt3/2); |i + j| <= 2 gives 19 circles */
+    const r = R / 4.55;
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
+      if (Math.abs(i + j) > 2) continue;
+      circle(cx + i * r + j * r * 0.5, cy + j * r * Math.sqrt(3) / 2, r);
+    }
+  } else {
+    /* METATRON: thirteen centres -- one, six at r, six at r*sqrt3 turned 30 deg -- and every chord */
+    const r = R * 0.315, pts = [[cx, cy]];
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+      pts.push([cx + Math.cos(a + Math.PI / 6) * r * Math.sqrt(3), cy + Math.sin(a + Math.PI / 6) * r * Math.sqrt(3)]);
+    }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      line(pts[i][0], pts[i][1], pts[j][0], pts[j][1]);
+    }
+    for (const p of pts) circle(p[0], p[1], r * 0.42);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 4;
+  return t;
+}
+/* the Flower of Life, ENGRAVED IN THE MARBLE under the council table: an inlay, not a decal -- it sits on
+   the mirror at 3 cm, additive gold at 16 %, so it reads as a line of metal set into stone. */
+const floorMandala = new THREE.Mesh(new THREE.PlaneGeometry(9.2, 9.2),
+  new THREE.MeshBasicMaterial({ map: mandalaCanvas("flower", 1024), transparent: true, opacity: 0.16,
+    blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffd98a }));
+floorMandala.rotation.x = -Math.PI / 2;
+floorMandala.position.y = 0.032;
+scene.add(floorMandala);
+/* METATRON'S CUBE, HUNG IN THE AIR beyond the table where the star is: thirteen circles and seventy-eight
+   chords, turning slowly against the cloud sea. The board asked for a portal; this is the one that is
+   actually constructible. */
+const cubePlane = new THREE.Mesh(new THREE.PlaneGeometry(13.5, 13.5),
+  new THREE.MeshBasicMaterial({ map: mandalaCanvas("metatron", 1024), transparent: true, opacity: 0.20,
+    blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffe3ac }));
+cubePlane.position.set(0, 11.6, -16.2);
+scene.add(cubePlane);
+
+/* ── THE LINTEL: the captain's plate, stood up. Above each of the twelve columns, a panel of stacked
+   signs between hairlines -- the plate's own structure, one panel per column, facing INWARD so the ring
+   of text encircles the room at 18 m and the council reads as a place that was WRITTEN, not decorated.
+   Deterministic seed per panel, so the wall is the same wall on every load. ------------------------ */
+for (let i = 0; i < 12; i++) {
+  const a = (i / 12) * Math.PI * 2;
+  const panel = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.55, 3.30),
+    new THREE.MeshBasicMaterial({ map: hieroFrieze(1474 + i * 37, 2, 168, 448),
+      transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending, color: 0xffe3ac }));
+  panel.position.set(Math.cos(a) * 20.55, 18.1, Math.sin(a) * 20.55);
+  panel.lookAt(0, 18.1, 0);                       /* +Z faces the centre: the text looks at the table */
+  scene.add(panel);
 }
 
 /* ── THE DOME and its stars. BackSide, so we are inside it; the oculus is a gold ring at the zenith and
@@ -875,7 +1059,12 @@ function loft(rings, seg, square) {
         cx = Math.sign(cx) * Math.pow(Math.abs(cx), p);
         cz = Math.sign(cz) * Math.pow(Math.abs(cz), p);
       }
-      pos.push(ox + cx * r.rx, r.y, oz + cz * r.rz);
+      /* PLEATS. A gathered cloth ring is never a circle: it is a circle with N folds in it. `fold` is the
+         amplitude and `foldN` the count, so the hem of a robe can be a seven-metre sweep of fabric that
+         REMEMBERS being gathered -- no simulation, no texture, one cosine. (Garment3DGen's real lesson is
+         that cloth reads by its drape, not its resolution; this is that lesson in one line.) --------- */
+      const pleat = r.fold ? (1 + r.fold * Math.cos((r.foldN || 8) * a + (r.foldPhase || 0))) : 1;
+      pos.push(ox + cx * r.rx * pleat, r.y, oz + cz * r.rz * pleat);
       uv.push(s / seg, i / (rings.length - 1));
     }
   }
@@ -1413,33 +1602,39 @@ HUMAN.push(cape);
   ANGELV.push(tunic);
 
   /* ── THE SKIRT, OPEN DOWN THE FRONT. A closed loft is a cone -- the pawn. A robe is an ARC: it falls
-     from the waist, splits at the front, and the legs show through the split when he flies. --------- */
+     from the waist, splits at the front, and the legs show through the split when he flies. And it is
+     GATHERED: thirteen pleats that deepen toward the hem, so the sweep of cloth is a fold pattern and
+     not a smooth surface. (The captain's ask, 2026-10-24: "ample clothes".) ----------------------- */
   const sk = new THREE.Mesh(loft((function () {
     const rings = [], N = 18;
     const gap = 1.15;                                /* radians of open front, centred on +z */
     for (let i = 0; i <= N; i++) {
       const t = i / N, y = HIP + 0.03 - t * (HIP - 0.015);
-      const flare = 0.165 + Math.pow(t, 1.5) * 0.34;
+      const flare = 0.165 + Math.pow(t, 1.5) * 0.40;
       rings.push({ y, rx: flare, rz: flare * 0.88,
+        fold: 0.020 + 0.042 * Math.pow(t, 0.8), foldN: 13,
         span: Math.PI * 2 - gap, a0: Math.PI / 2 + gap / 2 });
     }
     return rings;
-  })(), 36), WHITE);
+  })(), 72), WHITE);
   rig.add(sk);
   ANGELV.push(sk);
 
-  /* a SECOND layer at the hem: cloth falls in layers, and the outer one is what catches the light */
+  /* a SECOND layer at the hem: cloth falls in layers, and the outer one is what catches the light.
+     Seventeen finer pleats at a DIFFERENT phase, so the two layers never line up -- which is what real
+     gathered cloth does, and what one cone can never do. ----------------------------------------- */
   const hemLayer = new THREE.Mesh(loft((function () {
     const rings = [], N = 10;
     const gap = 1.15;
     for (let i = 0; i <= N; i++) {
       const t = i / N, y = HIP - 0.02 - t * (HIP - 0.12);
-      const flare = 0.175 + Math.pow(t, 1.35) * 0.40;
+      const flare = 0.175 + Math.pow(t, 1.35) * 0.46;
       rings.push({ y, rx: flare, rz: flare * 0.88,
+        fold: 0.016 + 0.040 * Math.pow(t, 0.7), foldN: 17, foldPhase: 0.42,
         span: Math.PI * 2 - gap, a0: Math.PI / 2 + gap / 2 });
     }
     return rings;
-  })(), 36), WHITE2);
+  })(), 84), WHITE2);
   rig.add(hemLayer);
   ANGELV.push(hemLayer);
 
@@ -1477,12 +1672,80 @@ HUMAN.push(cape);
   collarA.rotation.x = Math.PI / 2;
   rig.add(collarA);
   ANGELV.push(collarA);
-  const sash = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.012, 8, 36), mGoldF);
-  sash.position.y = HIP + 0.01;
-  sash.rotation.x = Math.PI / 2;
-  sash.scale.z = kBody.depth * 1.1;
-  rig.add(sash);
-  ANGELV.push(sash);
+  /* THE SASH. Not a torus: a WOUND band with eleven folds in it, a gold knot at the left hip, and two
+     tails that hang and swing. The belt is where "ample" is decided, because it is the one place the
+     cloth is gathered by FORCE, and a circle of gold there is what made the robe read as a bathrobe. */
+  {
+    const rings = [];
+    for (let i = 0; i <= 5; i++) {
+      const t = i / 5;
+      rings.push({ y: HIP + 0.050 - t * 0.098, rx: 0.186 + t * 0.005, rz: 0.152,
+        fold: 0.013, foldN: 11 });
+    }
+    const band = new THREE.Mesh(loft(rings, 56), WHITE2);
+    rig.add(band);
+    ANGELV.push(band);
+    const knot = new THREE.Mesh(loft([
+      { y: 0.045, rx: 0.030, rz: 0.026 }, { y: 0.000, rx: 0.038, rz: 0.032 },
+      { y: -0.048, rx: 0.028, rz: 0.024 }], 14), mGoldF);
+    knot.position.set(-0.168, HIP - 0.005, 0.055);
+    knot.rotation.z = 0.18;
+    rig.add(knot);
+    ANGELV.push(knot);
+    /* the two tails: cloth, pleated, hanging off the knot */
+    for (const [dx, len, ph] of [[-0.015, 0.46, 0.0], [0.055, 0.34, 0.9]]) {
+      const tail = new THREE.Mesh(loft((function () {
+        const r = [];
+        for (let i = 0; i <= 7; i++) {
+          const t = i / 7;
+          r.push({ y: -t * len, rx: 0.032 - t * 0.010, rz: 0.011,
+            ox: Math.sin(t * 2.1 + ph) * 0.012, oz: 0.030 * Math.sin(t * 1.6 + ph),
+            fold: 0.11, foldN: 5, foldPhase: ph });
+        }
+        return r;
+      })(), 12), WHITE2);
+      tail.position.set(-0.168 + dx, HIP + 0.02, 0.075);
+      rig.add(tail);
+      ANGELV.push(tail);
+    }
+  }
+
+  /* THE BELL SLEEVE, on the right arm only. The left is the MACHINE and must stay visible -- so the
+     cloth goes where the body does, and the asymmetry is the character: one arm of a tailor, one arm of
+     a workshop. Twelve pleats widening to a cuff that swallows the hand, and it rides the shoulder
+     pivot, so it swings with the arm instead of hanging off the torso. ----------------------------- */
+  {
+    const sleeve = new THREE.Mesh(loft((function () {
+      const r = [];
+      for (let i = 0; i <= 9; i++) {
+        const t = i / 9;
+        r.push({ y: 0.055 - t * 0.40, rx: 0.086 + Math.pow(t, 1.5) * 0.085,
+          rz: (0.086 + Math.pow(t, 1.5) * 0.085) * 0.92,
+          fold: 0.030 + 0.075 * t, foldN: 12 });
+      }
+      return r;
+    })(), 44), WHITE2);
+    armRm.shoulder.add(sleeve);
+    ANGELV.push(sleeve);
+  }
+
+  /* THE TRAIN: a half-arc behind the shoulders, gathering as it falls, so the back of the figure is cloth
+     and not a silhouette. It is the one piece that only reads in flight -- which is the point. ------ */
+  {
+    const train = new THREE.Mesh(loft((function () {
+      const r = [], N = 14, span = 2.5;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N, y = HIP + 0.06 - t * (HIP - 0.06);
+        const flare = 0.16 + Math.pow(t, 1.25) * 0.52;
+        r.push({ y, rx: flare, rz: flare * 0.95,
+          fold: 0.014 + 0.045 * t, foldN: 15, foldPhase: 1.1,
+          span, a0: -Math.PI / 2 - span / 2 });
+      }
+      return r;
+    })(), 64), WHITE2);
+    rig.add(train);
+    ANGELV.push(train);
+  }
 
   /* the two ribbons that stream off the shoulders (cloth, not a cape) */
   for (const sx of [-1, 1]) {
@@ -2068,8 +2331,12 @@ function frame() {
   if (keys.has("ArrowLeft")) cam.yaw += TURN;      /* MEASURED (the captain, 2026-10-24): the arrows
                                                       orbited the WRONG way; the sign is the fix */
   if (keys.has("ArrowRight")) cam.yaw -= TURN;
-  if (keys.has("ArrowUp")) cam.pitch = Math.min(1.25, cam.pitch + TURN * 0.55);
-  if (keys.has("ArrowDown")) cam.pitch = Math.max(-0.35, cam.pitch - TURN * 0.55);
+  /* ── THE VERTICAL IS INVERTED NO LONGER (the captain, 2026-10-24: "camera movement in inversed top and
+     bot"). pitch > 0 puts the CAMERA ABOVE the body, so a positive pitch LOOKS DOWN. ArrowUp was adding
+     to pitch, which raised the eye and tipped the view at the floor — press UP, see DOWN. The sign is
+     the bug: ArrowUp now lowers the eye (the horizon rises into frame), ArrowDown raises it. --------- */
+  if (keys.has("ArrowUp")) cam.pitch = Math.max(-0.35, cam.pitch - TURN * 0.55);
+  if (keys.has("ArrowDown")) cam.pitch = Math.min(1.25, cam.pitch + TURN * 0.55);
 
   /* ── THE DOJO'S WALK, AND THE ANGEL'S FLIGHT. Ground: wish in CAMERA space, damped velocity, the body
      clamped to the house. Air: the same wish on a longer leash, plus a vertical velocity that is SPENT
@@ -2231,6 +2498,8 @@ function frame() {
   clouds.rotation.y = t * 0.008;
   columnClouds.rotation.y = t * 0.004;
   islands.rotation.y = t * 0.0032;                 /* the world turns slowly; the hall does not */
+  cubePlane.rotation.z = t * 0.012;                /* thirteen circles, seventy-eight chords, turning */
+  floorMandala.rotation.z = -t * 0.006;
   coreStar.scale.setScalar(7 + Math.sin(t * 1.7) * 0.5);
   domeMat.uniforms.uTime.value = t;
   mirror.material.uniforms.uTime.value = t;
