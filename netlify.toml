@@ -1,0 +1,25 @@
+# 🔥 Ace · 2026-10-24 · NETLIFY BUILD — versioned, so no build setting lives only in a click.
+#
+# THE ONE RULE THIS FILE EXISTS FOR: publish = "." — this repository IS the deploy folder. It carries the
+# pages of the One Verse and NOTHING ELSE. The vessel (WHITEHAT/, _agentfs/, DNA, keys, lab code) is never
+# here, because a Netlify project pointed at the vessel root would publish the vault. Measured 2026-10-24:
+# the dashboard had publish directory "/" against the repo root, which is that accident waiting to happen.
+#
+# No build command: these are authored pages, not generated ones. The generator lives in the vessel
+# (scripts/one_verse_publish.py) and this folder is its output, byte-checked before it is committed.
+
+[build]
+  publish = "."
+  command = ""
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# Headers: no sniffing, no referrer leaking a player's path. No CSP here on purpose -- a CSP written by
+# hand for a page that loads one module from unpkg would be a guess, and a guessed policy is worse than
+# an honest absence. Recorded as OPEN in the vessel's HANDOVER.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
