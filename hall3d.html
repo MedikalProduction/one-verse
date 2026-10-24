@@ -2339,6 +2339,115 @@ const ARENA = { x: 64, z: 0, r: 23 };
   }
 }
 
+/* ── THE FLAGSHIP. The captain: "WHERE IS THE SHIPP". She was never on this page: the real one is a
+   procedural PINNACE in the 0xGen app (`frontend/src/lib/procShip.ts`, 5393 parts, hull of 728 strakes),
+   measured off a reference at W 15.53 · H 32.58 · D 39.79 -- longer than tall, less than half as wide as
+   tall. This is her REBUILT here at those ratios (length 72, height 58.9, beam 28.1, draft 6.6): the same
+   `loft` law as the angel, three masts, five sails, rigging drawn as lines, a lantern with its own light,
+   and she RIDES the swell instead of sitting on it. It is a reconstruction, not a port of 5393 parts. */
+{
+  const ship = new THREE.Group();
+  const SEA_Y = -34;
+  ship.position.set(30, SEA_Y, -84);
+  ship.rotation.y = -0.55;
+  scene.add(ship);
+  const L = 72, BEAM = 28.1, DRAFT = 6.6;
+  const hullDark = new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.82, metalness: 0.06 });
+  const hullTrim = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.42, metalness: 0.55,
+    emissive: 0x3a2d0c, emissiveIntensity: 0.4 });
+  const sailMat = new THREE.MeshStandardMaterial({ color: 0xe8e2d2, roughness: 0.9, metalness: 0.0,
+    side: THREE.DoubleSide, emissive: 0x2a2418, emissiveIntensity: 0.25 });
+  /* THE HULL: rings down her LENGTH, so her plan is a ship and not a barrel. Sited along local Z. */
+  const hull = new THREE.Mesh(loft((function () {
+    const r = [], N = 16;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;                                   /* 0 = stern, 1 = bow */
+      const w = BEAM * 0.5 * Math.pow(Math.sin(Math.PI * (0.12 + t * 0.80)), 0.72);
+      const d = DRAFT * (0.55 + 0.65 * Math.sin(Math.PI * (0.2 + t * 0.6)));
+      r.push({ y: (t - 0.5) * L, rx: Math.max(0.9, w), rz: Math.max(0.8, d),
+        ox: -Math.sin(t * Math.PI) * 1.1,
+        fold: 0.012, foldN: 14 });
+    }
+    return r;
+  })(), 28), hullDark);
+  hull.rotation.x = Math.PI / 2;                       /* lay the loft down her length */
+  ship.add(hull);
+  /* the deck, a gold sheer line, and a stern castle */
+  const deck = new THREE.Mesh(loft([
+    { y: 0.0, rx: BEAM * 0.40, rz: L * 0.40 }, { y: 0.55, rx: BEAM * 0.36, rz: L * 0.38 }], 24, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0x7a5f3e, roughness: 0.9 }));
+  deck.rotation.x = Math.PI / 2;
+  deck.position.y = DRAFT * 0.9;
+  ship.add(deck);
+  for (const sgn of [-1, 1]) {
+    const sheer = new THREE.Mesh(loft([
+      { y: -L * 0.46, rx: 0.26, rz: 0.26 }, { y: 0, rx: 0.3, rz: 0.3 }, { y: L * 0.46, rx: 0.24, rz: 0.24 }], 8),
+      hullTrim);
+    sheer.position.set(sgn * BEAM * 0.46, DRAFT * 1.15, 0);
+    ship.add(sheer);
+  }
+  /* THREE MASTS, tapered, with yards; heights are ratios of her own height (58.9) */
+  const H = L * 32.58 / 39.79;
+  const MASTS = [{ z: -L * 0.30, h: 0.62 }, { z: 0.02, h: 0.78 }, { z: L * 0.30, h: 0.52 }];
+  MASTS.forEach(function (m, mi) {
+    const mast = new THREE.Mesh(loft([
+      { y: 0, rx: 0.55, rz: 0.55 }, { y: H * m.h * 0.55, rx: 0.36, rz: 0.36 },
+      { y: H * m.h, rx: 0.16, rz: 0.16 }], 10), hullDark);
+    mast.position.set(0, DRAFT * 0.9, m.z);
+    ship.add(mast);
+    const yards = 3;
+    for (let k = 0; k < yards; k++) {
+      const yy = H * m.h * (0.34 + k * 0.22);
+      const yl = BEAM * (0.62 - k * 0.13);
+      const yard = new THREE.Mesh(loft([
+        { y: -yl / 2, rx: 0.11, rz: 0.11 }, { y: 0, rx: 0.16, rz: 0.16 },
+        { y: yl / 2, rx: 0.10, rz: 0.10 }], 6), hullDark);
+      yard.rotation.z = Math.PI / 2;
+      yard.position.set(0, DRAFT * 0.9 + yy, m.z + (mi === 1 ? 0.3 : 0));
+      ship.add(yard);
+      /* the sail: a plane bowed by its own vertices, so it BILLOWS instead of hanging flat */
+      const sg = new THREE.PlaneGeometry(yl * 0.92, H * 0.15, 8, 6);
+      const pos = sg.attributes.position;
+      for (let v = 0; v < pos.count; v++) {
+        const px = pos.getX(v), py = pos.getY(v);
+        const bow = Math.cos((px / (yl * 0.46)) * Math.PI * 0.5) * 0.9;
+        pos.setZ(v, bow * (1 - Math.abs(py) / (H * 0.10)));
+      }
+      sg.computeVertexNormals();
+      const sail = new THREE.Mesh(sg, sailMat);
+      sail.position.set(0, DRAFT * 0.9 + yy - H * 0.085, m.z + (mi === 1 ? 0.3 : 0) + 0.4);
+      ship.add(sail);
+    }
+  });
+  /* RIGGING: lines from the mastheads to the bow and the stern -- cheap, and the silhouette needs them */
+  {
+    const pts = [];
+    const top = DRAFT * 0.9 + H * 0.78;
+    pts.push(0, top, 0.02, 0, DRAFT * 0.9, L * 0.48);
+    pts.push(0, top, 0.02, 0, DRAFT * 0.9, -L * 0.48);
+    for (const sgn of [-1, 1]) {
+      pts.push(0, top, 0.02, sgn * BEAM * 0.46, DRAFT * 1.1, -L * 0.18);
+      pts.push(0, top, 0.02, sgn * BEAM * 0.40, DRAFT * 1.1, L * 0.10);
+    }
+    const rg = new THREE.BufferGeometry();
+    rg.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+    ship.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: 0x2a2118, transparent: true,
+      opacity: 0.75 })));
+  }
+  /* her lantern: a warm point light so she is visible in the dark sea */
+  const lamp = new THREE.Mesh(loft([
+    { y: -0.9, rx: 0.55, rz: 0.55 }, { y: 0, rx: 0.9, rz: 0.9 }, { y: 0.9, rx: 0.5, rz: 0.5 }], 10),
+    new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffb454, emissiveIntensity: 2.2,
+      roughness: 0.4 }));
+  lamp.position.set(0, DRAFT * 0.9 + H * 0.84, -L * 0.30);
+  ship.add(lamp);
+  const lampLight = new THREE.PointLight(0xffbb66, 260, 60, 2.0);
+  lampLight.position.copy(lamp.position);
+  ship.add(lampLight);
+  ship.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.userData.ship = ship;
+}
+
 /* ── A SEAT FOR EACH OF THE SEVENTY-TWO. The names were already written on the floor; a name on a floor is
    a LABEL, a plinth is a CHAIR. Seventy-two stone stools in one ring, ONE draw call (InstancedMesh): the
    council now has somewhere for its members to sit, and the room stops reading as a lobby. ------- */
@@ -2640,6 +2749,8 @@ const DIAG = /(\?|&)diag\b/.test(location.search);
 const SHOT = /(\?|&)shot\b/.test(location.search);
 /* ?face -- the portrait camera: the head, close, so the face can be judged instead of guessed. */
 const FACE = /(\?|&)face\b/.test(location.search);
+/* ?ship -- the flagship's own view, so she can be judged instead of assumed. */
+const SHIPVIEW = /(\?|&)ship\b/.test(location.search);
 /* ?nobody hides the player, so a headless run can DIFF two frames and get the body's exact silhouette
    as a mask -- the only honest way to judge a shape against a bright hall. ---------------------- */
 const NOBODY = /(\?|&)nobody\b/.test(location.search);
@@ -3099,6 +3210,11 @@ function frame() {
     camera.position.set(char.pos.x + 0.46, char.pos.y + 1.64, char.pos.z + 0.66);
     camera.lookAt(char.pos.x, char.pos.y + 1.55, char.pos.z);
   }
+  if (SHIPVIEW && scene.userData.ship) {   /* ?ship: three-quarters off her bow, the whole rig in frame */
+    const sp = scene.userData.ship.position;
+    camera.position.set(sp.x + 62, sp.y + 34, sp.z + 66);
+    camera.lookAt(sp.x, sp.y + 22, sp.z);
+  }
   /* the travelling rim sits just behind the camera and a little above it: the light the eye expects but
      the room cannot give, because the room's only lights are fixed and the body turns. */
   rimCam.position.set(camera.position.x, camera.position.y + 0.55, camera.position.z);
@@ -3134,6 +3250,14 @@ function frame() {
     const nt = scene.userData.sea.material.normalMap;
     nt.offset.x = t * 0.0055;
     nt.offset.y = t * 0.0038;
+  }
+  /* SHE RIDES THE SWELL: the flagship heels with a long slow roll and lifts with the water, out of phase
+     with the hall so she never looks welded to the sea. */
+  if (scene.userData.ship) {
+    const sp = scene.userData.ship;
+    sp.position.y = -34 + Math.sin(t * 0.55) * 1.15;
+    sp.rotation.z = Math.sin(t * 0.47 + 0.8) * 0.035;
+    sp.rotation.x = Math.sin(t * 0.33 + 2.1) * 0.018;
   }
   cubePlane.rotation.z = t * 0.012;                /* thirteen circles, seventy-eight chords, turning */
   floorMandala.rotation.z = -t * 0.006;
