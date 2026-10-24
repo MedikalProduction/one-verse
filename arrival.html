@@ -548,9 +548,12 @@ const CYAN = 0x39d0ff;
 const cyMat = new THREE.MeshStandardMaterial({ color: 0x0b2b33, emissive: CYAN, emissiveIntensity: 1.6,
                                                roughness: 0.5, metalness: 0.4 });
 
-/* the COAT -- a ragged open cone. Nine sides, open at both ends: a hem that is not a circle. */
-const coat = new THREE.Mesh(new THREE.ConeGeometry(0.40, 0.82, 9, 1, true), bodyMat);
-coat.position.y = 0.10;
+/* the COAT -- 🔥 MEASURED 2026-10-24 by the captain's screenshot: it was ConeGeometry(0.40, 0.82), i.e.
+   WIDER than the shoulder line (0.31), so the whole figure read as a PAWN and the chest, arms and neck were
+   all swallowed. A coat hangs FROM the shoulders: it must start narrower than them and flare only at the
+   hem. Tapered, open at both ends, nine sides -- still a hem that is not a circle, now a person inside it. */
+const coat = new THREE.Mesh(new THREE.CylinderGeometry(0.295, 0.355, 0.66, 9, 1, true), bodyMat);
+coat.position.y = 0.04;
 body.add(coat);
 
 /* the DREADS -- six thin cylinders, splayed; salvage hair, not a helmet. */
@@ -659,6 +662,16 @@ scene.add(hullRing);
    warms the water around your feet. */
 const lampSelf = new THREE.PointLight(0xc9a227, 7, 14, 2);
 scene.add(lampSelf);
+
+/* 🔥 THE MOON'S EDGE — MEASURED 2026-10-24: the scene had NO directional light except the sunrise (whose
+   intensity is 0 until dawn), so for the first six seconds every MeshStandardMaterial in the world was lit
+   only by two point lights and the captain's own body came out black. A night needs a MOON, not a sun:
+   one cool directional, low, from the far side of the water -- enough for a rim, never enough to be day. */
+const moonlight = new THREE.DirectionalLight(0x9fc0d8, 0.55);
+moonlight.position.set(-210, 60, -820);          // the moon's own place, so the light and the disc agree
+scene.add(moonlight);
+const moonFill = new THREE.AmbientLight(0x1a2a36, 0.55);   // lifts the shadow off pure black, no more
+scene.add(moonFill);
 
 const lamp = new THREE.PointLight(GOLD, 26, 90, 2.0);
 lamp.position.set(0, 7.0, -30);
