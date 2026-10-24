@@ -58,7 +58,7 @@
 </head>
 <body>
 <div id="veil"></div>
-<div id="enter"><div><span>The Council</span>click to enter · <b>drag</b> to look · <b>W A S D</b> to walk · <b>SHIFT</b> to run</div></div>
+<div id="enter"><div><span>The Council</span><b>you are the ark angel</b> · click to enter<br><b>W A S D</b> move · <b>SPACE</b> rise · <b>C</b> sink · <b>SHIFT</b> boost · <b>V</b> wings · <b>J</b> cut · <b>R</b> replay a cut · <b>G</b> re-forge</div></div>
 <div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span><span id="hudGram">four grammars of the corpus — <b>♬</b> sound and image · <b>△</b> geometric emblems · <b>⊗</b> planetary squares and traced seals · <b>◎</b> concentric cosmograms</span></div>
 <div id="near"></div>
 <form id="gate"><input id="body" placeholder="present a body" spellcheck="false" autocomplete="off"><button type="submit">PRESENT</button></form>
@@ -76,12 +76,16 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
+/* the page must be able to TELL me what broke: a headless run reads window.__err through ?diag. */
+addEventListener("error", (e) => { window.__err = String((e && e.message) || e); });
+addEventListener("unhandledrejection", (e) => { window.__err = "promise:" + String((e && e.reason) || e); });
+
 const GOLD = 0xc9a227, GOLD_HI = 0xefd489, PARCH = 0xe7dfcc, CYAN = 0x39d0ff, MARBLE = 0xd9cfb8;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.98;
+renderer.toneMappingExposure = 0.88;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -128,8 +132,10 @@ function envCanvas() {
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 /* MEASURED (shot 5, 2026-10-24): strength 0.46 + threshold 0.70 over a lit SKY turned the whole frame to
-   milk — bloom eats area, not detail. 0.30 / 0.88 lets the gold bleed and leaves the air alone. */
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.30, 0.62, 0.88);
+   milk — bloom eats area, not detail. 0.30 / 0.88 lets the gold bleed and leaves the air alone.
+   MEASURED AGAIN (shot 7, 2026-10-24): with the white robe and the halo in frame, 0.30 still veiled the
+   whole room, so it is 0.22 — a bloom that costs the marble its veins is not a finish, it is a fog. */
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.55, 0.90);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -810,158 +816,805 @@ sealCore.scale.set(4.2, 4.2, 1);
 sealCore.position.z = 0.25;
 mark.add(sealCore);
 
-/* ── THE ARK ANGELS — .:aRk:. .:nGl:. .:aGl:. — three guardians at the back of the hall, holding the seal's
-   axis. Gold-plated, faceless, winged: a tapered robe, a capsule core, a halo, and two extruded feather-wings
-   whose outline is a quadratic curve, so the leading edge is a curve and not a step. ─────────────────── */
-const angelGold = new THREE.MeshStandardMaterial({ color: 0xf7e6bb, metalness: 0.95, roughness: 0.23,
-  emissive: 0xffb84a, emissiveIntensity: 0.22, envMapIntensity: 2.2 });
-const angelDark = new THREE.MeshStandardMaterial({ color: 0x090d13, metalness: 0.55, roughness: 0.4 });
-const wingShape = new THREE.Shape();
-wingShape.moveTo(0, 0);
-wingShape.quadraticCurveTo(1.15, 1.25, 2.55, 2.85);
-wingShape.quadraticCurveTo(1.35, 1.15, 0.50, 0.18);
-wingShape.lineTo(0, 0);
-const wingGeo = new THREE.ExtrudeGeometry(wingShape, { depth: 0.07, bevelEnabled: true,
-  bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 1, curveSegments: 10 });
-const ARK = [["aRk", -9.4, -10.8, 0.34], ["nGl", 9.4, -10.8, -0.34], ["aGl", 0, -15.8, 0]];
-for (const ANG of ARK) {
-  const g = new THREE.Group();
-  g.name = ANG[0];
-  const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 1.55, 3.5, 26, 1, true), angelDark);
-  robe.position.y = 1.75;
-  g.add(robe);
-  const core = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 1.5, 8, 16), angelGold);
-  core.position.y = 3.35;
-  g.add(core);
-  const headA = new THREE.Mesh(new THREE.SphereGeometry(0.30, 20, 16), angelGold);
-  headA.position.y = 4.60;
-  g.add(headA);
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.045, 8, 48), angelGold);
-  halo.position.y = 4.66;
-  g.add(halo);
-  for (const sgn of [-1, 1]) {
-    const wing = new THREE.Mesh(wingGeo, angelGold);
-    wing.position.set(sgn * 0.34, 3.10, -0.24);
-    wing.scale.x = sgn;
-    wing.rotation.z = sgn * 0.22;
-    g.add(wing);
+/* ── ONE PRIMITIVE, AND EVERYTHING WITH A SILHOUETTE IS BUILT FROM IT ────────────────────────────────
+   THE CAPTAIN'S VERDICT (2026-10-24): "make it cool not the robloxy like shit you made". A capsule
+   torso, a sphere head and an extruded wing are STOCK SHAPES: they have no contour, so the eye reads
+   a toy no matter how much light is poured on it. The fix is not more detail, it is ONE primitive with
+   a CONTOUR: a PROFILE of rings (y, half-width x, half-depth z, sideways offset) lofted into a skin.
+   A body, a blade, a feather and a robe hem are then the same law with different numbers -- which is
+   also why they never look assembled out of stock primitives. ------------------------------------ */
+function loft(rings, seg, square) {
+  seg = seg || 26; square = square || 0;
+  const pos = [], uv = [], idx = [];
+  const p = 2 / (2 + square * 6);                     /* square>0 = superellipse (armour plating) */
+  for (let i = 0; i < rings.length; i++) {
+    const r = rings[i], ox = r.ox || 0, oz = r.oz || 0;
+    for (let s = 0; s <= seg; s++) {
+      const a = s / seg * Math.PI * 2;
+      let cx = Math.cos(a), cz = Math.sin(a);
+      if (square) {
+        cx = Math.sign(cx) * Math.pow(Math.abs(cx), p);
+        cz = Math.sign(cz) * Math.pow(Math.abs(cz), p);
+      }
+      pos.push(ox + cx * r.rx, r.y, oz + cz * r.rz);
+      uv.push(s / seg, i / (rings.length - 1));
+    }
   }
-  g.position.set(ANG[1], 0, ANG[2]);
-  g.rotation.y = ANG[3];
-  scene.add(g);
+  for (let i = 0; i < rings.length - 1; i++) {
+    for (let s = 0; s < seg; s++) {
+      const a = i * (seg + 1) + s, b = a + seg + 1;
+      idx.push(a, b, a + 1, a + 1, b, b + 1);         /* outward winding: y x tangent = +normal */
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
 }
-console.log("[council] ark angels bound: .:aRk:. .:nGl:. .:aGl:.");
+
+/* ── THE BODY NUMBERS ARE THE SHIP'S OWN LAW, NOT MY TASTE ────────────────────────────────────────
+   frontend/src/lib/procBody.ts turns a ROLE into 21 BANDS (silhouette width per band, top to bottom,
+   as a fraction of height) by FNV-1a over the role's name, and procFromRef.ts derives the landmarks
+   (shoulder = widest band, waist = the pinch that RISES after it, neck = the pinch above the shoulder).
+   MEASURED 2026-10-24 with the ship's own module, not by hand:
+
+     node -e "import('./frontend/src/lib/procBody.ts').then(m=>console.log(JSON.stringify(
+        {b:m.bandsFromRole('ace'), s:m.bodySpec('ace')})))"
+
+   role "ace"        DNA 1011506472  size 0.628 x 1.75 x 0.389  lm s.80 w.60 n.85
+   role "ark angel"  DNA 2282982774  size 0.693 x 1.75 x 0.430  lm s.80 w.60 n.85
+
+   So the figure below is 1.75 tall, its shoulder is at 0.80 of height, its waist at 0.60, its neck at
+   0.85, it is 0.628 wide and 0.389 deep -- DERIVED. The bands are what the torso and legs are lofted
+   FROM, so the silhouette is the measurement itself. Two things the bands cannot see are named rather
+   than hidden: the ARMS (a standing reference merges them with the torso) use anatomy ratios, and the
+   DEPTH is kRef.depth = 0.62 of the width, exactly as procFromRef declares. ----------------------- */
+const kBody = { H: 1.75, depth: 0.62, shoulder: 0.80, waist: 0.60, neck: 0.85 };
+const MATRIX = {
+  ace:   { dna: 1011506472, bands: [0.0713, 0.1188, 0.0891, 0.1076, 0.3588, 0.3481, 0.3409, 0.3229,
+           0.2565, 0.3345, 0.2871, 0.2512, 0.1974, 0.1615, 0.1507, 0.1579, 0.1435, 0.1507,
+           0.1794, 0.1866, 0.1722] },
+  angel: { dna: 2282982774, bands: [0.0848, 0.1414, 0.1060, 0.1187, 0.3955, 0.3837, 0.3758, 0.3560,
+           0.2725, 0.3563, 0.3164, 0.2769, 0.2175, 0.1780, 0.1661, 0.1740, 0.1582, 0.1661,
+           0.1978, 0.2057, 0.1899] },
+};
+/* Catmull-Rom over the measured bands: t = 0 at the CROWN, 1 at the FEET, so t also means "height
+   below the crown" and the caller reads the silhouette at a real height instead of at a table row. */
+function band(B, t) {
+  const n = B.length - 1, x = Math.max(0, Math.min(1, t)) * n, i = Math.min(n - 1, Math.floor(x));
+  const f = x - i, p0 = B[Math.max(0, i - 1)], p1 = B[i], p2 = B[i + 1], p3 = B[Math.min(n, i + 2)];
+  return 0.5 * ((2 * p1) + (-p0 + p2) * f + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f * f
+    + (-p0 + 3 * p1 - 3 * p2 + p3) * f * f * f);
+}
+/* t from HEIGHT ABOVE THE GROUND (0 = feet), because a body is built upward and the bands are stored
+   top-down. Both directions are needed, so both exist and neither is a guess. */
+const bandAtY = (B, y) => band(B, 1 - y / kBody.H);
+/* the measured silhouette, in METRES: a band is a width as a fraction of height -> half-width. */
+const halfW = (B, y) => bandAtY(B, y) * kBody.H * 0.5;
+
+/* ── A FEATHER is this primitive too: a spine that curves, a vane that swells and tapers, a quill thin
+   enough to read as an edge. Forty-one stock shapes would be a fan; a lofted vane is a feather. ──── */
+function featherGeo(len, w, curl, th) {
+  const rings = [], N = 9;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const swell = Math.pow(Math.sin(Math.PI * Math.pow(t, 0.62)), 0.72);   /* 0 -> fat -> 0 */
+    const tip = 1 - 0.55 * Math.pow(t, 3.2);                              /* the point narrows */
+    rings.push({ y: t * len, rx: Math.max(0.0006, w * swell * tip),
+      rz: Math.max(0.0006, th * (0.35 + swell * 0.65)), oz: -curl * t * t });
+  }
+  const g = loft(rings, 10);
+  g.rotateZ(-Math.PI / 2);                                                /* +y spine -> +x wing bone */
+  return g;
+}
 
 
 
 
+
+/* ── A WING is a FAN OF LOFTED VANES, not one extruded outline. Three rows (primaries, secondaries,
+   coverts) on their own pivots, so a flap moves the long feathers later than the short ones -- which
+   is the whole difference between a wing and a paper fan. Mirrored by scale.x = -1, so the geometry
+   is built ONCE and both wings are the same law. -------------------------------------------------- */
+function wingPair(len, mat, rootX) {
+  const g = new THREE.Group();
+  const sides = [];
+  const ROWS = [
+    { n: 13, len: 1.00, w: 0.058, fan: 0.10, spread: 1.15, lift: 0.00, curl: 0.20 },
+    { n: 11, len: 0.74, w: 0.070, fan: -0.05, spread: 0.92, lift: 0.07, curl: 0.15 },
+    { n: 10, len: 0.46, w: 0.082, fan: -0.18, spread: 0.76, lift: 0.14, curl: 0.10 },
+  ];
+  for (const sgn of [-1, 1]) {
+    const side = new THREE.Group();
+    side.position.set(sgn * (rootX || 0.17), 0, 0);
+    side.scale.x = sgn;
+    const rows = [];
+    for (const R of ROWS) {
+      const row = new THREE.Group();
+      row.position.y = R.lift * len;
+      const geo = featherGeo(R.len * len, R.w * len, R.curl * len, R.w * len * 0.30);
+      for (let i = 0; i < R.n; i++) {
+        const t = i / (R.n - 1);
+        const f = new THREE.Mesh(geo, mat);
+        /* MEASURED (shot 8, 2026-10-24): fanning the vanes about Z made a PEACOCK -- a vertical wheel
+           behind the head. A wing fans BACKWARD, so the spread turns about Y (the horizontal plane) and
+           only a little droop is left to Z. That one axis change is the difference. -------------- */
+        f.rotation.y = -(R.fan + t * R.spread) * 0.92;
+        f.rotation.z = -0.30 + t * 0.52;                 /* the dihedral: tips rise above the shoulder */
+        f.rotation.x = -0.06 + t * 0.10;
+        f.position.set(-0.02 * len, 0, -0.03 * len - t * 0.05 * len);
+        f.scale.setScalar(1 - t * 0.18);
+        row.add(f);
+      }
+      side.add(row);
+      rows.push(row);
+    }
+    g.add(side);
+    sides.push({ side, rows });
+  }
+  return { group: g, sides };
+}
+
+/* ── THE ARK ANGELS — .:aRk:. .:nGl:. .:aGl:. — three guardians at the back of the hall, holding the
+   seal's axis. The robe is lofted (it widens as it falls, the way cloth does), the body is a shaft of
+   gold light inside it, and the wings are the fan above at hall scale. ---------------------------- */
+const angelGold = new THREE.MeshStandardMaterial({ color: 0xf7e6bb, metalness: 0.92, roughness: 0.22,
+  emissive: 0xffb84a, emissiveIntensity: 0.20, envMapIntensity: 2.2, side: THREE.DoubleSide });
+const angelDark = new THREE.MeshStandardMaterial({ color: 0x090d13, metalness: 0.35, roughness: 0.55,
+  side: THREE.DoubleSide });
+const haloGold = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.55,
+  blending: THREE.AdditiveBlending, depthWrite: false });
+{
+  const robeRings = [];
+  for (let i = 0; i <= 16; i++) {
+    const t = i / 16, y = t * 4.3;
+    const flare = 0.34 + Math.pow(t, 1.7) * 1.24;            /* a robe falls OPEN, never a cone */
+    robeRings.push({ y, rx: flare * (1 + 0.035 * Math.sin(t * 13)), rz: flare * 0.82 });
+  }
+  const robeGeo = loft(robeRings, 34);
+  const haloGeo = new THREE.TorusGeometry(0.56, 0.035, 6, 64);
+  const ARK = [["aRk", -9.4, -10.8, 0.34], ["nGl", 9.4, -10.8, -0.34], ["aGl", 0, -15.8, 0]];
+  for (const ANG of ARK) {
+    const g = new THREE.Group();
+    g.name = ANG[0];
+    const robe = new THREE.Mesh(robeGeo, angelDark);            /* open at the top AND the bottom */
+    g.add(robe);
+    const shaft = new THREE.Mesh(loft([
+      { y: 0.9, rx: 0.13, rz: 0.12 }, { y: 2.6, rx: 0.26, rz: 0.22 },
+      { y: 3.9, rx: 0.20, rz: 0.18 }, { y: 4.25, rx: 0.10, rz: 0.10 }], 18), angelGold);
+    g.add(shaft);
+    const headA = new THREE.Mesh(loft([
+      { y: 4.24, rx: 0.10, rz: 0.10 }, { y: 4.40, rx: 0.19, rz: 0.17 },
+      { y: 4.62, rx: 0.20, rz: 0.18 }, { y: 4.80, rx: 0.09, rz: 0.09 }], 18), angelGold);
+    g.add(headA);
+    for (let i = 0; i < 3; i++) {                                /* three rings, turning against each other */
+      const halo = new THREE.Mesh(haloGeo, haloGold);
+      halo.position.y = 4.58 + i * 0.055;
+      halo.rotation.x = Math.PI / 2 + (i - 1) * 0.22;
+      halo.scale.setScalar(1 - i * 0.13);
+      halo.userData.spin = (i % 2 ? -1 : 1) * (0.20 + i * 0.10);
+      g.add(halo);
+      if (!g.userData.halos) g.userData.halos = [];
+      g.userData.halos.push(halo);
+    }
+    const W = wingPair(2.7, angelGold, 0.30);
+    W.group.position.set(0, 3.30, -0.26);
+    W.group.rotation.z = 0.16;
+    g.add(W.group);
+    g.userData.wings = W;
+    g.position.set(ANG[1], 0, ANG[2]);
+    g.rotation.y = ANG[3];
+    scene.add(g);
+    (scene.userData.guardians = scene.userData.guardians || []).push(g);
+  }
+}
+console.log("[council] ark angels bound: .:aRk:. .:nGl:. .:aGl:. — 3 rows of lofted vanes each");
 
 /* ── THE BODY — Ace, on the dojo's own rig (five pivots: two hips, two shoulders, one neck) and the palette
    read from the captain's sheet: cream frayed cape, olive hoodie, charcoal pants, leather, the CYAN machine
    arm, one RED patch. Third person is not a camera mode here: it is the same character who walks the dojo. */
-const ACE_C = { cream: 0xe4dbc2, olive: 0x565440, char: 0x2b2b2e, leather: 0x6b4a2f,
-                cyan: 0x6fe9e4, red: 0xff3f5c, skin: 0xcbb49a, metal: 0xcfd6d8 };
-const mCream = new THREE.MeshStandardMaterial({ color: ACE_C.cream, roughness: 0.94 });
-const mOlive = new THREE.MeshStandardMaterial({ color: ACE_C.olive, roughness: 0.96 });
-const mChar = new THREE.MeshStandardMaterial({ color: ACE_C.char, roughness: 0.95 });
-const mLeath = new THREE.MeshStandardMaterial({ color: ACE_C.leather, roughness: 0.86 });
-const mSkin = new THREE.MeshStandardMaterial({ color: ACE_C.skin, roughness: 0.78 });
-const mMetal = new THREE.MeshStandardMaterial({ color: ACE_C.metal, roughness: 0.34, metalness: 0.72 });
-const mCyanB = new THREE.MeshStandardMaterial({ color: ACE_C.cyan, emissive: ACE_C.cyan,
-                                                emissiveIntensity: 2.4, roughness: 0.4 });
-const mRedB = new THREE.MeshStandardMaterial({ color: ACE_C.red, emissive: ACE_C.red,
-                                               emissiveIntensity: 1.4, roughness: 0.5 });
-const mHair = new THREE.MeshStandardMaterial({ color: 0x33302c, roughness: 0.9 });
-const mTeal = new THREE.MeshStandardMaterial({ color: 0x2f8f92, emissive: 0x1d5f63,
-                                               emissiveIntensity: 0.9, roughness: 0.8 });
-const HIP = 0.90, SHOULDER = 0.46, LEG = 0.46, ARM = 0.40;
+/* ── MATERIALS WITH A SURFACE, NOT A COLOUR ──────────────────────────────────────────────────────
+   A toy is one flat roughness for everything. Cloth gets SHEEN (the fibre halo at grazing angles) and
+   a rim term added in the fragment shader, so the silhouette separates from the dark hall without a
+   single extra light; the machine gets clearcoat; the skin stays matte. The same shader also WINDS the
+   cloth: a vertex displacement that grows toward the hem, so a coat hangs and moves instead of being
+   a cone. uTime is shared, so one clock drives every garment in the room. ------------------------- */
+const U = { uTime: { value: 0 }, uWind: { value: 0 } };
+function clothMat(color, opts) {
+  const m = new THREE.MeshPhysicalMaterial(Object.assign({
+    color, roughness: 0.94, metalness: 0.0, sheen: 0.85, sheenRoughness: 0.72,
+    sheenColor: new THREE.Color(0xffffff), side: THREE.DoubleSide,
+  }, opts || {}));
+  m.onBeforeCompile = function (sh) {
+    sh.uniforms.uTime = U.uTime;
+    sh.uniforms.uWind = U.uWind;
+    sh.vertexShader = "uniform float uTime;uniform float uWind;\n" + sh.vertexShader
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\n" +
+        "float hang = clamp(-transformed.y * 1.25, 0.0, 1.0);\n" +
+        "float wx = sin(transformed.y * 5.2 + uTime * 1.6 + transformed.x * 2.2) * 0.030\n" +
+        "         + sin(transformed.z * 3.7 - uTime * 2.1) * 0.020;\n" +
+        "transformed.x += wx * hang * (0.35 + uWind);\n" +
+        "transformed.z += cos(transformed.y * 4.1 + uTime * 1.85) * 0.026 * hang * (0.35 + uWind);");
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <dithering_fragment>", "#include <dithering_fragment>\n" +
+        "float rim = pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 2.6);\n" +
+        "gl_FragColor.rgb += vec3(0.46, 0.66, 0.92) * rim * 0.18;");
+  };
+  return m;
+}
+const ACE_C = { cream: 0xe2d8bd, olive: 0x54523f, char: 0x26262a, leather: 0x6b4a2f,
+                cyan: 0x6fe9e4, red: 0xff3f5c, skin: 0xc2a184, metal: 0xccd4d7 };
+const mCream  = clothMat(ACE_C.cream, { roughness: 0.97 });
+const mOlive  = clothMat(ACE_C.olive, { roughness: 0.95 });
+const mChar   = clothMat(ACE_C.char,  { roughness: 0.93 });
+const mLeath  = new THREE.MeshPhysicalMaterial({ color: ACE_C.leather, roughness: 0.72,
+  clearcoat: 0.25, clearcoatRoughness: 0.6 });
+const mSkin   = new THREE.MeshPhysicalMaterial({ color: ACE_C.skin, roughness: 0.62,
+  sheen: 0.35, sheenColor: new THREE.Color(0xd8a98c) });
+const mMetal  = new THREE.MeshPhysicalMaterial({ color: ACE_C.metal, roughness: 0.28, metalness: 0.88,
+  clearcoat: 0.6, clearcoatRoughness: 0.22, envMapIntensity: 1.8 });
+const mDarkM  = new THREE.MeshPhysicalMaterial({ color: 0x2c3237, roughness: 0.42, metalness: 0.75 });
+const mCyanB  = new THREE.MeshStandardMaterial({ color: ACE_C.cyan, emissive: ACE_C.cyan,
+  emissiveIntensity: 2.6, roughness: 0.35 });
+const mRedB   = new THREE.MeshStandardMaterial({ color: ACE_C.red, emissive: ACE_C.red,
+  emissiveIntensity: 1.3, roughness: 0.5 });
+const mHair   = new THREE.MeshPhysicalMaterial({ color: 0x2c2a27, roughness: 0.78, sheen: 0.5 });
+const mTeal   = new THREE.MeshStandardMaterial({ color: 0x2f8f92, emissive: 0x1d5f63,
+  emissiveIntensity: 1.1, roughness: 0.7 });
+const WHITE   = clothMat(0xcfc9ba, { roughness: 0.95, sheen: 0.55, sheenColor: new THREE.Color(0xf2e3bd) });
+const WHITE2  = clothMat(0xb9b3a5, { roughness: 0.93, sheen: 0.45 });
+/* the feathers carry their OWN light. MEASURED (shot 9, 2026-10-24): lit only by the room, a wing behind
+   the body in a backlit hall renders DARK and reads as a plume of smoke -- so the vane gets a warm
+   emissive floor. A feather is thin enough that real light passes through it; this is that, cheaply. */
+const mWing = new THREE.MeshStandardMaterial({ color: 0xe9e3d3, roughness: 0.82, metalness: 0.06,
+  emissive: 0x8a7f63, emissiveIntensity: 0.55, side: THREE.DoubleSide });
+const mGoldF  = new THREE.MeshStandardMaterial({ color: 0xf3dda2, metalness: 0.9, roughness: 0.25,
+  emissive: 0xffc862, emissiveIntensity: 0.30, envMapIntensity: 2.0 });
+
+/* ── THE RIG. Five pivots (two hips, two shoulders, one neck) on a pelvis, and the measured skeleton
+   under them: hip 0.60 H, shoulder 0.80 H, neck 0.85 H. Both FORMS hang off these same joints, so
+   the angel and the traveler are one body with two skins -- never two characters. ---------------- */
+const HIP = kBody.waist * kBody.H;          /* 1.0500 -- the waist IS the hip pivot, measured */
+const SHOULDER = kBody.shoulder * kBody.H;  /* 1.4000 */
+const NECKY = kBody.neck * kBody.H;         /* 1.4875 */
+const CROWN = kBody.H;                      /* 1.7500 */
+const BACE = MATRIX.ace.bands, BANG = MATRIX.angel.bands;
+const ARM_W = kBody.H * 0.628 * 0.16;       /* figureParts: armW = W * 0.16 -- the law's own arm */
+const halfShoulder = (B, y) => Math.max(0.05, halfW(B, y) - ARM_W * 0.5);
+/* the arm zone: a smooth bump over the heights where a standing figure's arms sit against the torso */
+const armZone = (y) => Math.max(0, Math.min(1, (y - HIP - 0.06) / 0.12))
+                      * Math.max(0, Math.min(1, (SHOULDER + 0.02 - y) / 0.10));
+const torsoHalf = (B, y) => halfW(B, y) - ARM_W * 0.5 * armZone(y);
+
 const player = new THREE.Group();
 scene.add(player);
-const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.160, 0.40, 6, 14), mOlive);
-torso.position.y = HIP + 0.22;
-player.add(torso);
-const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.115, 0.07, 12), mChar);
-collar.position.y = HIP + 0.44;
-player.add(collar);
-const neck = new THREE.Group();
-neck.position.y = HIP + 0.44;
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.122, 18, 14), mSkin);
-head.position.y = 0.10;
-neck.add(head);
-for (const sx of [-1, 1]) {                       /* two eyes on +z: the rig faces +z, yaw = atan2(vx, vz) */
-  const eyeM = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 6), mChar);
-  eyeM.position.set(sx * 0.045, 0.112, 0.113);
-  neck.add(eyeM);
-}
-for (let i = 0; i < 14; i++) {                    /* the dreads, with the teal tips */
-  const a = (i / 14) * Math.PI * 2 + 0.3, len = 0.17 + ((i * 37) % 11) / 100;
-  const d = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, len, 4, 6), mHair);
-  d.position.set(Math.cos(a) * 0.085, 0.20 - len * 0.34, Math.sin(a) * 0.085);
-  d.rotation.set(Math.cos(a) * 0.7, 0, -Math.sin(a) * 0.7);
-  neck.add(d);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 5), mTeal);
-  tip.position.set(d.position.x * 1.35, d.position.y - len * 0.52, d.position.z * 1.35);
-  neck.add(tip);
-}
-player.add(neck);
+const HUMAN = [], ANGELV = [];                 /* the two skins, toggled by setForm() */
+const rig = new THREE.Group();
+player.add(rig);
 
-function limbMesh(len, rad, mat) {
-  const g = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(rad, Math.max(0.04, len - rad * 2), 4, 10), mat);
-  m.position.y = -len / 2;
-  g.add(m);
-  return g;
-}
-/* LEFT ARM = THE MACHINE (pale plating + two cyan rings) · RIGHT ARM = sleeve + glove */
-const armL = limbMesh(ARM, 0.048, mMetal);
-const armR = limbMesh(ARM, 0.056, mOlive);
-armL.position.set(-0.235, HIP + SHOULDER, 0);
-armR.position.set(0.235, HIP + SHOULDER, 0);
-[-0.10, -0.33].forEach(function (yy, i) {
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(i ? 0.042 : 0.050, 0.010, 6, 16), mCyanB);
-  ring.position.y = yy;
-  ring.rotation.x = Math.PI / 2;
-  armL.add(ring);
-});
-const glove = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), mChar);
-glove.position.y = -ARM + 0.02;
-armR.add(glove);
-const legL = limbMesh(LEG, 0.082, mChar);
-const legR = limbMesh(LEG, 0.082, mChar);
-legL.position.set(-0.088, HIP, 0);
-legR.position.set(0.088, HIP, 0);
-player.add(armL, armR, legL, legR);
-/* the CREAM CAPE: truncated cone, open, with a FRAYED hem pushed by hand */
-const capeGeo = new THREE.CylinderGeometry(0.135, 0.30, 0.48, 18, 1, true);
-{
-  const p = capeGeo.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    if (p.getY(i) < -0.22) p.setY(i, p.getY(i) - (((i * 71) % 13) / 13) * 0.07);
+/* TORSO: lofted from the measured bands, shoulder (0.80) down to waist (0.60). The chest carries the
+   depth the law declares (kRef.depth = 0.62 of the width), and the arm zone is SUBTRACTED, because a
+   standing reference merges the arms into the silhouette and the torso is what is left. ---------- */
+const torso = new THREE.Mesh(loft((function () {
+  const rings = [], N = 22;
+  for (let i = 0; i <= N; i++) {
+    const y = HIP - 0.03 + (SHOULDER - HIP + 0.05) * (i / N);
+    rings.push({ y, rx: torsoHalf(BACE, y), rz: torsoHalf(BACE, y) * kBody.depth * 1.06 });
   }
-  p.needsUpdate = true;
-  capeGeo.computeVertexNormals();
+  return rings;
+})(), 30), mOlive);
+rig.add(torso);
+HUMAN.push(torso);
+{   /* the PELVIS: a body has hips; a cylinder does not */
+  const rings = [], N = 9;
+  for (let i = 0; i <= N; i++) {
+    const y = HIP + 0.02 - 0.18 * (i / N);
+    const rx = halfW(BACE, y) * 0.92;
+    rings.push({ y, rx, rz: rx * kBody.depth * 1.1 });
+  }
+  const pelvis = new THREE.Mesh(loft(rings, 26), mChar);
+  rig.add(pelvis);
+  HUMAN.push(pelvis);
 }
-const cape = new THREE.Mesh(capeGeo, new THREE.MeshStandardMaterial({
-  color: ACE_C.cream, roughness: 0.97, side: THREE.DoubleSide }));
-cape.position.y = HIP + 0.06;
-player.add(cape);
-const belt = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.020, 6, 20), mLeath);
-belt.position.y = HIP + 0.02;
-belt.rotation.x = Math.PI / 2;
-player.add(belt);
-const patch = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.10, 0.012), mRedB);
-patch.position.set(0.02, HIP + 0.30, -0.152);
-player.add(patch);
+/* THE NECK AND HEAD. The head is lofted from the three top bands (crown, head, jaw) plus the rules a
+   silhouette cannot hold: a jaw that narrows, an occiput that swells, a brow line. -------------- */
+const neck = new THREE.Group();
+neck.position.y = NECKY - 0.03;
+rig.add(neck);
+{
+  const nk = new THREE.Mesh(loft([
+    { y: -0.04, rx: 0.052, rz: 0.050 }, { y: 0.04, rx: 0.047, rz: 0.046 },
+    { y: 0.10, rx: 0.044, rz: 0.044 }], 14), mSkin);
+  neck.add(nk);
+  HUMAN.push(nk);
+}
+const headG = new THREE.Group();
+headG.position.y = 0.09;
+neck.add(headG);
+{
+  const head = new THREE.Mesh(loft([
+    { y: -0.02, rx: 0.043, rz: 0.046, oz: 0.008 },   /* under the jaw */
+    { y: 0.020, rx: 0.060, rz: 0.064, oz: 0.006 },   /* jaw */
+    { y: 0.062, rx: 0.074, rz: 0.079, oz: 0.004 },   /* cheek */
+    { y: 0.108, rx: 0.079, rz: 0.085, oz: 0.000 },   /* brow, widest */
+    { y: 0.150, rx: 0.074, rz: 0.082, oz: -0.006 },  /* skull */
+    { y: 0.190, rx: 0.052, rz: 0.058, oz: -0.012 },  /* crown */
+    { y: 0.208, rx: 0.016, rz: 0.018, oz: -0.014 },
+  ], 24), mSkin);
+  headG.add(head);
+  HUMAN.push(head);
+  /* the face: brow, nose, mouth, and two eyes set into the socket line -- four strokes, no texture */
+  const brow = new THREE.Mesh(new THREE.BoxGeometry(0.112, 0.010, 0.020), mSkin);
+  brow.position.set(0, 0.112, 0.070);
+  brow.rotation.x = -0.18;
+  const nose = new THREE.Mesh(loft([
+    { y: 0.100, rx: 0.011, rz: 0.010 }, { y: 0.070, rx: 0.014, rz: 0.018 },
+    { y: 0.048, rx: 0.010, rz: 0.012 }], 8), mSkin);
+  nose.position.set(0, 0, 0.074);
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.006, 0.008), mSkin);
+  mouth.position.set(0, 0.016, 0.068);
+  headG.add(brow, nose, mouth);
+  HUMAN.push(brow, nose, mouth);
+  for (const sx of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0135, 10, 8), mDarkM);
+    eye.position.set(sx * 0.034, 0.086, 0.064);
+    eye.scale.z = 0.6;
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.030, 0.007, 0.008), mSkin);
+    lid.position.set(sx * 0.034, 0.100, 0.068);
+    lid.rotation.x = -0.3;
+    headG.add(eye, lid);
+    HUMAN.push(eye, lid);
+  }
+  /* THE HAIR: tubes along real curves with a taper and the teal tips -- not fourteen capsules. */
+  const skull = new THREE.Mesh(loft([
+    { y: 0.095, rx: 0.082, rz: 0.088 }, { y: 0.150, rx: 0.078, rz: 0.086 },
+    { y: 0.196, rx: 0.056, rz: 0.062 }, { y: 0.212, rx: 0.018, rz: 0.020 }], 20), mHair);
+  skull.position.y = -0.004;
+  skull.scale.set(1.03, 1.0, 1.03);
+  headG.add(skull);
+  HUMAN.push(skull);
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2 + 0.17;
+    const r0 = 0.070 + ((i * 29) % 7) / 90, len = 0.16 + ((i * 37) % 13) / 55;
+    const hang = Math.cos(a) < 0 ? 1.35 : 1;                       /* the back falls further than the front */
+    const p0 = new THREE.Vector3(Math.cos(a) * r0, 0.150, Math.sin(a) * r0 * 1.08);
+    const p1 = new THREE.Vector3(Math.cos(a) * (r0 + 0.030), 0.150 - len * 0.55,
+      Math.sin(a) * (r0 + 0.030) * 1.10);
+    const p2 = new THREE.Vector3(Math.cos(a) * (r0 + 0.052), 0.150 - len * hang,
+      Math.sin(a) * (r0 + 0.052) * 1.12);
+    const curve = new THREE.CatmullRomCurve3([p0, p1, p2]);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 8, 0.0085, 6, false), mHair);
+    headG.add(tube);
+    HUMAN.push(tube);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.0105, 7, 6), mTeal);
+    tip.position.copy(p2);
+    headG.add(tip);
+    HUMAN.push(tip);
+  }
+}
+
+/* ARMS: shoulder -> upper arm -> ELBOW PIVOT -> forearm -> hand. Two segments, because one straight
+   limb is the strongest "toy" cue there is. The left arm is the MACHINE (plated, cyan seams and the
+   two coupling rings from the sheet); the right is the sleeve. ----------------------------------- */
+function armChain(sx, machine) {
+  const sh = new THREE.Group();
+  sh.position.set(sx * halfShoulder(BACE, SHOULDER + 0.04), SHOULDER - 0.02, 0);
+  {   /* deltoid swells, bicep tapers: a loft, not a capsule */
+    const rings = [], N = 8;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const r = (machine ? 0.050 : 0.058) * (1.00 + 0.10 * Math.sin(t * 3.1) - 0.30 * Math.pow(t, 1.6));
+      rings.push({ y: -t * 0.31, rx: r, rz: r * 0.92 });
+    }
+    sh.add(new THREE.Mesh(loft(rings, 16, machine ? 0.35 : 0), machine ? mMetal : mOlive));
+  }
+  const elbow = new THREE.Group();
+  elbow.position.y = -0.31;
+  {
+    const rings = [], N = 8;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const r = (machine ? 0.046 : 0.050) * (1.0 - 0.42 * Math.pow(t, 1.4));
+      rings.push({ y: -t * 0.27, rx: r, rz: r * 0.90 });
+    }
+    elbow.add(new THREE.Mesh(loft(rings, 16, machine ? 0.4 : 0), machine ? mMetal : mOlive));
+    if (machine) {
+      for (const [yy, rr] of [[-0.07, 0.048], [-0.235, 0.040]]) {   /* the sheet's two coupling rings */
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.0075, 6, 22), mCyanB);
+        ring.position.y = yy;
+        ring.rotation.x = Math.PI / 2;
+        elbow.add(ring);
+      }
+      elbow.add(new THREE.Mesh(loft([
+        { y: -0.10, rx: 0.050, rz: 0.046 }, { y: -0.16, rx: 0.049, rz: 0.045 },
+        { y: -0.20, rx: 0.043, rz: 0.040 }], 12, 0.5), mDarkM));
+    }
+  }
+  /* the HAND: a palm and four fingers, because a mitten at the end of an arm is what a toy does */
+  const hand = new THREE.Group();
+  hand.position.y = -0.27;
+  const handMat = machine ? mMetal : mSkin;
+  hand.add(new THREE.Mesh(loft([
+    { y: 0.000, rx: 0.030, rz: 0.022 }, { y: -0.045, rx: 0.034, rz: 0.025 },
+    { y: -0.088, rx: 0.027, rz: 0.020 }], 12, 0.3), handMat));
+  for (let f = 0; f < 4; f++) {
+    const fing = new THREE.Mesh(loft([
+      { y: 0, rx: 0.0075, rz: 0.0075 }, { y: -0.030, rx: 0.0068, rz: 0.0068 },
+      { y: -0.055, rx: 0.0050, rz: 0.0050 }], 8), handMat);
+    fing.position.set((f - 1.5) * 0.0155, -0.086, 0.004);
+    fing.rotation.x = 0.22 + f * 0.02;
+    hand.add(fing);
+  }
+  const thumb = new THREE.Mesh(loft([
+    { y: 0, rx: 0.009, rz: 0.009 }, { y: -0.042, rx: 0.0072, rz: 0.0072 }], 8), handMat);
+  thumb.position.set(sx * -0.030, -0.030, 0.012);
+  thumb.rotation.z = sx * 0.85;
+  hand.add(thumb);
+  elbow.add(hand);
+  sh.add(elbow);
+  return { shoulder: sh, elbow, hand };
+}
+const armRm = armChain(1, false), armLm = armChain(-1, true);
+const armR = armRm.shoulder, armL = armLm.shoulder;
+rig.add(armL, armR);
+/* NOT pushed to HUMAN: the arms (and the blade in the left hand) belong to the BODY, not to a skin --
+   the ark angel carries Lame too, and hiding them was what turned him into a chess piece. -------- */
+
+/* LEGS: hip -> thigh -> KNEE PIVOT -> shin -> boot. The contour is the measured band profile, so the
+   calf swells and the ankle narrows by the same numbers that gave the torso its shape. ---------- */
+function legChain(sx) {
+  const hip = new THREE.Group();
+  hip.position.set(sx * 0.086, HIP - 0.02, 0);
+  {
+    const rings = [], N = 9;
+    for (let i = 0; i <= N; i++) {
+      const y = -0.46 * (i / N);
+      const rx = Math.max(0.045, halfW(BACE, HIP - 0.02 + y) * 0.42);
+      rings.push({ y, rx, rz: rx * 0.94 });
+    }
+    hip.add(new THREE.Mesh(loft(rings, 18), mChar));
+  }
+  const knee = new THREE.Group();
+  knee.position.y = -0.46;
+  {
+    const rings = [], N = 9;
+    for (let i = 0; i <= N; i++) {
+      const y = -0.40 * (i / N);
+      const rx = Math.max(0.038, halfW(BACE, 0.13 + 0.40 * (1 - i / N)) * 0.40);
+      rings.push({ y, rx, rz: rx * 0.92 });
+    }
+    knee.add(new THREE.Mesh(loft(rings, 18), mChar));
+    const boot = new THREE.Mesh(loft([
+      { y: -0.36, rx: 0.052, rz: 0.058 }, { y: -0.44, rx: 0.056, rz: 0.070 },
+      { y: -0.50, rx: 0.050, rz: 0.088, oz: 0.020 },
+      { y: -0.53, rx: 0.042, rz: 0.080, oz: 0.026 }], 16), mLeath);
+    knee.add(boot);
+  }
+  hip.add(knee);
+  return { hip, knee };
+}
+const legLc = legChain(-1), legRc = legChain(1);
+const legL = legLc.hip, legR = legRc.hip;
+rig.add(legL, legR);
+HUMAN.push(legL, legR);
+
+/* THE COAT: a lofts, cream, flaring past the knee, frayed by the vertex wind in clothMat. A coat is not
+   a body part; it is the silhouette's weather, so it is built AFTER the body and moves on its own. */
+const cape = new THREE.Mesh(loft((function () {
+  const rings = [], N = 12;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, y = SHOULDER + 0.02 - t * 1.02;
+    const flare = 0.135 + Math.pow(t, 1.55) * 0.30;
+    rings.push({ y, rx: flare, rz: flare * 0.92 });
+  }
+  return rings;
+})(), 30), mCream);
+cape.position.y = 0.0;
+rig.add(cape);
+HUMAN.push(cape);
+{
+  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.018, 8, 26), mLeath);
+  belt.position.y = HIP + 0.01;
+  belt.rotation.x = Math.PI / 2;
+  belt.scale.z = kBody.depth * 1.06;
+  rig.add(belt);
+  HUMAN.push(belt);
+  const patch = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.052, 0.010), mRedB);
+  patch.position.set(0.030, SHOULDER - 0.20, -0.115);
+  rig.add(patch);
+  HUMAN.push(patch);
+  /* the hood, folded back at the neck -- the sheet's frayed cream collar */
+  const hood = new THREE.Mesh(loft([
+    { y: 0.00, rx: 0.115, rz: 0.105 }, { y: 0.09, rx: 0.128, rz: 0.115 },
+    { y: 0.15, rx: 0.100, rz: 0.092 }], 20), mCream);
+  hood.position.y = SHOULDER - 0.05;
+  hood.scale.z = 0.9;
+  rig.add(hood);
+  HUMAN.push(hood);
+}
+
+/* ── THE ARK ANGEL — the second skin, on the SAME joints. Numbers from the angel's own role: its bands
+   are wider at the shoulder (0.3955 against 0.3588), so the robe swings from a broader frame and the
+   body underneath is the same body. White cloth, gold filigree, three rings that counter-rotate, and
+   the vane-fan wings. This is the form the captain asked to BE at /council. ----------------------- */
+{
+  /* the ROBE: from the shoulders to the floor, flaring as cloth falls, wound by the same shader */
+  const robe = new THREE.Mesh(loft((function () {
+    const rings = [], N = 20;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, y = SHOULDER - 0.04 - t * (SHOULDER + 0.06);
+      const flare = 0.125 + Math.pow(t, 1.55) * 0.40;
+      rings.push({ y, rx: flare, rz: flare * 0.86 });
+    }
+    return rings;
+  })(), 40), WHITE);
+  rig.add(robe);
+  ANGELV.push(robe);
+
+  /* the MANTLE over the shoulders: wider than the torso by the angel's own measured bands */
+  const mantle = new THREE.Mesh(loft((function () {
+    const rings = [], N = 10;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, y = SHOULDER + 0.055 - t * 0.42;
+      const r = 0.10 + Math.pow(t, 0.75) * (halfW(BANG, y) + 0.045 - 0.10);
+      rings.push({ y, rx: r, rz: r * 0.78 });
+    }
+    return rings;
+  })(), 30), WHITE2);
+  rig.add(mantle);
+  ANGELV.push(mantle);
+
+  /* the collar: a thin gold band where the mantle closes */
+  const collarA = new THREE.Mesh(new THREE.TorusGeometry(0.108, 0.010, 8, 32), mGoldF);
+  collarA.position.y = SHOULDER + 0.04;
+  collarA.rotation.x = Math.PI / 2;
+  rig.add(collarA);
+  ANGELV.push(collarA);
+
+  /* the two ribbons that stream off the shoulders (the sheet's cloth, not a cape) */
+  for (const sx of [-1, 1]) {
+    const ribbon = new THREE.Mesh(loft([
+      { y: 0, rx: 0.032, rz: 0.006 }, { y: -0.35, rx: 0.040, rz: 0.006 },
+      { y: -0.85, rx: 0.026, rz: 0.005 }, { y: -1.15, rx: 0.010, rz: 0.004 }], 8), WHITE2);
+    ribbon.position.set(sx * 0.155, SHOULDER + 0.02, -0.05);
+    ribbon.rotation.x = 0.12;
+    rig.add(ribbon);
+    ANGELV.push(ribbon);
+  }
+}
+/* THE WINGS — the vane-fan, at body scale, rooted between the shoulder blades. MEASURED (headless shot,
+   2026-10-24): at 1.62 the primaries swallowed the head and read as leaves, so the span is 1.05 -- just
+   past the hands -- and the root sits BELOW the shoulder and BEHIND the spine, where a wing is. ----- */
+const angelWings = wingPair(1.30, mWing, 0.11);
+angelWings.group.position.set(0, SHOULDER + 0.02, -0.16);
+angelWings.group.rotation.x = -0.18;
+rig.add(angelWings.group);
+ANGELV.push(angelWings.group);
+
+/* THE HALO — three armillary rings, each turning on its own axis, over the head. Not a flat disc: a ring
+   seen from the side IS a line, so three of them at three tilts read as a sphere of light. --------- */
+const haloG = new THREE.Group();
+haloG.position.y = CROWN + 0.10;
+rig.add(haloG);
+ANGELV.push(haloG);
+const haloRings = [];
+{
+  const gm = new THREE.MeshBasicMaterial({ color: 0xffe6b0, transparent: true, opacity: 0.62,
+    blending: THREE.AdditiveBlending, depthWrite: false });
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.30 + i * 0.045, 0.006, 6, 72), gm);
+    ring.rotation.x = Math.PI / 2 + (i - 1) * 0.55;
+    ring.rotation.y = i * 0.4;
+    ring.userData.spin = (i % 2 ? -1 : 1) * (0.55 + i * 0.22);
+    haloG.add(ring);
+    haloRings.push(ring);
+  }
+  /* the cross of light above the rings — the second reference image's one sharp stroke */
+  for (const [ax, ay, rot] of [[0, 0.42, 0], [0, 0.42, Math.PI / 2]]) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(ax === 0 && rot === 0 ? 0.016 : 0.016, 0.62, 0.016),
+      gm);
+    bar.position.set(0, ay, 0);
+    bar.rotation.z = rot;
+    haloG.add(bar);
+  }
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, transparent: true,
+    opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffe9bb }));
+  glow.scale.set(1.9, 1.9, 1);
+  haloG.add(glow);
+}
+
+/* ── THE TWO FORMS ────────────────────────────────────────────────────────────────────────────────
+   ONE body, two skins: the same joints drive both, so switching never teleports, never rebuilds, and
+   can never desynchronise. `?form=foot` starts on foot; /council starts as the ARK ANGEL (the
+   captain's order, 2026-10-24). --------------------------------------------------------------- */
+const FORMS = { angel: "ARK ANGEL", foot: "on foot" };
+let form = /(\?|&)form=foot\b/.test(location.search) ? "foot" : "angel";
+function setForm(f) {
+  form = f === "foot" ? "foot" : "angel";
+  const winged = form === "angel";
+  for (const o of HUMAN) o.visible = !winged;
+  for (const o of ANGELV) o.visible = winged;
+  if (!winged && char.fly) char.fly = false;
+  if (typeof refreshHud === "function") refreshHud();
+}
+
+/* ── LAME — "the blade that ate the tide" (the captain's sheet, 2026-10-24). Built from the same
+   primitive as the body: a PROFILE, because the sheet's blade is asymmetric (one edge shorter), it
+   carries a visible SEAM, and it ends in a HARPOON tip. The three laws are not decoration here --
+   two of them are mechanics:
+     1. it cannot enter salt water ................ DECLARED, not simulated (there is no salt water in
+        the hall; the page will not pretend a rule it does not run)
+     2. it holds three strikes .................... charges 3..0, each cut spends one
+     3. every replay costs a piece of itself ..... each replay raises the scar count; at the hilt the
+        blade must be RE-FORGED and the fruit forgets everything ------------------------------- */
+const mBlade = new THREE.MeshPhysicalMaterial({ color: 0x8e9aa6, metalness: 0.94, roughness: 0.34,
+  clearcoat: 0.3, clearcoatRoughness: 0.35, envMapIntensity: 1.6, side: THREE.DoubleSide });
+const mSeam = new THREE.MeshBasicMaterial({ color: 0x59e6ff, transparent: true, opacity: 0.95,
+  blending: THREE.AdditiveBlending, depthWrite: false });
+const lamePivot = new THREE.Group();               /* the hand's grip: every cut turns here */
+armLm.hand.add(lamePivot);
+lamePivot.position.y = -0.075;
+const BLADE_LEN = 1.02;
+const bladeProfile = [
+  { t: 0.00, w: 0.026, th: 0.0080, ox: 0.006 },
+  { t: 0.07, w: 0.041, th: 0.0100, ox: 0.006 },
+  { t: 0.22, w: 0.048, th: 0.0110, ox: 0.004 },
+  { t: 0.45, w: 0.043, th: 0.0100, ox: 0.002 },
+  { t: 0.68, w: 0.037, th: 0.0090, ox: 0.001 },
+  { t: 0.86, w: 0.030, th: 0.0080, ox: 0.000 },
+  { t: 0.94, w: 0.019, th: 0.0060, ox: 0.000 },
+  { t: 1.00, w: 0.002, th: 0.0020, ox: 0.000 },
+];
+{
+  lamePivot.add(new THREE.Mesh(loft(bladeProfile.map(p => ({ y: p.t * BLADE_LEN, rx: p.w,
+    rz: p.th, ox: p.ox })), 12), mBlade));
+  /* THE SEAM: always visible, always part of it -- and it GLOWS when the machine and the blade share a
+     current. A thin ribbon riding the spine, additive, because a seam is a leak of light. */
+  const seam = new THREE.Mesh(loft([
+    { y: 0.02, rx: 0.0035, rz: 0.0018 }, { y: BLADE_LEN * 0.7, rx: 0.0030, rz: 0.0016 },
+    { y: BLADE_LEN * 0.97, rx: 0.0012, rz: 0.0010 }], 6), mSeam);
+  seam.position.z = 0.011;
+  lamePivot.add(seam);
+  /* the HARPOON: two barbs pointing BACK from the tip, so the blade pulls what it has cut */
+  for (const sx of [-1, 1]) {
+    const barb = new THREE.Mesh(loft([
+      { y: 0, rx: 0.002, rz: 0.002 }, { y: -0.085, rx: 0.016, rz: 0.004 },
+      { y: -0.115, rx: 0.001, rz: 0.001 }], 6), mBlade);
+    barb.position.set(sx * 0.020, BLADE_LEN * 0.90, 0);
+    barb.rotation.z = sx * 0.30;
+    lamePivot.add(barb);
+  }
+  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.014, 0.036), mDarkM);
+  guard.position.y = -0.008;
+  lamePivot.add(guard);
+  lamePivot.add(new THREE.Mesh(loft([
+    { y: -0.012, rx: 0.019, rz: 0.017 }, { y: -0.120, rx: 0.017, rz: 0.016 },
+    { y: -0.225, rx: 0.020, rz: 0.018 }], 12), mLeath));
+  const coupler = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.006, 6, 18), mCyanB);
+  coupler.position.y = -0.215;
+  coupler.rotation.x = Math.PI / 2;
+  lamePivot.add(coupler);
+}
+/* the CARRY: point down against the mechanical arm, so the seam is the first thing the light finds --
+   exactly how the sheet says it is carried. A cut leaves this pose and returns to it. ---------- */
+const CARRY = { rx: Math.PI - 0.12, rz: 0.06 };
+lamePivot.rotation.set(CARRY.rx, 0, CARRY.rz);
+/* THE ARC: the last sixteen tip positions of a cut, drawn as an additive line. Memory made visible. */
+const ARC_N = 16;
+const arcGeo = new THREE.BufferGeometry();
+arcGeo.setAttribute("position", new THREE.Float32BufferAttribute(new Float32Array(ARC_N * 3), 3));
+const arcMat = new THREE.LineBasicMaterial({ color: 0x9fe7ff, transparent: true, opacity: 0.0,
+  blending: THREE.AdditiveBlending, depthWrite: false });
+const arc = new THREE.Line(arcGeo, arcMat);
+arc.frustumCulled = false;
+scene.add(arc);
 
 /* ── THE CONTROLLER — COPIED FROM THE DOJO (the captain's order, 2026-10-24: "same control setting for
-   char and mov"). Nothing snaps: every value chases its target with MathUtils.damp (1 - e^(-λ·dt)), so the
-   feel is identical at 30 or 240 fps. Drag to look, WASD (or arrows) to walk, SHIFT to run. */
+   char and mov"). Nothing snaps: every value chases its target with MathUtils.damp (1 - e^(-λ·dt)), so
+   the feel is identical at 30 or 240 fps. Drag to look, WASD (or arrows) to walk, SHIFT to run, and
+   now SPACE to rise: he asked to BE the ark angel and to FLY. -------------------------------- */
 let pinned = 0, dragging = false, px = 0, py = 0;
 const keys = new Set();
 /* the CAMERA is an ORBIT round the body: yaw around it, pitch above it, distance behind it. Arrows drive it. */
 const cam = { yaw: 0, pitch: 0.30, dist: 6.4 };
 const char = { pos: new THREE.Vector3(0, 0, 10.2), vel: new THREE.Vector3(), yaw: Math.PI,
-               speed: 0, phase: 0, turn: 0 };
+               speed: 0, phase: 0, turn: 0, fly: false, vy: 0, alt: 0, bank: 0, pitch: 0,
+               flap: 0 };
+/* ── THE THREE LAWS, AS STATE. A charge is spent by a cut; a replay spends a SCAR, not a charge --
+   the sheet is explicit that the strikes and the remembering are different accounts. ------------- */
+const lame = { charges: 3, max: 3, scars: 0, seamMax: 9, swing: -1, rec: null, recBuf: [],
+  ghosts: [], forged: 0 };
+const tipV = new THREE.Vector3();
+const bladeTip = (out) => out.set(0, BLADE_LEN, 0) && lamePivot.localToWorld(out);
+function sayBlade() {
+  if (typeof say !== "function") return;
+  say("<b>" + FORMS[form] + "</b> · blade " + "●".repeat(lame.charges) + "○".repeat(lame.max - lame.charges)
+    + " · scars " + lame.scars + "/" + lame.seamMax);
+}
+function reforge(voluntary) {
+  lame.charges = lame.max; lame.scars = 0; lame.rec = null; lame.recBuf = []; lame.forged++;
+  if (typeof say === "function") say("<b>re-forged</b> — the fruit forgets everything");
+}
+function strike() {
+  if (lame.swing >= 0) return;
+  if (lame.charges <= 0) {
+    if (typeof say === "function") say("<b>lame</b> will not take a fourth — it turns in the hand rather than lie");
+    return;
+  }
+  lame.charges--; lame.swing = 0; lame.recBuf = [];
+  sayBlade();
+}
+function replay() {
+  if (lame.swing >= 0) return;
+  if (!lame.rec || lame.rec.length < 6) {
+    if (typeof say === "function") say("<b>lame</b> has nothing to replay — cut first");
+    return;
+  }
+  const g = lame.ghosts.find(x => !x.userData.live) || (function () {
+    const n = ghostBlade();
+    n.userData.live = false;
+    lame.ghosts.push(n);
+    return n;
+  })();
+  g.visible = true; g.userData.live = true; g.userData.u = 0;
+  g.position.copy(lamePivot.position);
+  lame.scars++;
+  if (typeof say === "function") {
+    say("<b>replay</b> — the cut arrives again from where it came · scar " + lame.scars + "/" + lame.seamMax);
+  }
+  if (lame.scars >= lame.seamMax) reforge(false);
+}
+/* one function drives the blade, the arc and every ghost, so nothing in this file can animate the cut
+   in two places and disagree with itself. ------------------------------------------------------ */
+function updateLame(dt, time) {
+  const P = lamePivot;
+  const arcPos = arcGeo.attributes.position;
+  if (lame.swing >= 0) {
+    lame.swing += dt;
+    const u = Math.min(1, lame.swing / 0.42);
+    const s = Math.pow(Math.sin(Math.PI * u), 0.75);
+    P.rotation.x = CARRY.rx - (CARRY.rx + 0.68) * s;      /* over the head, then through */
+    P.rotation.z = CARRY.rz + 0.62 * s;
+    P.rotation.y = -0.36 * s;
+    lame.recBuf.push({ x: P.rotation.x, y: P.rotation.y, z: P.rotation.z });
+    if (lame.swing >= 0.42) {
+      lame.swing = -1;
+      lame.rec = lame.recBuf.slice();
+      P.rotation.set(CARRY.rx, 0, CARRY.rz);
+    }
+  } else {
+    P.rotation.x = THREE.MathUtils.damp(P.rotation.x, CARRY.rx, 9, dt);
+    P.rotation.z = THREE.MathUtils.damp(P.rotation.z, CARRY.rz, 9, dt);
+    P.rotation.y = THREE.MathUtils.damp(P.rotation.y, 0, 9, dt);
+  }
+  /* the arc: shift the ring buffer and write it. A cut is a POINT that moved; the line is its memory. */
+  if (lame.swing >= 0) {
+    bladeTip(tipV);
+    arcPos.array.copyWithin(0, 3);
+    arcPos.setXYZ(ARC_N - 1, tipV.x, tipV.y, tipV.z);
+    arcPos.needsUpdate = true;
+    arcMat.opacity = Math.min(0.9, arcMat.opacity + dt * 6);
+  } else {
+    arcMat.opacity = Math.max(0, arcMat.opacity - dt * 1.7);
+  }
+  /* the ghosts: each walks the RECORDED angles, so a replay is the same cut and not a new one */
+  for (const g of lame.ghosts) {
+    if (!g.userData.live) continue;
+    g.userData.u += dt / 0.42;
+    if (g.userData.u >= 1) { g.userData.live = false; g.visible = false; continue; }
+    const rec = lame.rec;
+    const k = Math.min(rec.length - 1, Math.floor(g.userData.u * (rec.length - 1)));
+    g.rotation.set(rec[k].x, rec[k].y, rec[k].z);
+    g.children.forEach(c => { if (c.material && c.material.transparent) c.material.opacity = 0.42 * (1 - g.userData.u); });
+  }
+  /* the seam breathes, and it brightens with the charge he is holding: the blade is a battery, not a prop */
+  mSeam.opacity = 0.55 + 0.35 * Math.sin(time * 3.1) + 0.05 * lame.charges;
+  /* the halo turns */
+  for (const r of haloRings) r.rotation.z += (r.userData.spin || 0) * dt;
+}
+
 const canvas = renderer.domElement;
 const enterEl = document.getElementById("enter");
 const nearEl = document.getElementById("near");
@@ -974,10 +1627,19 @@ enterEl.addEventListener("click", () => {
 /* ── MY OWN EYES: with ?auto (or #auto) the veil lifts without a click, so a headless browser can photograph
    the room. It is also a legitimate "cinema" mode: no click, straight in. ───────────────────────────── */
 const AUTO = /(\?|&)auto\b/.test(location.search) || location.hash === "#auto";
+const DIAG = /(\?|&)diag\b/.test(location.search);
+/* ?shot puts the camera on a FIXED 3/4 view of the body, airborne, so a headless run photographs the
+   character instead of the room. It is the captain's own sheet turned into a test. ---------------- */
+const SHOT = /(\?|&)shot\b/.test(location.search);
 if (AUTO) {
   document.getElementById("veil").style.transition = "none";
   document.getElementById("veil").style.opacity = "0";
   enterEl.classList.add("gone");
+}
+if (SHOT) {
+  char.pos.set(0, 3.4, 6.4);
+  char.fly = form === "angel";
+  setForm(form);
 }
 canvas.addEventListener("pointerdown", e => { dragging = true; px = e.clientX; py = e.clientY; });
 addEventListener("pointerup", () => { dragging = false; });
@@ -988,7 +1650,19 @@ addEventListener("pointermove", e => {
   cam.pitch = Math.max(-0.10, Math.min(0.95, cam.pitch));
   px = e.clientX; py = e.clientY;
 });
-addEventListener("keydown", e => { keys.add(e.code); });
+/* one-shot keys: the form, the cut, the replay, the re-forge. Space is a FLIGHT control, so it must not
+   also scroll the page. Repeat is ignored by the Set, and every one-shot is guarded by its own state. */
+addEventListener("keydown", e => {
+  const first = !keys.has(e.code);
+  keys.add(e.code);
+  if (e.code === "Space") e.preventDefault();
+  if (!first) return;
+  if (e.code === "Space" && form === "angel") char.fly = true;
+  if (e.code === "KeyV") setForm(form === "angel" ? "foot" : "angel");
+  if (e.code === "KeyJ") strike();
+  if (e.code === "KeyR") replay();
+  if (e.code === "KeyG") reforge(true);
+});
 addEventListener("keyup", e => { keys.delete(e.code); });
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
@@ -1002,7 +1676,12 @@ function refreshHud() {
   hudRows.innerHTML = seatMeshes.map(function (r) {
     const name = r.seat.id === "HELD" ? "held" : r.seat.id;
     return (r.lit ? "● " : "○ ") + name + " — " + (r.lit ? "lit" : "vacant");
-  }).join("<br>");
+  }).join("<br>")
+    + "<br><br><span style=\"color:#efd489\">" + FORMS[form] + "</span>"
+    + (form === "angel" ? (char.fly ? " · FLYING" : " · wings folded") : "")
+    + " · alt " + char.alt.toFixed(1) + " m"
+    + "<br>blade " + "●".repeat(lame.charges) + "○".repeat(lame.max - lame.charges)
+    + " · scars " + lame.scars + "/" + lame.seamMax;
 }
 function say(html) {
   nearEl.innerHTML = html;
@@ -1028,27 +1707,35 @@ document.getElementById("gate").addEventListener("submit", function (e) {
   refreshHud();
 });
 refreshHud();
+setForm(form);                                    /* the captain is the ARK ANGEL at /council, by default */
+let hudT = 0;
 
 const clock = new THREE.Clock();
+player.rotation.order = "YXZ";                    /* yaw, then pitch, then bank -- a flyer needs all three */
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  hudT += dt;
+  if (hudT > 0.25) { hudT = 0; refreshHud(); }     /* four HUD refreshes a second: live, never a flood */
 
   /* ── THE CAMERA ON THE ARROWS (the captain, 2026-10-24: "camera moov: with arrows") — ←→ orbit the body,
      ↑↓ raise and lower the eye. Damped like everything else, so it glides instead of stepping. ──────── */
   const TURN = 2.0 * dt;
   if (keys.has("ArrowLeft")) cam.yaw -= TURN;
   if (keys.has("ArrowRight")) cam.yaw += TURN;
-  if (keys.has("ArrowUp")) cam.pitch = Math.min(0.98, cam.pitch + TURN * 0.55);
-  if (keys.has("ArrowDown")) cam.pitch = Math.max(-0.08, cam.pitch - TURN * 0.55);
+  if (keys.has("ArrowUp")) cam.pitch = Math.min(1.25, cam.pitch + TURN * 0.55);
+  if (keys.has("ArrowDown")) cam.pitch = Math.max(-0.35, cam.pitch - TURN * 0.55);
 
-  /* ── THE DOJO'S WALK: wish in CAMERA space, damped velocity, the body clamped to the house ─────────── */
+  /* ── THE DOJO'S WALK, AND THE ANGEL'S FLIGHT. Ground: wish in CAMERA space, damped velocity, the body
+     clamped to the house. Air: the same wish on a longer leash, plus a vertical velocity that is SPENT
+     and never teleported -- SPACE rises, C sinks, and the floor catches him. ─────────────────────── */
   let fwd = 0, side = 0;
   if (keys.has("KeyW")) fwd += 1;
   if (keys.has("KeyS")) fwd -= 1;
   if (keys.has("KeyA")) side -= 1;
   if (keys.has("KeyD")) side += 1;
   const run = keys.has("ShiftLeft") || keys.has("ShiftRight");
-  const maxSpeed = run ? 4.0 : 1.85;
+  const flying = char.fly && form === "angel";
+  const maxSpeed = flying ? (run ? 11.0 : 5.6) : (run ? 4.0 : 1.85);
   let wx = 0, wz = 0;
   if (fwd || side) {
     const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw);
@@ -1058,49 +1745,127 @@ function frame() {
     wx = wx / n * maxSpeed;
     wz = wz / n * maxSpeed;
   }
-  char.vel.x = THREE.MathUtils.damp(char.vel.x, wx, 9, dt);
-  char.vel.z = THREE.MathUtils.damp(char.vel.z, wz, 9, dt);
+  char.vel.x = THREE.MathUtils.damp(char.vel.x, wx, flying ? 4.2 : 9, dt);
+  char.vel.z = THREE.MathUtils.damp(char.vel.z, wz, flying ? 4.2 : 9, dt);
   char.speed = Math.hypot(char.vel.x, char.vel.z);
   char.pos.x += char.vel.x * dt;
   char.pos.z += char.vel.z * dt;
   const rad = Math.hypot(char.pos.x, char.pos.z);    /* THE WALL IS THE COLUMNS */
   if (rad > 26) { char.pos.x *= 26 / rad; char.pos.z *= 26 / rad; }
+  /* THE VERTICAL: a target, a damped velocity, and a FLOOR. Never a teleport. */
+  let vyTarget = 0;
+  if (flying) {
+    const up = keys.has("Space"), down = keys.has("KeyC") || keys.has("ControlLeft");
+    if (up) vyTarget += run ? 6.4 : 3.4;
+    if (down) vyTarget -= run ? 6.4 : 3.4;
+    if (!up && !down) vyTarget = -0.32;              /* a body in the air falls, slowly: it has wings */
+  } else if (char.pos.y > 0.001) {
+    vyTarget = -6.0;                                 /* folding the wings drops him; the floor decides */
+  }
+  char.vy = THREE.MathUtils.damp(char.vy, vyTarget, flying ? 5.0 : 12, dt);
+  char.pos.y += char.vy * dt;
+  if (char.pos.y <= 0) { char.pos.y = 0; char.vy = 0; if (!flying) char.fly = false; }
+  if (char.pos.y > 24) { char.pos.y = 24; char.vy = Math.min(0, char.vy); }   /* under the oculus */
+  char.alt = char.pos.y;
+  char.flap += dt * (flying ? (2.2 + Math.max(0, char.vy) * 0.55 + char.speed * 0.10) : 1.1);
   /* face the way you MOVE, not the way you press — shortest arc, damped */
   if (char.speed > 0.12) {
     const want = Math.atan2(char.vel.x, char.vel.z);
     const dd = ((want - char.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
     char.turn = dd / Math.max(dt, 1e-4);
-    char.yaw += dd * (1 - Math.exp(-14 * dt));
+    char.yaw += dd * (1 - Math.exp(-(flying ? 6 : 14) * dt));
   } else {
     char.turn *= 0.86;
   }
+  /* BANK AND PITCH: a flyer leans into the turn and noses up when climbing -- driven by what the body is
+     ACTUALLY doing, never by which key is down. */
+  char.bank = THREE.MathUtils.damp(char.bank, flying
+    ? -char.turn * 0.055 * Math.min(1, char.speed / 5) : -char.turn * 0.018, 5, dt);
+  char.pitch = THREE.MathUtils.damp(char.pitch, flying ? -Math.min(0.5, char.vy * 0.10) : 0, 5, dt);
   player.position.copy(char.pos);
-  player.rotation.y = char.yaw;
-  /* the walk is COMPUTED: the phase advances with the REAL speed, so it slows when you do */
-  char.phase += char.speed * dt * 3.4;
+  player.rotation.set(char.pitch, char.yaw, char.bank);
+  /* ── THE BODY: two gaits out of ONE skeleton. On the ground the walk is COMPUTED (the phase advances
+     with the REAL speed, knees bend on the up-swing, arms counter-swing). In the air the legs trail,
+     the arms open, and the WINGS carry the motion -- row by row, the long primaries arriving last. */
+  char.phase += char.speed * dt * (flying ? 1.1 : 3.4);
   const sw = Math.sin(char.phase), sw2 = Math.sin(char.phase * 2);
-  const amp = Math.min(1, char.speed / 2.1);
-  legL.rotation.x = sw * 0.70 * amp;
-  legR.rotation.x = -sw * 0.70 * amp;
-  armL.rotation.x = -sw * 0.46 * amp - 0.05;
-  armR.rotation.x = sw * 0.46 * amp - 0.05;
-  torso.position.y = HIP + 0.22 + Math.abs(sw2) * 0.017 * amp;
-  neck.position.y = HIP + 0.44 + Math.abs(sw2) * 0.013 * amp;
-  cape.position.y = HIP + 0.06 + Math.abs(sw2) * 0.010 * amp;
-  player.rotation.z = THREE.MathUtils.damp(player.rotation.z, -char.turn * 0.018, 6, dt);
-  /* the camera is a body too: it FOLLOWS with damp, it never snaps */
+  const amp = Math.min(1, char.speed / (flying ? 5.6 : 2.1));
+  if (flying) {
+    const trail = 0.55 + 0.18 * Math.sin(t * 1.6);
+    legL.rotation.x = -trail + 0.06 * sw;
+    legR.rotation.x = -trail - 0.06 * sw;
+    legLc.knee.rotation.x = 0.62; legRc.knee.rotation.x = 0.52;
+    armL.rotation.x = -0.55; armR.rotation.x = -0.42;
+    armL.rotation.z = 0.42;  armR.rotation.z = -0.46;
+    armLm.elbow.rotation.x = -0.35; armRm.elbow.rotation.x = -0.30;
+    neck.rotation.x = THREE.MathUtils.damp(neck.rotation.x, -char.pitch * 0.6 + 0.10, 6, dt);
+    torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, 0.10, 6, dt);
+  } else {
+    legL.rotation.x = sw * 0.70 * amp;
+    legR.rotation.x = -sw * 0.70 * amp;
+    legLc.knee.rotation.x = Math.max(0, -sw) * 0.95 * amp;
+    legRc.knee.rotation.x = Math.max(0, sw) * 0.95 * amp;
+    armL.rotation.x = -sw * 0.46 * amp - 0.05;
+    armR.rotation.x = sw * 0.46 * amp - 0.05;
+    armL.rotation.z = 0.10; armR.rotation.z = -0.10;
+    armLm.elbow.rotation.x = -0.22 - Math.max(0, -sw) * 0.30 * amp;
+    armRm.elbow.rotation.x = -0.22 - Math.max(0, sw) * 0.30 * amp;
+    neck.rotation.x = THREE.MathUtils.damp(neck.rotation.x, 0, 6, dt);
+    torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, 0, 8, dt);
+  }
+  torso.position.y = Math.abs(sw2) * 0.012 * amp;
+  neck.position.y = NECKY - 0.03 + Math.abs(sw2) * 0.010 * amp;
+  cape.position.y = Math.abs(sw2) * 0.010 * amp;
+  /* THE WINGS: one flap number, and each ROW takes it late and smaller -- that lag is the whole
+     difference between a wing and a paper fan. Folded on the ground, open and beating in the air. */
+  {
+    const fl = Math.sin(char.flap);
+    const open = flying ? 1 : 0;
+    const fold = THREE.MathUtils.damp(angelWings.group.userData.fold || 0, open, 4, dt);
+    angelWings.group.userData.fold = fold;
+    angelWings.sides.forEach(function (s) {
+      s.side.rotation.z = -0.30 + fold * (0.34 + fl * 0.52) - (1 - fold) * 1.05;
+      s.side.rotation.y = (1 - fold) * 0.55;                    /* folded back along the spine */
+      s.rows.forEach(function (row, ri) {
+        row.rotation.z = -fl * (0.26 - ri * 0.06) * fold;
+      });
+    });
+    angelWings.group.rotation.x = -0.10 - fold * 0.16;
+  }
+  /* the camera is a body too: it FOLLOWS with damp, it never snaps. In the air it pulls back and up,
+     so the whole man is in frame with the wings spread -- a third-person view that can SEE the flight. */
+  cam.dist = THREE.MathUtils.damp(cam.dist, flying ? 9.4 : 6.4, 3.2, dt);
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   let wantX = char.pos.x + Math.sin(cam.yaw) * cp * cam.dist;
   let wantZ = char.pos.z + Math.cos(cam.yaw) * cp * cam.dist;
-  const wantY = 1.75 + sp * cam.dist;
+  const wantY = char.pos.y + 1.35 + sp * cam.dist;
   /* THE CAMERA IS INSIDE THE HOUSE TOO: MEASURED (shot 3, 2026-10-24) it walked into a column and filled
      the frame with marble. So it is clamped to the colonnade ring like the body is. */
   const cRad = Math.hypot(wantX, wantZ);
   if (cRad > 18.6) { wantX *= 18.6 / cRad; wantZ *= 18.6 / cRad; }
   camera.position.x = THREE.MathUtils.damp(camera.position.x, wantX, 8, dt);
-  camera.position.y = THREE.MathUtils.damp(camera.position.y, wantY, 8, dt);
+  camera.position.y = THREE.MathUtils.damp(camera.position.y, Math.max(0.45, wantY), 8, dt);
   camera.position.z = THREE.MathUtils.damp(camera.position.z, wantZ, 8, dt);
-  camera.lookAt(char.pos.x, char.pos.y + 1.55, char.pos.z);
+  camera.lookAt(char.pos.x, char.pos.y + (flying ? 1.28 : 1.45), char.pos.z);
+  if (SHOT) {                       /* the sheet's view: three-quarters, at the body's own height */
+    camera.position.set(char.pos.x + 2.75, char.pos.y + 0.42, char.pos.z + 3.20);
+    camera.lookAt(char.pos.x, char.pos.y + 0.95, char.pos.z);
+  }
+
+  /* the blade, the arc, the ghosts, the halo -- one call, so the cut can never animate twice */
+  updateLame(dt, t);
+  U.uTime.value = t;
+  U.uWind.value = 0.35 + Math.min(1.6, char.speed * 0.22) + (flying ? 0.8 : 0);
+  /* the guardians turn their rings and beat their wings slowly, out of phase with each other */
+  for (const gd of (scene.userData.guardians || [])) {
+    if (gd.userData.halos) for (const h of gd.userData.halos) h.rotation.z += h.userData.spin * dt;
+    if (gd.userData.wings) {
+      const f = Math.sin(t * 0.55 + gd.position.x * 0.3) * 0.10;
+      gd.userData.wings.sides.forEach(function (s, i) {
+        s.side.rotation.z = -0.16 + f * (i ? -1 : 1);
+      });
+    }
+  }
 
   mark.rotation.y = t * 0.16;
   mark.position.y = 9.4 + Math.sin(t * 0.9) * 0.16;
@@ -1141,6 +1906,14 @@ function frame() {
   }
 
   composer.render();
+  /* ?diag writes the body's real numbers into the title, so a headless run can MEASURE instead of guess
+     what the camera saw. --dump-dom prints it. ---------------------------------------------------- */
+  if (DIAG) {
+    document.title = "D f=" + form + " p=" + char.pos.toArray().map(v => v.toFixed(2)).join(",")
+      + " cam=" + camera.position.toArray().map(v => v.toFixed(2)).join(",")
+      + " d=" + cam.dist.toFixed(2) + " alt=" + char.alt.toFixed(2) + " fly=" + (char.fly ? 1 : 0)
+      + " err=" + (window.__err || "none");
+  }
   requestAnimationFrame(frame);
 }
 frame();
