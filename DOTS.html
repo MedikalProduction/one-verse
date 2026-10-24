@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!-- 🔥 Ace · 2026-10-24 · DOTS — the second door. Regular strikes, irregular survivors. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOTS — la deuxième serrure</title>
+<style>
+  :root { --ink:#e8e4da; --dim:#8d8a83; --gold:#e0bc45; --bad:#c0554a; --ice:#9fd4e8; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; color:var(--ink);
+         font:13px/1.6 ui-monospace,"JetBrains Mono",Consolas,monospace;
+         background:
+           radial-gradient(62% 44% at 6% 40%, rgba(232,150,54,.11), transparent 72%),
+           radial-gradient(62% 44% at 94% 62%, rgba(232,150,54,.09), transparent 72%),
+           radial-gradient(56% 50% at 50% 6%, rgba(96,148,190,.11), transparent 74%),
+           radial-gradient(130% 95% at 50% 112%, rgba(0,0,0,.95), transparent 62%),
+           linear-gradient(#05080c,#020406 62%,#000);
+         display:flex; align-items:center; justify-content:center; padding:24px; }
+  main { width:min(760px,100%); text-align:center; }
+  #slab { padding:22px 20px 18px; border-radius:6px; border:1px solid rgba(224,188,69,.22);
+          background:linear-gradient(180deg, rgba(10,14,18,.9), rgba(3,6,9,.94));
+          box-shadow:0 0 50px rgba(0,0,0,.7), inset 0 0 34px rgba(90,140,180,.05); }
+  h1 { font-size:10px; letter-spacing:.3em; color:var(--gold); margin:0 0 4px; font-weight:500;
+       text-transform:uppercase; }
+  #sub { font-size:9px; letter-spacing:.22em; color:var(--dim); text-transform:uppercase;
+         margin-bottom:16px; }
+  /* the table: columns n, one row per prime. dots = that prime strikes here at its period */
+  #table { display:grid; gap:3px 2px; justify-content:center; margin:0 auto; overflow-x:auto;
+           font-size:11px; }
+  .lab { color:var(--dim); text-align:right; padding-right:6px; }
+  .hdr { color:var(--dim); }
+  .cell { width:18px; height:16px; display:flex; align-items:center; justify-content:center;
+          font-size:9px; }
+  .dot  { color:rgba(224,188,69,.55); }
+  .mark { cursor:pointer; color:#3a4a56; border-bottom:1px solid rgba(150,200,225,.18); }
+  .mark:hover { color:var(--ice); }
+  .mark.on { color:var(--gold); border-bottom-color:var(--gold); }
+  .mark.wrong { color:var(--bad); border-bottom-color:var(--bad); }
+  #say { margin-top:16px; min-height:3.4em; color:#b9d9ea; font-style:italic;
+         text-shadow:0 0 18px rgba(120,180,210,.25); }
+  .row { display:flex; gap:14px; align-items:center; justify-content:center; margin-top:12px; }
+  #tempo { width:150px; accent-color:#e0bc45; }
+  button { background:transparent; color:var(--gold); border:1px solid rgba(224,188,69,.5);
+           padding:7px 14px; font:inherit; font-size:10.5px; letter-spacing:.18em;
+           text-transform:uppercase; cursor:pointer; }
+  button:hover { background:rgba(224,188,69,.09); }
+  .foot { margin-top:18px; color:#4a5a66; font-size:9.5px; letter-spacing:.06em; }
+  #opened { display:none; margin-top:12px; }
+  #opened a { color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(224,188,69,.5); }
+</style>
+</head>
+<body>
+<main>
+  <div id="slab">
+    <h1>D O T S</h1>
+    <div id="sub">chaque nombre premier frappe à sa période exacte — trouve ce qui survit</div>
+    <div id="table"></div>
+    <div id="say" aria-live="polite"></div>
+    <div class="row">
+      <span class="lab" style="font-size:10px">tempo D</span>
+      <input id="tempo" type="range" min="1" max="10" value="4">
+      <button id="reset">recommencer</button>
+    </div>
+    <div id="opened"><a href="XV.html">← la première serrure</a> · <a href="PDP.html">la porte →</a></div>
+  </div>
+  <div class="foot">a column is prime if NO SMALLER prime strikes it · derived by sieve, never stored</div>
+</main>
+<script>
+/* DOTS — pure logic first, UI second, exactly like XV. `evaluate` computes the answer BY SIEVE, so the
+   lock cannot be solved by copying: there is no stored list to read. `tempo` is D, the rate variable:
+   it controls how fast the combs reveal themselves, and slowing it is a legitimate way to SEE the rule.
+
+   THE RULE, and it is the only hint the frame gives:
+       a column n is PRIME  <=>  no prime SMALLER than n strikes it.
+   Every prime strikes at its exact period (2 every 2nd, 3 every 3rd, ...), so a composite column
+   always receives a strike from one of its own factors. The survivors are the answer. */
+const N0 = 2, N1 = 31;                     // the strip the player works on
+const COMB_ROWS = [2, 3, 5, 7, 11, 13];    // the combs shown (bigger primes add only their own dot)
+
+function primesUpTo(n) {
+  const ok = new Array(n + 1).fill(true);
+  ok[0] = ok[1] = false;
+  for (let i = 2; i * i <= n; i++) if (ok[i]) for (let j = i * i; j <= n; j += i) ok[j] = false;
+  return ok;
+}
+
+function smallestStrike(n) {               // the smallest prime strictly dividing n, or 0
+  for (let p = 2; p < n; p++) if (n % p === 0) return p;
+  return 0;
+}
+
+/** evaluate(marks) -> the frame's verdict. marks is a Set of clicked columns. */
+function evaluate(marks) {
+  const isPrime = primesUpTo(N1);
+  const truth = [], picked = [], missed = [], extra = [];
+  let correct = 0;
+  for (let n = N0; n <= N1; n++) {
+    const should = isPrime[n], did = marks.has(n);
+    if (should) truth.push(n);
+    if (did) picked.push(n);
+    if (should && did) correct++;
+    if (should && !did) missed.push(n);
+    if (!should && did) extra.push(n);
+  }
+  const opened = missed.length === 0 && extra.length === 0;
+  return { truth, picked, missed, extra, correct, opened };
+}
+
+if (typeof document !== "undefined") {
+  const tableEl = document.getElementById("table"), sayEl = document.getElementById("say");
+  const openEl = document.getElementById("opened"), tempoEl = document.getElementById("tempo");
+  const marks = new Set();
+  let revealed = 0, timer = null;
+
+  function speak(t) { sayEl.textContent = t; }
+
+  function build() {
+    // grid: 1 label column + one per n; one header + one row per comb + one mark row
+    tableEl.innerHTML = "";
+    tableEl.style.gridTemplateColumns = "auto repeat(" + (N1 - N0 + 1) + ", 18px)";
+    const h = document.createElement("div");
+    h.className = "cell hdr"; h.textContent = "";
+    tableEl.appendChild(h);
+    for (let n = N0; n <= N1; n++) {
+      const c = document.createElement("div");
+      c.className = "cell hdr"; c.textContent = n;
+      tableEl.appendChild(c);
+    }
+    COMB_ROWS.forEach((p, idx) => {
+      const l = document.createElement("div");
+      l.className = "cell lab"; l.textContent = p;
+      tableEl.appendChild(l);
+      for (let n = N0; n <= N1; n++) {
+        const c = document.createElement("div");
+        c.className = "cell dot";
+        c.dataset.row = idx;
+        c.textContent = n % p === 0 ? "·" : "";
+        c.style.opacity = "0";
+        tableEl.appendChild(c);
+      }
+    });
+    const l = document.createElement("div");
+    l.className = "cell lab"; l.textContent = "?";
+    tableEl.appendChild(l);
+    for (let n = N0; n <= N1; n++) {
+      const c = document.createElement("div");
+      c.className = "cell mark"; c.dataset.n = n; c.textContent = "☐";
+      c.addEventListener("click", () => {
+        marks.has(n) ? marks.delete(n) : marks.add(n);
+        render();
+      });
+      tableEl.appendChild(c);
+    }
+    reveal();
+  }
+
+  /** D controls the tempo: the combs appear one at a time, at a rate the player chooses. */
+  function reveal() {
+    clearInterval(timer);
+    revealed = 0;
+    const dots = [...tableEl.querySelectorAll(".dot")];
+    dots.forEach(d => { d.style.opacity = "0"; });
+    const rate = Math.max(60, 900 / Number(tempoEl.value));    // slower tempo = you can watch
+    timer = setInterval(() => {
+      dots.filter(d => Number(d.dataset.row) === revealed).forEach(d => { d.style.opacity = "1"; });
+      revealed++;
+      if (revealed >= COMB_ROWS.length) clearInterval(timer);
+    }, rate);
+  }
+
+  function render() {
+    const st = evaluate(marks);
+    [...tableEl.querySelectorAll(".mark")].forEach(c => {
+      const n = Number(c.dataset.n), on = marks.has(n);
+      c.textContent = on ? "■" : "☐";
+      c.className = "cell mark" + (on ? " on" : "");
+      if (on && !primesUpTo(N1)[n]) c.classList.add("wrong");
+    });
+
+    if (st.opened) {
+      speak("les survivants sont exacts. la deuxième serrure cède.");
+      openEl.style.display = "block";
+      return;
+    }
+    openEl.style.display = "none";
+    if (marks.size === 0) { speak("regarde les points tomber. ce qui ne reçoit rien a survécu."); return; }
+    if (st.missed.length === 1 && st.extra.length === 0) {
+      speak("un seul survivant te manque. tu as le reste, et il en reste un."); return;
+    }
+    if (st.missed.length === 0 && st.extra.length === 1) {
+      speak("une colonne de trop. celle-là a reçu un coup — relis sa période."); return;
+    }
+    speak(st.correct + " survivant" + (st.correct > 1 ? "s" : "") + " sur " + st.truth.length
+          + (st.extra.length ? " · " + st.extra.length + " marquée(s) à tort" : ""));
+  }
+
+  tempoEl.addEventListener("input", reveal);
+  document.getElementById("reset").addEventListener("click", () => {
+    marks.clear(); build();
+  });
+  build();
+}
+</script>
+
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-24 -->

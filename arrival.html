@@ -17,11 +17,60 @@
         pointer-events:none}
   #w{position:fixed;left:0;right:0;bottom:22px;text-align:center;color:#8fa8b4;font:11px/1.6
      ui-monospace,Consolas,monospace;letter-spacing:.22em;opacity:.55;transition:opacity 1.2s ease}
+  /* 🔥 THE WAY IN. The arrival says "you are not inside yet" -- so the door's handle appears only AFTER
+     the veil lifts, and it is the table itself, not a menu. One line, no chrome. */
+  #enter{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);text-decoration:none;
+        color:#c9a227;font:11px/1 ui-monospace,Consolas,monospace;letter-spacing:.34em;
+        opacity:0;transition:opacity 2s ease;pointer-events:none}
+  #enter.live{opacity:.72;pointer-events:auto}
+  #enter:hover{opacity:1}
+  /* 🔥 THE ISLAND'S NAME PLATE. Hidden until you are within sight of the shore -- a destination that
+     announces itself from 26 m away is a menu, not a place. */
+  #isle{position:fixed;left:50%;top:18%;transform:translateX(-50%);color:#e8d9a6;opacity:0;
+        font:11px/1.6 ui-monospace,Consolas,monospace;letter-spacing:.30em;transition:opacity 1.6s ease;
+        pointer-events:none}
+  #isle.live{opacity:.85}
+  /* 🔥 LAME'S LAWS, on the screen because they are rules and not lore: three strikes, three replays,
+     then the blade pays for the memory. Cyan here and nowhere else. */
+  #lame{position:fixed;left:18px;top:16px;color:#39d0ff;opacity:.78;max-width:min(58vw,420px);
+        font:11px/1.7 ui-monospace,Consolas,monospace;letter-spacing:.14em;transition:opacity 1.2s ease}
+  #lame b{color:#d8cfa9;font-weight:600}
+  #lame i{color:#e8d9a6;font-style:normal;opacity:.9}
+  /* 🔥 THE SHORE — the first thing the ocean ASKS for. It appears only inside 30 m of the island, it
+     refuses wrong answers with a RULE, and it pays in a RECEIPT: a line of text the player keeps, which
+     is the only persistence a static world can honestly offer -- no account, no backend. */
+  #shore,#door{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);width:min(92vw,540px);
+    display:none;background:rgba(6,18,26,.92);border:1px solid rgba(201,162,39,.45);padding:12px 14px;
+    font:11px/1.7 ui-monospace,Consolas,monospace;color:#e8d9a6;letter-spacing:.14em}
+  #shore.live,#door.live{display:block}
+  #shore input,#door input{width:100%;background:transparent;border:0;
+    border-bottom:1px solid rgba(201,162,39,.4);font:12px/1.5 ui-monospace,Consolas,monospace;
+    color:#f3efe6;letter-spacing:.16em;padding:6px 2px;outline:none;margin:6px 0}
+  #shore button,#door button{background:transparent;border:1px solid #c9a227;color:#c9a227;padding:6px 12px;
+    font:11px/1 ui-monospace,Consolas,monospace;letter-spacing:.18em;cursor:pointer;border-radius:2px}
+  #door a{color:#39d0ff;text-decoration:none;letter-spacing:.2em}
+  #receipt{display:none;white-space:pre-wrap;color:#cfe9f2;font:10px/1.6 ui-monospace,Consolas,monospace;
+    margin-top:9px;user-select:all;-webkit-user-select:all}
 </style>
 </head>
 <body>
 <div id="veil"></div>
-<div id="w">drag to look &nbsp;·&nbsp; scroll to come closer &nbsp;·&nbsp; the world turns</div>
+<div id="w">WASD walk the water &nbsp;·&nbsp; arrows look &nbsp;·&nbsp; V for the eye &nbsp;·&nbsp; scroll to come closer</div>
+<a id="enter" href="marie_joise.html">THE TABLE &nbsp;›</a>
+<div id="isle">.:iSl:.</div>
+<div id="lame"></div>
+<div id="shore">
+  <div id="ask">the shore asks for its name &nbsp;·&nbsp; three glyphs, from three things you can see</div>
+  <input id="shoreIn" placeholder="present a body" spellcheck="false" autocomplete="off">
+  <button id="shoreGo">PRESENT</button>
+  <div id="receipt"></div>
+</div>
+<div id="door">
+  <div id="doorAsk">the door asks for what the water gave you &nbsp;·&nbsp; paste the receipt, or just its seal</div>
+  <input id="doorIn" placeholder="seal  5f2a91cc" spellcheck="false" autocomplete="off">
+  <button id="doorGo">KNOCK</button>
+  <div id="doorOut"></div>
+</div>
 <script type="module">
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 
@@ -485,6 +534,111 @@ head.position.y = 0.815;                       // 🔥 seated IN the collar: at 
 body.add(head);
 
 
+/* ── 🔥 LAME — THE BLADE THAT ATE THE TIDE (captain's design, 2026-10-24) ───────────────────────
+   THE RULE THIS BLOCK KEEPS: the world has ONE accent, gold -- so cyan is not decoration, it is the
+   SECOND body: the current that only exists where the machine and the blade meet. The seam is always
+   visible (his law: "the seam is always visible, always part of it"), and the coat is ragged because a
+   pirate is salvage, not uniform.
+   THE THREE LAWS live in the HUD and in the counters below; they are his, not mine:
+     1. it cannot enter salt water -- the body swims, the blade guards the surface, always one each;
+     2. it holds THREE strikes, no more -- a full blade turns in the hand rather than take a fourth;
+     3. every replay costs the blade a piece of itself -- when the seam reaches the hilt it must be
+        re-forged and the fruit forgets everything. The record wears the vessel out.                   */
+const CYAN = 0x39d0ff;
+const cyMat = new THREE.MeshStandardMaterial({ color: 0x0b2b33, emissive: CYAN, emissiveIntensity: 1.6,
+                                               roughness: 0.5, metalness: 0.4 });
+
+/* the COAT -- a ragged open cone. Nine sides, open at both ends: a hem that is not a circle. */
+const coat = new THREE.Mesh(new THREE.ConeGeometry(0.40, 0.82, 9, 1, true), bodyMat);
+coat.position.y = 0.10;
+body.add(coat);
+
+/* the DREADS -- six thin cylinders, splayed; salvage hair, not a helmet. */
+for (let i = 0; i < 6; i++) {
+  const d = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.010, 0.30, 5), bodyMat);
+  const a = -0.5 + i * 0.2;
+  d.position.set(Math.sin(a) * 0.10, 0.86, Math.cos(a) * 0.10);
+  d.rotation.set(0.5, a, Math.sin(a) * 0.4);
+  body.add(d);
+}
+
+/* THE MECHANICAL ARM — left side only (the captain's sheet: one arm is machine). Out at -0.345, the
+   same span the human arm uses, so the silhouette stays a person and the seam sits in the gap. */
+const mech = new THREE.Mesh(new THREE.CapsuleGeometry(0.070, 0.44, 4, 10), bodyMat);
+mech.position.set(-0.345, 0.36, 0.02);
+mech.rotation.z = 0.17;
+mech.rotation.x = -0.10;
+body.add(mech);
+for (const y of [-0.10, -0.02]) {                 /* the two cyan rings: THE COUPLING */
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.012, 6, 20), cyMat);
+  ring.position.set(-0.345, 0.36 + y, 0.02);
+  ring.rotation.x = Math.PI / 2;
+  body.add(ring);
+}
+
+/* LAME herself: point DOWN, against the mechanical arm, so the seam is the first thing the light
+   finds -- his own carrying rule. Asymmetric: one edge shorter than the other. */
+const lame = new THREE.Group();
+const steel = new THREE.MeshBasicMaterial({ color: 0x9aa7ac, fog: true });
+const blade = new THREE.Mesh(new THREE.BoxGeometry(0.045, 1.5, 0.115), steel);
+blade.position.y = -0.55;
+lame.add(blade);
+const tip = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.34, 4), steel);
+tip.position.y = -1.46;
+tip.rotation.x = Math.PI;
+lame.add(tip);
+const seam = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1.42, 0.020), cyMat);
+seam.position.set(0, -0.55, 0.062);
+lame.add(seam);
+const guard = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.14), bodyMat);
+guard.position.y = 0.20;
+lame.add(guard);
+lame.position.set(-0.46, 0.30, 0.10);
+lame.rotation.z = 0.06;
+body.add(lame);
+
+/* the state the three laws act on -- nothing here is decoration */
+let strikes = 0, replays = 0, seamGrow = 0, slackUntil = 0;
+lame.userData.swing = 0;
+const lameEl = document.getElementById("lame");
+function hud(msg) {
+  const n = "●".repeat(strikes) + "○".repeat(Math.max(0, 3 - strikes));
+  lameEl.innerHTML = msg
+    ? "<i>" + msg + "</i>"
+    : "LAME &nbsp;<b>" + n + "</b> &nbsp;held &nbsp;·&nbsp; replays <b>" + replays + "/3</b>"
+      + " &nbsp;·&nbsp; seam <b>" + seamGrow + "/3</b>";
+  if (msg) setTimeout(hud, 2600);
+}
+/* THE THREE LAWS, as KEYS. E remembers a strike (three, no more). R replays one -- and the replay is
+   paid for by the blade: the scarred section grows, and at the third it must be re-forged and forgets.
+   Salt: a blade that has drunk salt goes slack for a minute and holds nothing. */
+addEventListener("keydown", e => {
+  const k = e.key.toLowerCase(), now = performance.now();
+  if (k !== "e" && k !== "r") return;
+  if (now < slackUntil) { hud("slack &nbsp;·&nbsp; the sea is still in it, and it remembers nothing"); return; }
+  if (k === "e") {
+    if (strikes >= 3) { hud("a full blade turns in the hand &nbsp;·&nbsp; it will not take a fourth"); return; }
+    strikes++;
+    lame.userData.swing = 0.34;
+    hud();
+  } else {
+    if (!strikes) { hud("nothing remembered &nbsp;·&nbsp; E first"); return; }
+    strikes--; replays++; seamGrow++;
+    seam.scale.y = 1 + seamGrow * 0.10;                 /* THE SEAM GROWS toward the hilt */
+    seam.position.y = -0.55 + seamGrow * 0.12;
+    lame.userData.swing = -0.22;
+    if (seamGrow >= 3) {                                /* the seam reaches the hilt */
+      seamGrow = 0; replays = 0; strikes = 0;
+      seam.scale.y = 1; seam.position.y = -0.55;
+      slackUntil = now + 60000;
+      hud("re-forged &nbsp;·&nbsp; the fruit forgets everything &nbsp;·&nbsp; one minute of slack");
+      return;
+    }
+    hud();
+  }
+});
+hud();
+
 /* the WATERLINE RING -- `.:cOc:.` : the hull, and the gold circle it wears at the surface.
    A silhouette alone is a shadow; a silhouette with one gold line is a PERSON.
    🔥 MEASURED 2026-10-22 (the captain's screenshot): at r=0.52 the ring was 2 cm outside a robe hem
@@ -509,6 +663,141 @@ scene.add(lampSelf);
 const lamp = new THREE.PointLight(GOLD, 26, 90, 2.0);
 lamp.position.set(0, 7.0, -30);
 scene.add(lamp);
+
+/* ── 🔥 THE ISLAND — `.:iSl:.` — the first thing at a COORDINATE ──────────────────────────────────
+   An ocean with nothing in it is a puddle: "explore" only means something if there is somewhere to go.
+   So this is not scenery, it is a PLACE: rock, a gold ring drawn on the water, and a fire on the crown --
+   the three nouns the hull already uses, so the island reads in the world's own language. It heaves with
+   the SAME swell function the shader draws, its fire breathes, and its name appears only when you are
+   near enough to read it. No asset, no texture, no fetch: geometry and one light. */
+const ISLE = { x: -72, z: -116, r: 15 };
+const isle = new THREE.Group();
+const isleLabel = document.getElementById("isle");
+const rockMat = new THREE.MeshBasicMaterial({ color: 0x101a20, fog: true });
+const rock = new THREE.Mesh(new THREE.ConeGeometry(ISLE.r, 9, 9), rockMat);
+rock.position.y = 4.5;
+isle.add(rock);
+const crown = new THREE.Mesh(new THREE.ConeGeometry(ISLE.r * 0.45, 5, 7), rockMat);
+crown.position.set(3.5, 8.6, -2);
+isle.add(crown);
+const shore = new THREE.Mesh(
+  new THREE.TorusGeometry(ISLE.r * 1.02, 0.07, 6, 64),
+  new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0.5, fog: true })
+);
+shore.rotation.x = Math.PI / 2;
+shore.position.y = 0.06;
+isle.add(shore);
+const fire = new THREE.PointLight(GOLD, 20, 80, 2.0);
+fire.position.set(0, 9.4, 0);
+isle.add(fire);
+const fireCore = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10),
+  new THREE.MeshBasicMaterial({ color: 0xffd889, fog: true }));
+fireCore.position.set(0, 9.2, 0);
+isle.add(fireCore);
+isle.position.set(ISLE.x, 0, ISLE.z);
+scene.add(isle);
+
+/* ── 🔥 THE FIRST ASK — the world's first CHALLENGE, and its first REWARD ──────────────────────────
+   Present the island's body and the fire takes the name. The receipt is a FINGERPRINT, not a signature,
+   and it SAYS SO in its own text -- a player must never be handed a lie about what they are holding.
+   Persistence is a line of text they keep plus one localStorage line: no account, no backend, nothing to
+   trust in this machine. A wrong answer gets a RULE, never the answer, exactly like the door's coach. */
+const shoreEl   = document.getElementById("shore");
+const askEl     = document.getElementById("ask");
+const shoreIn   = document.getElementById("shoreIn");
+const shoreGo   = document.getElementById("shoreGo");
+const receiptEl = document.getElementById("receipt");
+let shoreSolved = false;
+
+function sealOf(s) {                       /* djb2: a fingerprint, not cryptography, and labelled as one */
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return ("00000000" + h.toString(16)).slice(-8);
+}
+function presentShore() {
+  const raw  = shoreIn.value.trim();
+  const body = raw.replace(/^\.:/, "").replace(/:\.$/, "");
+  if (body !== "iSl") {
+    askEl.innerHTML = "not the name &nbsp;·&nbsp; the shore is <b>three</b> glyphs in the trigram form: "
+                    + "lower, CAPITAL, lower &nbsp;·&nbsp; rock, ring, fire";
+    return;
+  }
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  receiptEl.textContent =
+      "ONE VERSE · RECEIPT\n"
+    + "body       .:iSl:.\n"
+    + "name       THE ISLAND\n"
+    + "derived    i + S + l    (trigram form: the island's three things)\n"
+    + "witnessed  " + stamp + "\n"
+    + "seal       " + sealOf("iSl|" + stamp) + "\n\n"
+    + "this is a FINGERPRINT, not a signature -- the real one lives in scripts/sigil.py.\n"
+    + "keep it: the record wears the vessel out, and this is the piece of you the water keeps.";
+  receiptEl.style.display = "block";
+  askEl.innerHTML = "the fire takes the name &nbsp;·&nbsp; the shore remembers you";
+  fire.intensity = 70;
+  fireCore.scale.setScalar(1.6);
+  shoreSolved = true;
+  try { localStorage.setItem("one_verse.island", receiptEl.textContent); } catch (err) { /* private mode */ }
+}
+shoreGo.addEventListener("click", presentShore);
+shoreIn.addEventListener("keydown", ev => {
+  if (ev.key === "Enter") { ev.preventDefault(); presentShore(); }
+});
+try {
+  const kept = localStorage.getItem("one_verse.island");
+  if (kept) {
+    receiptEl.textContent = kept;
+    receiptEl.style.display = "block";
+    shoreSolved = true;
+    askEl.innerHTML = "you have been here before &nbsp;·&nbsp; the water kept it";
+  }
+} catch (err) { /* private mode: the world simply forgets, which is honest */ }
+
+/* ── 🔥 THE DOOR TAKES THE RECEIPT — the loop closes WITHOUT a server ───────────────────────────────
+   The receipt is SELF-VERIFYING: the door recomputes the fingerprint from the "witnessed" line carried in
+   the text, so it can check a visitor with no backend, no account and nothing to trust in this machine.
+   It is a FINGERPRINT, not a signature -- anyone who reads this code can produce one, and the page says
+   so, because a false ceremony is worse than an honest one. What the seal buys is not trust: it is
+   RECOGNITION -- evidence that this visitor did the walk. */
+const doorEl  = document.getElementById("door");
+const doorAsk = document.getElementById("doorAsk");
+const doorIn  = document.getElementById("doorIn");
+const doorGo  = document.getElementById("doorGo");
+const doorOut = document.getElementById("doorOut");
+let doorOpen = false;
+
+function receiptSeal(text) {
+  const w = /witnessed\s+(\d{4}-\d\d-\d\d \d\d:\d\d)/.exec(text || "");
+  const s = /seal\s+([0-9a-fA-F]{8})/.exec(text || "");
+  if (!w || !s) return null;
+  return sealOf("iSl|" + w[1]) === s[1].toLowerCase() ? w[1] : null;
+}
+function knock() {
+  const raw = doorIn.value.trim();
+  let when = receiptSeal(raw);
+  if (!when) {                                   /* a bare seal is accepted only if it is THIS machine's */
+    let kept = "";
+    try { kept = localStorage.getItem("one_verse.island") || ""; } catch (err) { /* private mode */ }
+    const mine = (kept.match(/seal\s+([0-9a-fA-F]{8})/) || [])[1] || "";
+    if (mine && raw.toLowerCase() === mine.toLowerCase()) when = "this machine";
+  }
+  if (!when) {
+    doorAsk.innerHTML = "the door does not read that &nbsp;·&nbsp; a receipt carries a "
+                      + "<b>witnessed</b> line and an <b>8-hex seal</b>";
+    return;
+  }
+  doorOpen = true;
+  doorAsk.innerHTML = "the door opens inward";
+  doorOut.innerHTML = "witnessed " + when + " &nbsp;·&nbsp; the table will see you &nbsp;→ "
+                    + "<a href=\"marie_joise.html?by=water\">THE TABLE</a>";
+  try { localStorage.setItem("one_verse.door", when); } catch (err) { /* private mode */ }
+}
+doorGo.addEventListener("click", knock);
+doorIn.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); knock(); } });
+try {
+  if (localStorage.getItem("one_verse.door")) doorAsk.innerHTML = "you knocked before &nbsp;·&nbsp; the door remembers";
+} catch (err) { /* private mode */ }
+
 
 /* ── THE HAND — drag to look, scroll to come closer. No pitch beyond what a neck allows. ───── */
 let yaw = 0, pitch = 0, dist = 26, down = false, px = 0, py = 0;
@@ -620,6 +909,25 @@ function frame() {
 
   const sl = (swellY(pos.x + 0.6, pos.z, tW) - swellY(pos.x - 0.6, pos.z, tW)) / 1.2;
   const eyeY = 1.7 + swellY(pos.x, pos.z, tW);
+  /* LAME swings and settles: the only animation the hand needs, and it drains to zero so the blade
+     returns to point-down on its own -- the carrying rule, enforced by physics-free arithmetic. */
+  if (lame.userData.swing !== 0) {
+    lame.rotation.x = lame.userData.swing;
+    lame.userData.swing *= 0.86;
+    if (Math.abs(lame.userData.swing) < 0.01) { lame.userData.swing = 0; lame.rotation.x = 0; }
+  }
+
+  /* THE ISLAND AND THE SHORE: it heaves with the same swell the shader draws, its fire breathes, and the
+     gate appears ONLY inside 30 m -- a challenge visible from across the water is not a challenge. */
+  isle.position.y = swellY(ISLE.x, ISLE.z, tW) - 0.6;
+  fire.intensity = (shoreSolved ? 70 : 20) + Math.sin(tW * 2.2) * (shoreSolved ? 12 : 6);
+  const dIsle = Math.hypot(pos.x - ISLE.x, pos.z - ISLE.z);
+  shoreEl.classList.toggle("live", dIsle < 30);
+  isleLabel.classList.toggle("live", dIsle < 30);
+  if (dIsle < 30) isleLabel.textContent = ".:iSl:.   ·   " + Math.round(dIsle) + " m";
+  /* the DOOR asks only when you are at it: the gate stands at (0, -30) and its question is distance-bound */
+  const dGate = Math.hypot(pos.x, pos.z + 30);
+  doorEl.classList.toggle("live", dGate < 22);
   body.visible = third;
   body.position.set(pos.x, 0.88 + swellY(pos.x, pos.z, tW), pos.z);
   hullRing.visible = third;
@@ -685,6 +993,7 @@ function frame() {
     requestAnimationFrame(() => {
       document.getElementById("veil").style.opacity = "0";
       document.getElementById("w").style.opacity = "0.55";
+      document.getElementById("enter").classList.add("live");
     });
   }
   requestAnimationFrame(frame);

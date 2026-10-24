@@ -189,6 +189,14 @@
   .shake { animation:shake .32s ease-in-out; }
   @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)}
     60%{transform:translateX(3px)} }
+  /* THE DOOR'S INPUT: a field for a codepoint nobody shipped.  Quiet, thumb-sized, and it speaks its
+     refusals in the same line as every other answer the page gives. */
+  #cprow { display:flex; gap:6px; margin:0 0 4px; }
+  #cpIn { flex:1; min-width:0; background:rgba(4,12,18,.7); border:1px solid var(--line);
+    border-radius:6px; color:var(--ink); font:inherit; font-size:11px; padding:7px 8px; outline:none; }
+  #cpIn:focus { border-color:var(--gold); }
+  #cprow button { padding:7px 10px; font-size:10px; }
+  #cpNote { font-size:9.5px; letter-spacing:.1em; color:var(--dim); min-height:12px; margin:0 0 6px; }
 </style>
 </head>
 <body>
@@ -196,6 +204,15 @@
 
 <div class="pane" id="marks">
   <h2>The marks <span id="mn" style="color:var(--dim)"></span></h2>
+  <!-- THE DOOR'S INPUT (2026-10-23).  The tray can only hold what the ship already thought of; this field
+       takes a codepoint nobody shipped.  It is judged by the rule the gate enforces -- General_Category
+       M*, not a list -- and a refusal is spoken right under it. -->
+  <div id="cprow">
+    <input id="cpIn" inputmode="text" autocomplete="off" spellcheck="false" maxlength="12"
+           placeholder="U+0654 — type a codepoint" title="U+XXXX, or just the hex" />
+    <button id="cpGo" class="ghost">TAKE</button>
+  </div>
+  <div id="cpNote"></div>
   <div id="mlist">reading the machine…</div>
 </div>
 
@@ -294,8 +311,14 @@ function markName(cp) {
    slid OLD ITALIC LETTER PE onto a cell and got "U+10310 ... not a COMBINING mark" -- the gate was
    right, the page was slow. Now the page refuses BEFORE the move is made, and says why. */
 function isMarkCp(cp) {
-  const want = "U+" + String(cp).toUpperCase();
-  return MARKS.some(m => m.cp === want);
+  const n = parseInt(cp, 16);
+  if (!(n >= 0 && n <= 0x10FFFF)) return false;
+  /* THE RULE, NOT THE LIST (2026-10-23).  This used to be `MARKS.some(...)` -- the server's 29-candidate
+     tray -- so a visitor could only place a mark the ship had already thought of.  The rule the gate
+     actually enforces is Unicode's own: a combining mark has General_Category M* (Mn, Mc, Me), and
+     `\p{M}` is that same rule written as a regex.  The page and the gate now agree by DEFINITION
+     instead of by list, which is the only way they can keep agreeing as the world grows. */
+  try { return /^\p{M}$/u.test(String.fromCodePoint(n)); } catch (e) { return false; }
 }
 
 function gridSequence() {                 /* reading order, the AXIS excluded: the centre is the base */
@@ -466,6 +489,63 @@ async function ask() {
   } catch (e) { $("say").textContent = "the gate is not answering"; }
 }
 
+/* THE TRAY, DRAWN FROM ONE PLACE.  Extracted from boot() on 2026-10-23 so a mark a VISITOR types can
+   land in exactly the same tray, with exactly the same gestures, as a mark the ship shipped. */
+function renderMarks() {
+  $("mn").textContent = "· " + MARKS.length;
+  $("mlist").innerHTML = MARKS.map(m => {
+    const cp = m.cp.slice(2);
+    return '<div class="m" data-cp="' + cp + '" draggable="false" title="slide it onto a cell, or click">' +
+      '<span class="g">' +
+      String.fromCodePoint(parseInt(cp, 16)) + '</span><span class="n">' +
+      String(m.name || "").replace("COMBINING ", "") + '</span><span class="v ' +
+      (m.single_glyph ? "fused" : "stk") + '">' + (m.single_glyph ? "F" : "S") + '</span></div>';
+  }).join("");
+  $("mlist").querySelectorAll(".m").forEach(el => {
+    /* THE TRAY FEEDS THE HAND: press a mark and it comes WITH you; release over a cell and it lands
+       there; release over nothing and it takes the first free cell. No browser drag, no second
+       gesture language -- the same pointer stream as the grid. Tap works because a tap is a very
+       short carry that ends where it began. */
+    el.addEventListener("pointerdown", ev => {
+      window.slideStart(ev, { kind: "mark", cp: el.dataset.cp,
+                              ch: String.fromCodePoint(parseInt(el.dataset.cp, 16)) });
+    });
+  });
+}
+
+/* THE DOOR'S INPUT (2026-10-23).  The tray shows what the SHIP already thought of; this field takes what
+   a VISITOR types.  It is judged by the same rule the gate enforces -- General_Category M* -- so a
+   codepoint the world has never seen is accepted on its PROPERTY and not on a list.  A refusal is
+   spoken here, in the same place the page speaks every other answer. */
+function addTypedMark() {
+  const note = $("cpNote");
+  const raw = ($("cpIn").value || "").trim().toLowerCase()
+    .replace(/^u\+?/, "").replace(/[^0-9a-f]/g, "");
+  if (!raw) { note.textContent = "type a codepoint — e.g. 0654"; return; }
+  const n = parseInt(raw, 16);
+  if (!(n >= 0 && n <= 0x10FFFF)) { note.textContent = "U+" + raw.toUpperCase() + " is not a codepoint"; return; }
+  if (!isMarkCp(n.toString(16))) {
+    note.textContent = "U+" + n.toString(16).toUpperCase() +
+      " is not a combining mark — the rule is General_Category M*, not a list";
+    return;
+  }
+  const cp = "U+" + n.toString(16).toUpperCase();
+  if (MARKS.some(m => m.cp === cp)) { note.textContent = cp + " is already in the tray"; return; }
+  const ch = String.fromCodePoint(n);
+  let single = false;
+  try { single = ("E" + ch).normalize("NFC").length === 1; } catch (e) { single = false; }
+  MARKS.push({ cp: cp, name: markName(cp) || "typed", single_glyph: single });
+  renderMarks();
+  note.textContent = cp + " taken — it is in the tray, drag it like any other";
+  $("cpIn").value = "";
+}
+/* A GUARD, NOT DECORATION: this runs when the script is parsed, and a page whose panes are declared
+   after it must not throw.  If the field is absent the feature is simply not there. */
+if ($("cpGo")) { $("cpGo").addEventListener("click", addTypedMark); }
+if ($("cpIn")) {
+  $("cpIn").addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); addTypedMark(); } });
+}
+
 async function boot() {
   try {
     ME = resolveMe();
@@ -478,25 +558,7 @@ async function boot() {
     renderWho();
     renderMatrix();
     renderLib();
-    $("mn").textContent = "· " + MARKS.length;
-    $("mlist").innerHTML = MARKS.map(m => {
-      const cp = m.cp.slice(2);
-      return '<div class="m" data-cp="' + cp + '" draggable="false" title="slide it onto a cell, or click">' +
-        '<span class="g">' +
-        String.fromCodePoint(parseInt(cp, 16)) + '</span><span class="n">' +
-        m.name.replace("COMBINING ", "") + '</span><span class="v ' +
-        (m.single_glyph ? "fused" : "stk") + '">' + (m.single_glyph ? "F" : "S") + '</span></div>';
-    }).join("");
-    $("mlist").querySelectorAll(".m").forEach(el => {
-      /* THE TRAY FEEDS THE HAND: press a mark and it comes WITH you; release over a cell and it lands
-         there; release over nothing and it takes the first free cell. No browser drag, no second
-         gesture language -- the same pointer stream as the grid. Tap works because a tap is a very
-         short carry that ends where it began. */
-      el.addEventListener("pointerdown", ev => {
-        window.slideStart(ev, { kind: "mark", cp: el.dataset.cp,
-                                ch: String.fromCodePoint(parseInt(el.dataset.cp, 16)) });
-      });
-    });
+    renderMarks();
     renderCore();
     $("seal").title = CAN_SEAL ? "" : "sealing needs the captain's door (:8473)";
     /* THE COACH STAYS UNTIL IT IS DISMISSED, then never returns -- a tutorial that reappears is a nag,
@@ -1018,4 +1080,4 @@ boot();
 </body>
 </html>
 
-<!-- 🔥 Ace · 2026-10-21 -->
+<!-- 🔥 Ace · 2026-10-23 -->

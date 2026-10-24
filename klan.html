@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THE KLAN — .:nFt:.</title>
+<style>
+  /* THE KLAN.  One crest per hand, derived from (root, hand) -- so every crest on this wall can be
+     recomputed by a stranger from the world's own root. No chain, no wallet, no network: the page
+     says so in its own bar, because a token that pretends to be more than a name is a lie with a
+     logo.  Nothing here is transferable: the chain has no verb for a sale, so no row could record one. */
+  :root { --ink:#f2efe6; --dim:#7f9aa8; --gold:#e0bc45; --line:rgba(140,190,210,.16);
+    --cold:#9fd8ff; --ok:#7fe0a6; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; background:#04080f; color:var(--ink);
+    font:13px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  body { padding:26px 30px 74px; }
+  h1 { margin:0; font-size:23px; letter-spacing:.32em; font-weight:300;
+    text-shadow:0 0 26px rgba(224,188,69,.28); }
+  .sub { color:var(--dim); font-size:11px; letter-spacing:.2em; margin:4px 0 22px;
+    text-transform:uppercase; }
+  #wall { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:14px; }
+  .card { border:1px solid var(--line); background:linear-gradient(160deg,rgba(8,20,28,.9),rgba(4,12,18,.9));
+    padding:10px; cursor:pointer; position:relative; }
+  .card:hover { border-color:rgba(224,188,69,.5); }
+  .card img { display:block; width:100%; height:auto; }
+  .card .who { margin-top:8px; font-size:12.5px; letter-spacing:.08em; color:var(--ink); }
+  .card .id { color:var(--dim); font-size:10px; letter-spacing:.1em; }
+  .card .klass { position:absolute; top:8px; left:8px; font-size:9.5px; letter-spacing:.18em;
+    text-transform:uppercase; padding:2px 6px; border:1px solid var(--line); }
+  .card .klass.sealed { color:var(--gold); border-color:rgba(224,188,69,.5); }
+  .card .klass.sworn { color:var(--cold); border-color:rgba(159,216,255,.45); }
+  .card .sealed-note { color:var(--dim); font-size:10px; margin-top:3px; }
+
+  #bar { position:fixed; left:30px; right:30px; bottom:18px; display:flex; gap:16px; align-items:center;
+    padding-top:11px; border-top:1px solid var(--line); font-size:11.5px; color:var(--dim);
+    letter-spacing:.06em; background:linear-gradient(#04080f00,#04080f 45%); }
+  #bar .sp { flex:1; }
+  #bar b { color:var(--gold); font-weight:500; }
+  #bar a { color:var(--gold); text-decoration:none; letter-spacing:.16em;
+    border-bottom:1px solid rgba(224,188,69,.35); padding-bottom:1px; }
+  #bar a:hover { border-bottom-color:var(--gold); }
+
+  #panel { position:fixed; right:30px; bottom:64px; width:min(380px,86vw);
+    background:linear-gradient(160deg,rgba(8,20,28,.96),rgba(4,12,18,.96));
+    border:1px solid var(--line); border-left:2px solid var(--gold); padding:15px 17px; font-size:12.5px;
+    opacity:0; transform:translateY(10px); pointer-events:none; transition:opacity .2s, transform .2s; }
+  #panel.on { opacity:1; transform:none; pointer-events:auto; }
+  #panel h2 { margin:0 0 2px; font-size:12px; letter-spacing:.22em; color:var(--gold);
+    font-weight:500; text-transform:uppercase; }
+  #panel .kind { color:var(--dim); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+    margin-bottom:9px; }
+  #panel p { margin:6px 0; color:#c3d6e0; }
+  #panel code { color:var(--gold); word-break:break-all; font-size:11px; }
+  #panel .proof { color:var(--dim); font-size:11.5px; border-top:1px solid var(--line);
+    padding-top:8px; margin-top:9px; }
+  #panel img { width:120px; display:block; margin:2px auto 6px; }
+</style>
+</head>
+<body>
+<h1>THE KLAN</h1>
+<div class="sub" id="sub">.:nFt:. · reading the root…</div>
+
+<div id="wall"></div>
+
+<div id="panel"><h2 id="pTitle">—</h2><div class="kind" id="pKind"></div><div id="pBody"></div></div>
+
+<div id="bar">
+  <span>tokens <b id="nAll">0</b></span>
+  <span>sealed <b id="nSealed">0</b></span>
+  <span>sworn <b id="nSworn">0</b></span>
+  <span id="lawline">one per hand · cannot travel · cannot be sold</span>
+  <span class="sp"></span>
+  <a href="/table.html">THE TABLE →</a>
+  <a href="/index.html">THE WORLD →</a>
+</div>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════
+   THE WALL.  Every card is a re-derivation, not an asset: /token.svg draws the crest from the id's own
+   bytes, and /api/klan carries the id, the class and the refusal to be sold.  If the gate does not
+   answer, this page shows NOTHING and says why -- an empty klan is honest, an invented crest is not.  */
+const FALLBACK = { schema: "0z.nft/1", n: 0, sealed: 0, sworn: 0, tokens: [], world_root: "",
+  law: [], not_claimed: "no gate, no root, no tokens" };
+let K = FALLBACK;
+
+const wall = document.getElementById("wall");
+const sub = document.getElementById("sub");
+const panel = document.getElementById("panel");
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function show(title, kind, html) {
+  document.getElementById("pTitle").textContent = title;
+  document.getElementById("pKind").textContent = kind;
+  document.getElementById("pBody").innerHTML = html;
+  panel.classList.add("on");
+}
+function hide() { panel.classList.remove("on"); }
+
+function card(t) {
+  const d = document.createElement("div");
+  d.className = "card";
+  const prov = (t.provenance || []).length
+    ? (t.provenance.length + " sealed row(s)")
+    : "no sealed row — the roster names this hand";
+  d.innerHTML =
+    '<span class="klass ' + esc(t.klass) + '">' + esc(t.klass) + "</span>" +
+    '<img alt="' + esc(t.hand) + ' crest" src="/token.svg?name=' + encodeURIComponent(t.hand) + '">' +
+    '<div class="who">' + esc(t.hand) + "</div>" +
+    '<div class="id">' + esc(t.short) + "</div>" +
+    '<div class="sealed-note">' + esc(prov) + "</div>";
+  d.addEventListener("click", function () {
+    const c = t.crest || {};
+    const rows = (t.provenance || []).map(function (p) {
+      return p.plot + " · " + p.hash + (p.verdict ? " · " + p.verdict : "");
+    }).join("<br>");
+    show(t.hand, t.klass + " · supply 1 · not transferable",
+      '<img alt="crest" src="/token.svg?name=' + encodeURIComponent(t.hand) + '">' +
+      "<p><code>" + esc(t.id) + "</code></p>" +
+      "<p>recompute: " + esc(t.verify) + "</p>" +
+      "<p>crest " + esc(c.points) + "-point star · " + esc(c.ring_notches) + " notches · hue " +
+      esc(c.hue) + " · sigil U+" + (c.sigil_cp ? c.sigil_cp.toString(16).toUpperCase() : "?") + "</p>" +
+      (rows ? "<p>" + rows + "</p>" : "") +
+      '<div class="proof">' + esc(t.why_untransferable) + "</div>");
+  });
+  return d;
+}
+
+function build() {
+  wall.innerHTML = "";
+  (K.tokens || []).forEach(function (t) { wall.appendChild(card(t)); });
+  document.getElementById("nAll").textContent = K.n || 0;
+  document.getElementById("nSealed").textContent = K.sealed || 0;
+  document.getElementById("nSworn").textContent = K.sworn || 0;
+  document.getElementById("lawline").textContent = K.n
+    ? "one per hand · cannot travel · cannot be sold"
+    : "no token: a token is derived from the world's root";
+  sub.textContent = ".:nFt:. · " + (K.n || 0) + " token(s) · root " +
+    (K.world_root ? K.world_root.slice(0, 12) : "—") + " · " + esc(K.not_claimed || "");
+}
+
+panel.addEventListener("click", function (e) { e.stopPropagation(); });
+document.addEventListener("click", hide);
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") { hide(); } });
+
+fetch("/api/klan", { headers: { Accept: "application/json" } })
+  .then(function (r) { return r.json(); })
+  .then(function (d) { if (d && d.schema === "0z.nft/1") { K = d; } build(); })
+  .catch(function () {
+    sub.textContent = "offline · no root, so no token can be derived: the wall stays empty";
+    build();
+  });
+build();
+</script>
+
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-23 -->

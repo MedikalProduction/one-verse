@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THE TABLE — Mary Geoise</title>
+<style>
+  /* THE TABLE.  A hall drawn from numbers, in the world's own palette.  Nothing here is a bitmap:
+     the courtyard, the wall, the beam of light and the ring are all geometry, because the place has
+     to be recomputable from what the gate says, not pasted from a render.                        */
+  :root { --ink:#f2efe6; --dim:#7f9aa8; --gold:#e0bc45; --gold2:#c9a227; --line:rgba(140,190,210,.16);
+    --cold:#9fd8ff; --ok:#7fe0a6; --bad:#e0776f; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#04080f; color:var(--ink);
+    font:13px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; -webkit-font-smoothing:antialiased; }
+  #hall { display:block; width:100%; height:100%; }
+
+  .hud { position:fixed; pointer-events:none; }
+  #top { top:26px; left:30px; }
+  #top h1 { margin:0; font-size:23px; letter-spacing:.32em; font-weight:300;
+    text-shadow:0 0 26px rgba(224,188,69,.28); }
+  #top .sub { color:var(--dim); font-size:11px; letter-spacing:.2em; margin-top:4px; text-transform:uppercase; }
+
+  #legend { top:26px; right:30px; text-align:right; font-size:10.5px; letter-spacing:.14em;
+    color:var(--dim); line-height:2; text-transform:uppercase; }
+  #legend b { color:var(--gold); font-weight:500; letter-spacing:.1em; }
+  #legend .k { color:var(--cold); }
+
+  #bar { position:fixed; left:30px; right:30px; bottom:20px; display:flex; gap:16px; align-items:center;
+    padding-top:11px; border-top:1px solid var(--line); font-size:11.5px; color:var(--dim);
+    letter-spacing:.06em; pointer-events:auto; }
+  #bar .sp { flex:1; }
+  #bar b { color:var(--gold); font-weight:500; }
+  #bar a { color:var(--gold); text-decoration:none; letter-spacing:.16em;
+    border-bottom:1px solid rgba(224,188,69,.35); padding-bottom:1px; }
+  #bar a:hover { border-bottom-color:var(--gold); }
+
+  #panel { position:fixed; right:30px; bottom:64px; width:min(360px,84vw);
+    background:linear-gradient(160deg, rgba(8,20,28,.95), rgba(4,12,18,.95));
+    border:1px solid var(--line); border-left:2px solid var(--gold); padding:15px 17px;
+    font-size:12.5px; backdrop-filter:blur(10px); opacity:0; transform:translateY(10px);
+    pointer-events:none; transition:opacity .2s ease, transform .2s ease; }
+  #panel.on { opacity:1; transform:none; pointer-events:auto; }
+  #panel h2 { margin:0 0 3px; font-size:12px; letter-spacing:.22em; color:var(--gold);
+    font-weight:500; text-transform:uppercase; }
+  #panel .kind { color:var(--dim); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+    margin-bottom:9px; }
+  #panel p { margin:6px 0; color:#c3d6e0; line-height:1.6; }
+  #panel b { color:var(--cold); font-weight:500; }
+  #panel .proof { color:var(--dim); font-size:11.5px; border-top:1px solid var(--line);
+    padding-top:8px; margin-top:9px; }
+  #panel a { color:var(--gold); text-decoration:none; letter-spacing:.14em;
+    border-bottom:1px solid rgba(224,188,69,.35); }
+  .met { color:var(--ok); } .notmet { color:var(--bad); } .unmeasured { color:var(--dim); }
+
+  g.seat { cursor:pointer; } g.seat:hover circle.ring, g.seat:hover rect.chair { stroke:#fff; }
+</style>
+</head>
+<body>
+<svg id="hall" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet" aria-label="the table">
+  <defs>
+    <radialGradient id="beam" cx="24%" cy="0%" r="82%">
+      <stop offset="0%"  stop-color="#f6e7b0" stop-opacity=".22" />
+      <stop offset="42%" stop-color="#e0bc45" stop-opacity=".07" />
+      <stop offset="100%" stop-color="#04080f" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="floor" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#0d2430" stop-opacity=".95" />
+      <stop offset="70%"  stop-color="#071620" stop-opacity=".85" />
+      <stop offset="100%" stop-color="#04080f" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="1000" height="1000" fill="url(#beam)" />
+  <circle cx="500" cy="520" r="470" fill="url(#floor)" />
+  <circle id="wall" cx="500" cy="520" r="400" fill="none" stroke="rgba(140,190,210,.13)" stroke-width="1.5" />
+  <g id="ring"></g>
+</svg>
+
+<div class="hud" id="top">
+  <h1>THE TABLE</h1>
+  <div class="sub" id="sub">mary geoise · reading the chain…</div>
+</div>
+
+<div class="hud" id="legend">
+  <div><b>seated</b> · a row exists</div>
+  <div><span class="k">sworn</span> · a name on a chair</div>
+  <div>vacant · P06, unfilled</div>
+  <div>throne · outside · empty</div>
+</div>
+
+<div id="panel"><h2 id="pTitle">—</h2><div class="kind" id="pKind"></div><div id="pBody"></div></div>
+
+<div id="bar">
+  <span>the table <b id="nSeated">0</b> seated</span>
+  <span>sworn <b id="nSworn">0</b></span>
+  <span>sealed rows <b id="nSeals">0</b></span>
+  <span id="lawNote">a seat is filled by a seal, not by a name</span>
+  <span class="sp"></span>
+  <a href="/alchemy.html">THE ATELIER →</a>
+  <a href="/index.html">THE WORLD →</a>
+</div>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════
+   THE LAW OF THE ROOM, in geometry:
+     * the ring has a GAP at the top -- the head stays empty, because the world's own rule says the
+       zero at the centre belongs to nobody, and a table with a head is a throne;
+     * SEATED hands sit ON the table (gold), SWORN officers stand just outside it (cold outline),
+       because a chair named by a roster is not a seat filled by a seal;
+     * P06 is drawn EMPTY and dotted -- the world declared it vacant and this page may not fill it;
+     * the THRONE is drawn OUTSIDE the wall, never at the table: it needs two distinct hands.
+   Nothing on this page writes. There is no POST here and no POST at the gate for it.            */
+const NS = "http://www.w3.org/2000/svg";
+const CX = 500, CY = 520, R_TABLE = 205, R_LABEL = 250, R_SWORN = 322, GAP = 46;
+
+const FALLBACK = {
+  schema: "0z.table/1",
+  place: { name: "MARY GEOISE", head: null,
+           centre_label: "the 0 -- it belongs to nobody; that is why no seat is at the head" },
+  seats: [], sworn: [],
+  vacant: { plot: "P06", empty: true,
+            when: "the empty seat -- six are built, the seventh stays vacant until someone arrives" },
+  throne: { plot: "P00", empty: true, at_table: false, needs: 2, when: "the harbour -- first stone laid" },
+  n: { seated: 0, sworn: 0, seals: 0 }
+};
+let T = FALLBACK;
+
+const svg = document.getElementById("hall");
+const ring = document.getElementById("ring");
+const sub = document.getElementById("sub");
+
+function el(name, attrs) {
+  const e = document.createElementNS(NS, name);
+  for (const k in attrs) { e.setAttribute(k, attrs[k]); }
+  return e;
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function polar(deg, r) {
+  const a = (deg - 90) * Math.PI / 180;
+  return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+}
+/* THE HEAD IS THE GAP: seats spread over the arc that remains, and a lone seat faces the gap. */
+function anglesFor(n) {
+  const out = [];
+  if (!n) { return out; }
+  if (n === 1) { return [180]; }
+  const span = 360 - GAP, step = span / (n - 1);
+  for (let i = 0; i < n; i++) { out.push(GAP / 2 + i * step); }
+  return out;
+}
+
+/* ── the panel: one chair at a time, and the figures that justify it ───────────────────────────── */
+const panel = document.getElementById("panel");
+const pTitle = document.getElementById("pTitle");
+const pKind = document.getElementById("pKind");
+const pBody = document.getElementById("pBody");
+function show(title, kind, html) {
+  pTitle.textContent = title;
+  pKind.textContent = kind;
+  pBody.innerHTML = html;
+  panel.classList.add("on");
+}
+function hide() { panel.classList.remove("on"); }
+
+function showSeat(s) {
+  const bases = (s.bases_list && s.bases_list.length) ? s.bases_list.join(" · ") : "—";
+  show(s.hand, "seated · a row exists",
+    "<p><b>" + esc(s.seals) + "</b> seal(s) · <b>" + esc(s.bases) + "</b> base(s) · <b>" +
+    esc(s.fusions) + "</b> fusion(s)</p>" +
+    "<p>stacks " + esc(s.stacks) + " · replayable " + esc(s.replayable) +
+    " · marks " + esc(s.marks_used) + "</p>" +
+    "<p>bases " + esc(bases) + "</p>" +
+    "<p>first " + esc(s.first) + " · last " + esc(s.last) + "</p>" +
+    "<div class='proof'>proof: " + esc(s.proof) + " — recompute it at /api/table</div>" +
+    "<p><a href='/alchemy.html?as=" + encodeURIComponent(s.hand) + "'>SIT AT THE ATELIER →</a></p>");
+}
+function showSworn(c) {
+  const met = c.x_mark_met === true ? "<span class='met'>met</span>"
+            : c.x_mark_met === false ? "<span class='notmet'>NOT met</span>"
+            : "<span class='unmeasured'>not measured</span>";
+  show(c.name, c.seated ? "sworn · the chain filled this chair" : "sworn · a name on a chair",
+    "<p>" + esc(c.role) + " · " + esc(c.status) + "</p>" +
+    "<p>" + esc(c.function) + "</p>" +
+    "<p>x-mark: " + met + " — " + esc(c.x_mark) + "</p>" +
+    "<p>dream: " + esc(c.dream) + "</p>" +
+    "<div class='proof'>" + esc(c.proof) + "</div>");
+}
+
+/* ── the hall ──────────────────────────────────────────────────────────────────────────────────── */
+function label(x, y, text, colour, size) {
+  const t = el("text", { x: x, y: y, fill: colour, "font-size": size || 11, "text-anchor": "middle",
+    "font-family": "ui-monospace, Consolas, monospace", "letter-spacing": "1.2" });
+  t.textContent = text;
+  return t;
+}
+
+function draw() {
+  while (ring.firstChild) { ring.removeChild(ring.firstChild); }
+
+  ring.appendChild(el("circle", { cx: CX, cy: CY, r: R_TABLE, fill: "rgba(9,24,33,.82)",
+    stroke: "rgba(224,188,69,.38)", "stroke-width": 1.4 }));
+  ring.appendChild(el("circle", { cx: CX, cy: CY, r: R_TABLE - 14, fill: "none",
+    stroke: "rgba(224,188,69,.13)", "stroke-width": 1 }));
+  ring.appendChild(el("circle", { cx: CX, cy: CY, r: 58, fill: "#04080f",
+    stroke: "rgba(224,188,69,.30)", "stroke-width": 1, "stroke-dasharray": "4 6" }));
+  ring.appendChild(label(CX, CY - 4, "the 0", "rgba(224,188,69,.72)", 15));
+  ring.appendChild(label(CX, CY + 15, "nobody's", "rgba(127,154,168,.85)", 10));
+
+  /* SEATED — on the table, in arrival order, spread around the gap */
+  const seated = T.seats || [];
+  const angS = anglesFor(seated.length);
+  seated.forEach(function (s, i) {
+    const p = polar(angS[i], R_TABLE);
+    const g = el("g", { "class": "seat" });
+    g.appendChild(el("circle", { "class": "ring", cx: p[0], cy: p[1], r: 25, fill: "#0d2430",
+      stroke: "#e0bc45", "stroke-width": 1.6 }));
+    const initial = el("text", { x: p[0], y: p[1] + 6, fill: "#e0bc45", "font-size": 16,
+      "text-anchor": "middle", "font-family": "ui-monospace, Consolas, monospace" });
+    initial.textContent = String(s.hand || "?").slice(0, 1).toUpperCase();
+    g.appendChild(initial);
+    const lp = polar(angS[i], R_LABEL);
+    g.appendChild(label(lp[0], lp[1] + 4, String(s.hand || "").slice(0, 14), "#cfe0e8", 11));
+    g.appendChild(label(lp[0], lp[1] + 18, s.seals + " seal" + (s.seals === 1 ? "" : "s"),
+      "rgba(127,154,168,.9)", 9.5));
+    g.addEventListener("click", function (ev) { ev.stopPropagation(); showSeat(s); });
+    ring.appendChild(g);
+  });
+
+  /* SWORN — just outside the table: a named chair is not a sealed seat */
+  const sworn = T.sworn || [];
+  const angW = anglesFor(sworn.length);
+  sworn.forEach(function (c, i) {
+    const p = polar(angW[i], R_SWORN);
+    const g = el("g", { "class": "seat" });
+    g.appendChild(el("rect", { "class": "chair", x: p[0] - 16, y: p[1] - 16, width: 32, height: 32,
+      rx: 3, fill: c.seated ? "rgba(224,188,69,.10)" : "rgba(159,216,255,.05)",
+      stroke: c.seated ? "#e0bc45" : "rgba(159,216,255,.55)", "stroke-width": c.seated ? 1.6 : 1 }));
+    g.appendChild(label(p[0], p[1] + 40, String(c.name || "").slice(0, 14),
+      c.seated ? "#e0bc45" : "rgba(159,216,255,.85)", 10.5));
+    g.addEventListener("click", function (ev) { ev.stopPropagation(); showSworn(c); });
+    ring.appendChild(g);
+  });
+
+  /* THE VACANT SEAT — at the head, and EMPTY: the world said so, the page may not fill it */
+  const top = polar(0, R_TABLE);
+  const gv = el("g", { "class": "seat" });
+  gv.appendChild(el("circle", { cx: top[0], cy: top[1], r: 24, fill: "none",
+    stroke: "rgba(242,239,230,.35)", "stroke-width": 1, "stroke-dasharray": "3 5" }));
+  gv.appendChild(label(top[0], top[1] + 4, "P06", "rgba(242,239,230,.45)", 10));
+  gv.appendChild(label(top[0], top[1] - 38, "vacant", "rgba(127,154,168,.8)", 9.5));
+  gv.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    show("the empty seat", "vacant · declared, not filled",
+      "<p>" + esc(T.vacant && T.vacant.when) + "</p>" +
+      "<div class='proof'>P06 is not a hand and not a rank: it is land waiting for someone.</div>");
+  });
+  ring.appendChild(gv);
+
+  /* THE THRONE — outside the wall, never at the table */
+  const TX = 856, TY = 792;
+  const gt = el("g", { "class": "seat" });
+  gt.appendChild(el("rect", { x: TX - 30, y: TY - 26, width: 60, height: 44, rx: 4,
+    fill: "rgba(224,188,69,.05)", stroke: "rgba(224,188,69,.45)", "stroke-width": 1,
+    "stroke-dasharray": "5 5" }));
+  gt.appendChild(el("path", { d: "M " + (TX - 16) + " " + (TY - 30) + " l 5 -12 l 5 12 l 7 -14 " +
+    "l 7 14 l 5 -12 l 5 12", fill: "none", stroke: "rgba(224,188,69,.55)", "stroke-width": 1 }));
+  gt.appendChild(label(TX, TY + 4, "P00", "rgba(224,188,69,.75)", 10.5));
+  gt.appendChild(label(TX, TY + 34, "THE THRONE · empty", "rgba(224,188,69,.7)", 10));
+  gt.appendChild(label(TX, TY + 48, "outside · needs " + ((T.throne && T.throne.needs) || 2) +
+    " hands", "rgba(127,154,168,.85)", 9.5));
+  gt.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    show("the throne", "outside the table · empty by rule",
+      "<p>" + esc(T.throne && T.throne.when) + "</p>" +
+      "<p>" + esc(T.throne && T.throne.why) + "</p>" +
+      "<div class='proof'>a single hand on " + esc(T.throne && T.throne.plot) +
+      " is refused by the gate (E_ONE_HAND): arithmetic, not permission.</div>");
+  });
+  ring.appendChild(gt);
+
+  document.getElementById("nSeated").textContent = (T.n && T.n.seated) || 0;
+  document.getElementById("nSworn").textContent = (T.n && T.n.sworn) || 0;
+  document.getElementById("nSeals").textContent = (T.n && T.n.seals) || 0;
+  sub.textContent = String((T.place && T.place.name) || "mary geoise").toLowerCase() +
+    " · " + ((T.n && T.n.seated) || 0) + " seated · " + ((T.n && T.n.sworn) || 0) + " sworn";
+}
+
+svg.addEventListener("click", hide);
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") { hide(); } });
+
+/* the gate answers, or the page stands alone with the empty table it can honestly draw */
+fetch("/api/table", { headers: { Accept: "application/json" } })
+  .then(function (r) { return r.json(); })
+  .then(function (d) { if (d && d.schema === "0z.table/1") { T = d; } draw(); })
+  .catch(function () {
+    sub.textContent = "offline · the table drawn here is the declared empty one";
+    draw();
+  });
+draw();
+</script>
+
+<!-- 🔥 Ace · 2026-10-23 -->
+</body>
+</html>

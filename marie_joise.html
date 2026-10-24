@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ONE VERSE · marie joise</title>
+<!-- 🔥 Ace · 2026-10-24 · MARIE JOISE — THE ROOM THE GATE OPENS INTO.
+     THE LAW THIS PAGE KEEPS (docs/HANDOVER.md): SEATS ARE DERIVED FROM THE CHAIN, AND THE HEAD STAYS
+     EMPTY. So with no name presented the hall is grey, the table stands, the head is empty, and nothing
+     happens. Present an engraved body and that seat's ring goes gold.
+     THE THREE SEATS ARE WHAT IS TRUE, NOT WHAT IS FLATTERING: two are HELD and their bodies are NOT
+     engraved here, because they were made before this notation existed; the third is iDk, engraved in
+     both scripts. The head stays empty because it must.
+     PURE CSS, ZERO EXTERNAL REQUESTS: no CDN, no image, no font, no fetch. The door's mark is 𐌀 above
+     and its inversion below -- the same shape seen through the swell on arrival.html. One accent: gold. -->
+<style>
+  :root{--marble:#f3efe6;--shadow:#cfc7b6;--gold:#c9a227;--night:#06121a;--ink:#2b2a26}
+  html,body{margin:0;height:100%;background:var(--night);overflow:hidden;
+    font:13px/1.6 ui-monospace,Consolas,monospace;color:var(--ink)}
+  #hall{position:fixed;inset:0;display:grid;place-items:center;transition:filter 2.2s ease,opacity 2.2s ease;
+    filter:grayscale(1) brightness(.34) contrast(.9);opacity:.9}
+  #hall.lit{filter:none;opacity:1}
+  .room{position:absolute;inset:0;background:
+    radial-gradient(120% 70% at 50% 0%, #ffffff 0%, var(--marble) 34%, var(--shadow) 62%, #8f887a 100%)}
+  .room:after{content:"";position:absolute;inset:0;background:
+    repeating-linear-gradient(90deg, rgba(43,42,38,.05) 0 1px, transparent 1px 92px),
+    radial-gradient(60% 40% at 50% 78%, rgba(201,162,39,.10), transparent 70%)}
+  .table{position:absolute;left:50%;top:58%;width:min(78vw,900px);aspect-ratio:2.6/1;
+    transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(ellipse at 50% 30%, #ffffff, var(--marble) 45%, var(--shadow) 100%);
+    box-shadow:0 60px 120px -40px rgba(0,0,0,.55), inset 0 0 0 2px rgba(201,162,39,.55),
+               inset 0 0 0 26px rgba(255,255,255,.55)}
+  .table:after{content:"";position:absolute;left:12%;right:12%;top:26%;height:48%;border-radius:50%;
+    box-shadow:inset 0 0 0 1px rgba(201,162,39,.45)}
+  .mark{position:absolute;left:50%;top:26%;transform:translate(-50%,-50%);
+    font:700 clamp(64px,12vw,150px)/1 ui-sans-serif,system-ui,sans-serif;color:var(--gold);
+    text-shadow:0 0 40px rgba(201,162,39,.45)}
+  .mark.reflect{top:60%;transform:translate(-50%,-50%) scaleY(-1);opacity:.16;text-shadow:none}
+  .seat{position:absolute;width:clamp(54px,7vw,86px);aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,#fff,var(--marble) 60%,var(--shadow));
+    box-shadow:inset 0 0 0 1px rgba(43,42,38,.25), 0 18px 30px -18px rgba(0,0,0,.5);
+    display:grid;place-items:center;transition:box-shadow 1.4s ease,transform 1.4s ease}
+  .seat b{font:600 clamp(10px,1.2vw,15px)/1 ui-monospace,Consolas,monospace;letter-spacing:.14em;
+    color:#7c7466;transition:color 1.2s ease}
+  .seat.earned{box-shadow:inset 0 0 0 2px var(--gold), 0 0 44px rgba(201,162,39,.55),
+    0 18px 30px -18px rgba(0,0,0,.5);transform:translateY(-4px) scale(1.04)}
+  .seat.earned b{color:var(--gold)}
+  .s1{left:18%;top:50%}.s2{left:30%;top:31%}.s3{left:70%;top:31%}
+  .head{left:50%;top:74%;width:clamp(64px,8.4vw,104px)}
+  .head:after{content:"";position:absolute;inset:14%;border-radius:50%;border:1px dashed rgba(43,42,38,.28)}
+  #gate{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);width:min(92vw,560px);
+    display:flex;gap:8px;align-items:center;background:rgba(6,18,26,.86);
+    border:1px solid rgba(201,162,39,.35);border-radius:2px;padding:10px 12px}
+  #gate input{flex:1;background:transparent;border:0;border-bottom:1px solid rgba(201,162,39,.35);
+    color:#f3efe6;font:14px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.18em;padding:6px 2px;
+    outline:none}
+  #gate button{background:transparent;border:1px solid var(--gold);color:var(--gold);padding:7px 14px;
+    font:11px/1 ui-monospace,Consolas,monospace;letter-spacing:.18em;cursor:pointer;border-radius:2px}
+  #say{position:fixed;left:0;right:0;bottom:96px;text-align:center;color:#d8cfa9;
+    font:11px/1.7 ui-monospace,Consolas,monospace;letter-spacing:.16em;opacity:.9;padding:0 18px}
+  #say b{color:var(--gold);font-weight:600}
+</style>
+<body>
+<div id="hall">
+  <div class="room"></div>
+  <div class="mark">𐌀</div>
+  <div class="mark reflect">𐌀</div>
+  <div class="table"></div>
+  <div class="seat s1"><b>HELD</b></div>
+  <div class="seat s2"><b>HELD</b></div>
+  <div class="seat s3" id="seat3"><b>iDk</b></div>
+  <div class="seat head" id="head"><b>·</b></div>
+</div>
+<div id="say">the hall is unlit &nbsp;·&nbsp; a seat is <b>derived</b>, not requested</div>
+<form id="gate" autocomplete="off">
+  <input id="name" placeholder="present a body" aria-label="present a body" spellcheck="false">
+  <button type="submit">PRESENT</button>
+</form>
+<script>
+/* THE ROSTER IS WHAT IS TRUE. Two seats are HELD and their bodies are NOT engraved -- they were made
+   before this notation existed. The third is iDk, engraved in BOTH scripts: the Latin trigram body, and
+   I + DE + KA. The head is absent from the roster on purpose: no body opens it.
+   NOTHING IS FETCHED: the comparison is local, so the page works offline and cannot rate-limit anyone. */
+const SEATS = [
+  { id: "seat3",
+    bodies: ["iDk", "\u{10309}\u{10303}\u{1030A}"],
+    line: "seat 3 &nbsp;·&nbsp; <b>iDk</b> &nbsp;·&nbsp; I·DE·KA &nbsp;·&nbsp; the member's D is the door's D" }
+];
+const hall = document.getElementById("hall");
+const say  = document.getElementById("say");
+
+function rule() {                 /* a RULE, never an answer -- the coach's discipline on the door */
+  say.innerHTML = "a seat is not requested, it is derived: <b>three glyphs, from your own words</b>"
+                + " &nbsp;·&nbsp; and the head of this table stays empty";
+}
+function present(raw) {
+  const body = (raw || "").trim();
+  if (!body) { rule(); return; }
+  for (const s of SEATS) {
+    if (s.bodies.indexOf(body) >= 0) {
+      hall.classList.add("lit");
+      document.getElementById(s.id).classList.add("earned");
+      say.innerHTML = s.line;
+      return;
+    }
+  }
+  rule();
+}
+document.getElementById("gate").addEventListener("submit", function (e) {
+  e.preventDefault();
+  present(document.getElementById("name").value);
+});
+/* ARRIVED BY THE WATER: a receipt gets you INTO the hall -- it does NOT get you a SEAT. A seat is
+   derived; a visit is witnessed. That distinction is the whole law of this room, so the two light
+   differently: the hall opens, the seats stay exactly as they were, and the head stays empty. */
+if (/(^|[?&])by=water(&|$)/.test(location.search)) {
+  hall.classList.add("lit");
+  say.innerHTML = "entered by the water &nbsp;·&nbsp; a visit is witnessed, a <b>seat</b> is derived";
+} else {
+  say.innerHTML = "the hall is unlit &nbsp;·&nbsp; present a body &nbsp;·&nbsp; <b>iDk</b>"
+                + " &nbsp;or&nbsp; <b>\u{10309}\u{10303}\u{1030A}</b>";
+}
+</script>
+</body>
+</html>

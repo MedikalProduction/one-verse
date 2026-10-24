@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<!-- 🔥 Ace · 2026-10-24 · XV — THE FIRST DOOR. The 3x3 lock, built from the law sheet. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XV — la première serrure</title>
+<style>
+  :root { --ink:#e8e4da; --dim:#8d8a83; --gold:#e0bc45; --bad:#c0554a; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; color:var(--ink);
+         font:13px/1.6 ui-monospace, "JetBrains Mono", Consolas, monospace;
+         background:
+           radial-gradient(62% 44% at 6% 40%, rgba(232,150,54,.11), transparent 72%),
+           radial-gradient(62% 44% at 94% 62%, rgba(232,150,54,.09), transparent 72%),
+           radial-gradient(56% 50% at 50% 6%, rgba(96,148,190,.11), transparent 74%),
+           radial-gradient(130% 95% at 50% 112%, rgba(0,0,0,.95), transparent 62%),
+           linear-gradient(#05080c, #020406 62%, #000);
+         display:flex; align-items:center; justify-content:center; padding:24px; }
+  main { width:min(560px,100%); text-align:center; position:relative; z-index:1; }
+
+  /* the frame: a stone slab with the constant engraved on it */
+  #slab { position:relative; padding:26px 26px 20px; border-radius:6px;
+          border:1px solid rgba(224,188,69,.22);
+          background:linear-gradient(180deg, rgba(10,14,18,.9), rgba(3,6,9,.94));
+          box-shadow:0 0 50px rgba(0,0,0,.7), inset 0 0 34px rgba(90,140,180,.05); }
+  #constant { font-size:30px; letter-spacing:.22em; color:var(--gold);
+              text-shadow:0 0 22px rgba(224,188,69,.45); margin-bottom:4px; }
+  #sub { font-size:9.5px; letter-spacing:.24em; color:var(--dim); text-transform:uppercase;
+         margin-bottom:18px; }
+
+  #grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;
+          width:min(330px,78vw); margin:0 auto; }
+  .cell { aspect-ratio:1; border-radius:9px; cursor:pointer;
+          display:flex; align-items:center; justify-content:center;
+          font-size:26px; color:#ffe9a8;
+          border:1px solid rgba(150,200,225,.28);
+          background:radial-gradient(circle at 34% 28%, rgba(120,180,210,.16), rgba(4,8,12,.94) 72%);
+          box-shadow:inset 0 0 12px rgba(120,190,220,.10);
+          transition:border-color .18s, box-shadow .18s, transform .1s; }
+  .cell:hover { transform:translateY(-1px); }
+  .cell.filled { border-color:rgba(224,188,69,.6); }
+  .cell.hi   { border-color:rgba(224,188,69,.95); box-shadow:0 0 20px rgba(224,188,69,.4); }
+  .cell.bad  { border-color:var(--bad); box-shadow:0 0 16px rgba(192,85,74,.4); }
+
+  /* the tray: the nine bronze tiles */
+  #tray { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:20px auto 0; }
+  .tile { width:46px; height:46px; display:flex; align-items:center; justify-content:center;
+          font-size:19px; cursor:pointer; border-radius:9px; color:#f1e7cf;
+          border:1px solid rgba(224,188,69,.34);
+          background:linear-gradient(180deg, rgba(26,21,12,.92), rgba(7,9,12,.96));
+          box-shadow:0 0 10px rgba(224,188,69,.10), inset 0 1px 0 rgba(255,255,255,.06);
+          transition:transform .12s, border-color .12s, box-shadow .12s; }
+  .tile:hover { transform:translateY(-2px); border-color:var(--gold); }
+  .tile.sel  { border-color:var(--gold); box-shadow:0 0 18px rgba(224,188,69,.55); }
+  .tile.gone { opacity:.18; pointer-events:none; }
+
+  #say { margin-top:20px; min-height:3.2em; font-size:13px; line-height:1.7;
+         color:#b9d9ea; font-style:italic; text-shadow:0 0 18px rgba(120,180,210,.25); }
+  #reset { margin-top:14px; background:transparent; color:var(--gold); cursor:pointer;
+           border:1px solid rgba(224,188,69,.5); padding:8px 16px; font:inherit;
+           letter-spacing:.18em; text-transform:uppercase; font-size:11px; }
+  #reset:hover { background:rgba(224,188,69,.09); }
+  #opened { display:none; margin-top:18px; }
+  #opened a { color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(224,188,69,.5); }
+  .foot { margin-top:22px; color:#4a5a66; font-size:10px; letter-spacing:.08em; }
+</style>
+</head>
+<body>
+<main>
+  <div id="slab">
+    <div id="constant">XV</div>
+    <div id="sub">les lignes doivent s'accorder</div>
+    <div id="grid"></div>
+    <div id="tray"></div>
+    <div id="say" aria-live="polite"></div>
+    <div id="opened"><a href="PDP.html">la porte derrière la serrure →</a></div>
+  </div>
+  <button id="reset">recommencer</button>
+  <div class="foot">derived, not copied · 9! placements, 8 survivors, 1 essence</div>
+</main>
+<script>
+/* THE XV LOCK -- pure logic first, UI second. The split is deliberate: `evaluate` is testable without a
+   browser, and node runs it against all eight known solutions. A puzzle whose checker was never tested
+   is a lottery with nicer lighting.
+
+   THE MATHEMATICS, measured in scripts/linear_maps.py:
+     - a 3x3 grid of 1..9 with every row, column and both diagonals at 15 has EXACTLY 8 solutions,
+       and exactly 1 up to rotation/reflection: one essence, eight faces;
+     - the constant is forced: S = n(n^2+1)/2 = 15, so nothing can be guessed wrong about the idea;
+     - the centre is forced too: 4S = (45-e) + 4e = 45+3e  =>  e = S/3 = 5.
+   That is why the door can say "one line refuses" and be telling the truth. */
+const TARGET = 15;
+const LINES = [
+  { n: "ligne 1",      c: [0, 1, 2] },
+  { n: "ligne 2",      c: [3, 4, 5] },
+  { n: "ligne 3",      c: [6, 7, 8] },
+  { n: "colonne 1",    c: [0, 3, 6] },
+  { n: "colonne 2",    c: [1, 4, 7] },
+  { n: "colonne 3",    c: [2, 5, 8] },
+  { n: "diagonale",    c: [0, 4, 8] },
+  { n: "l'antidiagonale", c: [2, 4, 6] }
+];
+
+/** evaluate(grid) -> what the frame knows. grid is a length-9 array of numbers or null.
+ *
+ *  BUG FOUND AND FIXED 2026-10-24, by the test in _xv_test.py: the first version did
+ *      const vals = L.c.filter(i => grid[i] !== null && grid[i] !== undefined);
+ *      const sum  = vals.reduce((a, b) => a + b, 0);
+ *  which sums the CELL INDICES, not the values. It "worked" because [2,5,8] sums to 15 as positions,
+ *  so exactly one line agreed on every grid and the door looked merely strict.
+ *  A checker that was never run against a known solution would have shipped, and nobody would have
+ *  known the lock was measuring the wrong thing. */
+function evaluate(grid) {
+  const lines = LINES.map(L => {
+    let sum = 0, filled = 0;
+    for (const i of L.c) {
+      const v = grid[i];
+      if (v !== null && v !== undefined) { sum += v; filled++; }
+    }
+    return { name: L.n, cells: L.c, full: filled === 3, sum,
+             agrees: filled === 3 && sum === TARGET };
+  });
+  const placed = grid.filter(v => v !== null && v !== undefined).length;
+  const agree = lines.filter(l => l.agrees).length;
+  const fullWrong = lines.filter(l => l.full && !l.agrees).length;
+  const opened = placed === 9 && agree === 8;
+  return { lines, placed, agree, fullWrong, opened };
+}
+
+const LINES_OK = (grid) => evaluate(grid).opened;
+
+if (typeof document !== "undefined") {
+  const gridEl = document.getElementById("grid"), trayEl = document.getElementById("tray");
+  const sayEl = document.getElementById("say"), openEl = document.getElementById("opened");
+  let grid = new Array(9).fill(null);
+  let sel = null;
+
+  for (let i = 0; i < 9; i++) {
+    const c = document.createElement("div");
+    c.className = "cell"; c.dataset.i = i;
+    c.addEventListener("click", () => {
+      if (grid[i] !== null) {                       // take the tile back
+        const back = grid[i]; grid[i] = null;
+        render(); speak("tile " + back + " reprise.");
+        return;
+      }
+      if (sel === null) { speak("choisis d'abord un nombre, en bas."); return; }
+      grid[i] = sel; sel = null; render();
+    });
+    gridEl.appendChild(c);
+  }
+
+  for (let v = 1; v <= 9; v++) {
+    const t = document.createElement("div");
+    t.className = "tile"; t.textContent = v; t.dataset.v = v;
+    t.addEventListener("click", () => { sel = (sel === v ? null : v); render(); });
+    trayEl.appendChild(t);
+  }
+
+  function speak(t) { sayEl.textContent = t; }
+
+  function render() {
+    const st = evaluate(grid);
+    [...gridEl.children].forEach((c, i) => {
+      c.textContent = grid[i] === null ? "" : grid[i];
+      c.className = "cell" + (grid[i] !== null ? " filled" : "");
+    });
+    [...trayEl.children].forEach(t => {
+      const v = Number(t.dataset.v);
+      t.className = "tile" + (grid.includes(v) ? " gone" : "") + (sel === v ? " sel" : "");
+    });
+
+    /* light the lines that are complete AND right; darken the ones that are complete AND wrong.
+       Nothing else is touched -- a cell is never shamed for a line it is not part of. */
+    st.lines.forEach(l => {
+      if (l.agrees) l.cells.forEach(i => gridEl.children[i].classList.add("hi"));
+      if (l.full && !l.agrees) l.cells.forEach(i => gridEl.children[i].classList.add("bad"));
+    });
+
+    if (st.opened) {
+      speak("les huit lignes s'accordent. la serrure cède.");
+      openEl.style.display = "block";
+      return;
+    }
+    openEl.style.display = "none";
+    if (st.placed === 0) { speak("XV. les lignes doivent s'accorder."); return; }
+    if (st.placed < 9) {
+      speak(st.agree === 0
+        ? "XV — aucune ligne ne s'accorde encore."
+        : st.agree + " ligne" + (st.agree > 1 ? "s" : "") + " d'accord sur 8.");
+      return;
+    }
+    // all nine placed, not open: this is where the door earns its cruelty
+    if (st.agree === 7) { speak("une ligne refuse. sept s'accordent, une seule te sépare."); return; }
+    if (st.fullWrong === 1) { speak("une seule ligne est fausse. la plus proche des portes."); return; }
+    speak(st.agree + " lignes sur 8. le reste se déduit, il ne se devine pas.");
+  }
+
+  document.getElementById("reset").addEventListener("click", () => {
+    grid = new Array(9).fill(null); sel = null; render();
+  });
+  render();
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+# 🔥 Ace · 2026-10-24 · NETLIFY ROUTES — so the root IS the arrival, not a file listing.
+# The door must be the first thing a stranger meets; a directory index is a corridor, not a shore.
+/                  /arrival.html      200
+/arrive            /arrival.html      200
+/table             /marie_joise.html  200
+/joise             /marie_joise.html  200

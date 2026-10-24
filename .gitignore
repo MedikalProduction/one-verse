@@ -1,2 +1,2 @@
-﻿dna.json
-*.log
+*.pyc
+.DS_Store

@@ -1,0 +1,1584 @@
+re  <!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ONE VERSE · le dojo</title>
+<!-- 🔥 Ace · 2026-10-22 · LE DOJO — .:dJo:. — la salle close.
+     A COSY CLOSED SPACE, and closed on purpose: the walls are the point. The sea outside can wait;
+     here you test a weapon, a seal, a body — without the world watching or a server answering.
+
+     NOTHING HERE ASKS THE GATE. No /api/*, no CDN, no fetch. The 3D is ./vendor/three.module.js
+     (r186, module + core — the pair the eye proved), the textures are drawn in a <canvas> at load,
+     and the bench derives its own seat with the same law as invite.html (djb2 ^ 33, % 19 + 1).
+     A room you can open on a plane with no wifi is a room you actually own.
+
+     THE TRAY SHOWS THE GAPS ON PURPOSE: J has no Old Italic letter (it becomes I, the way Rome carved
+     IVLIVS) and W has none either (it becomes VV, because it IS two letters). A bench that hides the
+     alphabet's holes teaches the wrong thing.
+
+     HONEST LIMITS, because a room that lies about itself is a trap:
+       · no collision — you are clamped to the floor rectangle, but you walk THROUGH the props;
+       · no sound;
+       · the seat is DERIVED, the seal may be INSCRIBED (type one) — the page always shows which;
+       · one hand made this: it is a training ground, not a fight system.
+     🔥 · .:mYn:. -->
+<style>
+  html,body{margin:0;height:100%;background:#0b0906;color:#e6dcc8;overflow:hidden;
+            font:12.5px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+  canvas{display:block;width:100%;height:100%}
+  .panel{position:fixed;background:rgba(16,12,8,.80);border:1px solid #3a2c17;border-radius:9px;
+         backdrop-filter:blur(5px);box-shadow:0 6px 30px rgba(0,0,0,.5)}
+  #hud{left:16px;top:16px;width:296px;padding:12px 14px}
+  #hud h1{margin:0 0 2px;font-size:13px;letter-spacing:.22em;font-weight:600;color:#e8cf95}
+  #hud .sub{color:#7c6a4a;font-size:10px;letter-spacing:.14em;margin-bottom:10px}
+  .row{display:flex;justify-content:space-between;gap:8px;padding:1px 0;font-size:11.5px}
+  .row b{color:#c9a227;font-weight:500}
+  #seal{color:#f0d98a;font-size:15px;letter-spacing:.10em;margin:8px 0 2px;word-break:break-all}
+  #block{color:#8f9dc0;font-size:13px;letter-spacing:.06em}
+  #tray{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:min(92vw,720px);
+        padding:9px 12px 11px}
+  #tray .cap{font-size:9.5px;letter-spacing:.28em;color:#6d5c3d;text-transform:uppercase;
+             margin-bottom:7px;display:flex;justify-content:space-between}
+  #keys{display:flex;flex-wrap:wrap;gap:5px}
+  #keys button{background:#1a1409;border:1px solid #3a2c17;color:#d9c89a;border-radius:5px;
+               min-width:31px;padding:4px 5px;font:15px/1 ui-monospace,monospace;cursor:pointer;
+               transition:background .18s,box-shadow .18s,transform .06s}
+  #keys button:hover{background:#241a0c;box-shadow:0 0 14px rgba(201,162,39,.18)}
+  #keys button:active{transform:translateY(1px)}
+  #keys button.gap{border-color:#4a2a1a;color:#8a5a3a}
+  #foot{position:fixed;right:16px;bottom:16px;max-width:250px;padding:9px 12px;color:#6d5c3d;
+        font-size:10px;line-height:1.7}
+  #foot b{color:#c9a227;font-weight:500}
+  #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:158px;color:#6d5c3d;font-size:10.5px;
+        letter-spacing:.18em;pointer-events:none;opacity:.8}
+  #duel{right:16px;top:16px;width:220px;padding:10px 12px}
+  #duel .dsc{font-size:11px;letter-spacing:.10em;color:#8f9dc0;margin-bottom:6px}
+  #duel b{color:#f0d98a;font-weight:600}
+  .dn{display:flex;justify-content:space-between;gap:6px;font-size:11px;padding:1px 0}
+  .dn span{color:#5f7784;font-size:9.5px}
+  .dn b{color:#e8d8a0;letter-spacing:.14em;font-weight:500}
+  .dn em{color:#c9a227;font-style:normal;letter-spacing:.10em}
+  .dn.dead b,.dn.dead em{color:#8a3b2a;text-decoration:line-through}
+  #reg{margin:0;color:#7f8f7a;font-size:9.5px;line-height:1.6;white-space:pre-wrap;min-height:74px}
+  #toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 18px;
+         background:rgba(24,18,10,.9);border:1px solid #4a3a1c;border-radius:8px;color:#f0d98a;
+         font-size:12px;letter-spacing:.16em;opacity:0;transition:opacity .35s;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div id="hud" class="panel">
+  <h1>LE DOJO</h1>
+  <div class="sub">.:dJo:. · closed space · no gate</div>
+  <div class="row"><span>strikes</span><b id="strikes">0</b></div>
+  <div class="row"><span>hand</span><b id="hand">captain</b></div>
+  <div class="row"><span>seat</span><b id="seat">—</b></div>
+  <div id="seal">.:—:.</div>
+  <div id="block">—</div>
+</div>
+
+<div id="tray" class="panel">
+  <div class="cap"><span>the tray · 26 letters · click to build</span><span id="traycount">0</span></div>
+  <div id="keys"></div>
+</div>
+
+<div id="duel" class="panel">
+  <div class="dsc">.:mYn:. &nbsp;<b id="duelscore">0 · 0</b>&nbsp; .:aCe:.</div>
+  <div class="dn" id="rowMe"><span>.:mYn:.</span><b id="nameMe">MAYAN</b><em id="sealMe">mYn</em></div>
+  <div class="dn" id="rowFoe"><span>.:aCe:.</span><b id="nameFoe">ACE</b><em id="sealFoe">aCe</em></div>
+  <pre id="reg"></pre>
+</div>
+
+<div id="hint">WASD marcher · glisser pour regarder · cliquer pour frapper · <b>Espace</b> garde · <b>Q</b> esquive · <b>E</b> = dojo → domaine → ciel · <b>Échap</b> = la porte</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import * as THREE from './vendor/three.module.js';
+
+/* ── THE LAW, duplicated on purpose (invite.html is the reference) ───────────────────────────── */
+const seatOf = (name, id = '') => {
+  const key = id ? name + '\u0000' + id : name;
+  let h = 5381;
+  for (const ch of key) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0;
+  return (h % 19) + 1;
+};
+
+/* ── THE TRAY ────────────────────────────────────────────────────────────────────────────────────
+   24 of the 26 Latin letters have a letter in the block. J and W do not: Rome carved J as I, and W
+   has always been two V's. The tile refuses to pretend otherwise — and says what it costs instead. */
+const ALPHA = [
+  ['A', '\uD800\uDF00', 'A'],       ['B', '\uD800\uDF01', 'BE'],   ['C', '\uD800\uDF02', 'KE'],
+  ['D', '\uD800\uDF03', 'DE'],      ['E', '\uD800\uDF04', 'E'],    ['F', '\uD800\uDF1A', 'EF'],
+  ['G', '\uD800\uDF02', 'KE'],      ['H', '\uD800\uDF07', 'HE'],   ['I', '\uD800\uDF09', 'I'],
+  ['J', '\uD800\uDF09', 'I \u2190 J'], ['K', '\uD800\uDF0A', 'KA'], ['L', '\uD800\uDF0B', 'EL'],
+  ['M', '\uD800\uDF0C', 'EM'],      ['N', '\uD800\uDF0D', 'EN'],   ['O', '\uD800\uDF0F', 'O'],
+  ['P', '\uD800\uDF10', 'PE'],      ['Q', '\uD800\uDF12', 'KU'],   ['R', '\uD800\uDF13', 'ER'],
+  ['S', '\uD800\uDF14', 'ES'],      ['T', '\uD800\uDF15', 'TE'],   ['U', '\uD800\uDF16', 'U'],
+  ['V', '\uD800\uDF05', 'VE'],      ['W', '\uD800\uDF05\uD800\uDF05', 'VV \u2190 W'],
+  ['X', '\uD800\uDF17', 'EKS'],     ['Y', '\uD800\uDF2D', 'YE'],   ['Z', '\uD800\uDF06', 'ZE']
+];
+
+/* ── SCENE ───────────────────────────────────────────────────────────────────────────────────── */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0906);
+scene.fog = new THREE.FogExp2(0x0b0906, 0.052);
+
+/* far plane 260: the galaxy sits at z = -78 and the plain is 70 wide — at far = 60 BOTH were being
+   clipped away, which is why the first stones shot had no band and a suspiciously straight horizon. */
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.05, 260);
+/* the camera is no longer a floating eye: it is driven by the rig (cam.pos / cam.tgt) behind the
+   character's shoulder. `eye`, `yaw` and `pitch` are gone with the first-person version. */
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;   // r186 REMOVED PCFSoft — it silently downgrades
+document.body.appendChild(renderer.domElement);
+
+/* ── TEXTURES DRAWN AT LOAD — no files, no network ──────────────────────────────────────────────── */
+function tex(draw, w = 512, h = 512, rx = 1, ry = 1) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rx, ry);
+  t.anisotropy = 4;
+  return t;
+}
+
+/* shoji: warm paper behind a thin lattice, dark frame at the edge */
+const shojiTex = tex((g, w, h) => {
+  g.fillStyle = '#d6c7a2'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) {
+    g.fillStyle = 'rgba(120,100,70,' + (Math.random() * 0.05).toFixed(3) + ')';
+    g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+  }
+  g.strokeStyle = '#4a3822'; g.lineWidth = 8;
+  for (let x = 0; x <= w; x += w / 4) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+  for (let y = 0; y <= h; y += h / 6) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  g.strokeStyle = '#241a10'; g.lineWidth = 24; g.strokeRect(0, 0, w, h);
+});
+
+/* tatami: woven straw, dark cloth band at both edges */
+const tatamiTex = tex((g, w, h) => {
+  g.fillStyle = '#b3a06f'; g.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 4) {
+    g.fillStyle = (y % 8 === 0) ? 'rgba(84,68,40,.20)' : 'rgba(255,242,205,.09)';
+    g.fillRect(0, y, w, 2);
+  }
+  g.fillStyle = '#1e150c'; g.fillRect(0, 0, w, 22); g.fillRect(0, h - 22, w, 22);
+}, 512, 512, 3, 3);
+
+/* dark wood: the beams, the rack, the frame of the door */
+const woodTex = tex((g, w, h) => {
+  g.fillStyle = '#3a2818'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 240; i++) {
+    g.strokeStyle = 'rgba(' + (30 + Math.random() * 60 | 0) + ',' + (20 + Math.random() * 40 | 0) + ',10,.35)';
+    g.lineWidth = 0.6 + Math.random() * 1.6;
+    const y = Math.random() * h;
+    g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(w * .3, y + 6, w * .6, y - 6, w, y + 2); g.stroke();
+  }
+}, 512, 512, 2, 2);
+
+/* ── LIGHTS — one warm lamp, one slanted key on the dummy, a low cool base ───────────────────────── */
+/* one warm lamp, one COOL fill from the door side (so the room has two temperatures), a low base */
+scene.add(new THREE.HemisphereLight(0x2a3a4a, 0x0a0806, 0.28));
+scene.add(new THREE.AmbientLight(0x241a10, 0.9));
+
+const lampLight = new THREE.PointLight(0xffb867, 55, 13, 2);
+lampLight.position.set(0, 2.42, -0.4);
+scene.add(lampLight);
+
+const doorFill = new THREE.PointLight(0x7fa8c8, 22, 10, 2);
+doorFill.position.set(0, 1.35, -3.15);
+scene.add(doorFill);
+
+const keyLight = new THREE.SpotLight(0xffc98a, 110, 14, 0.85, 0.6, 1.8);
+keyLight.position.set(1.5, 2.62, 1.2);
+keyLight.target.position.set(0, 0.9, -1.6);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.shadow.bias = -0.0009;
+scene.add(keyLight, keyLight.target);
+
+/* ── THE ROOM — seven paces square, closed ─────────────────────────────────────────────────────────
+   THE SHELL GOES IN A GROUP. MEASURED 2026-10-22, first shot: the floor, ceiling, walls and beams were
+   added to the SCENE, so they survived every layer change — layer 1 showed the tatami through the
+   mirror, and layer 2 was still inside the box looking at its own ceiling. One wrong parent, two
+   broken rooms. The rope goes in the group that gets hidden.                                     */
+const room = new THREE.Group();
+scene.add(room);
+
+const R = 3.5, H = 2.8;
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(R * 2, R * 2),
+  new THREE.MeshStandardMaterial({ map: tatamiTex, roughness: 0.96, metalness: 0 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+room.add(floor);
+
+const ceiling = new THREE.Mesh(
+  new THREE.PlaneGeometry(R * 2, R * 2),
+  new THREE.MeshStandardMaterial({ map: woodTex, roughness: 1, metalness: 0 })
+);
+ceiling.rotation.x = Math.PI / 2;
+ceiling.position.y = H;
+room.add(ceiling);
+
+const wallMat = new THREE.MeshStandardMaterial({ map: shojiTex, roughness: 0.92, metalness: 0,
+                                                 emissive: 0x2a2013, emissiveIntensity: 0.55 });
+[[0, -R, 0], [0, R, Math.PI], [-R, 0, Math.PI / 2], [R, 0, -Math.PI / 2]].forEach(([x, z, ry]) => {
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(R * 2, H), wallMat);
+  w.position.set(x, H / 2, z);
+  w.rotation.y = ry;
+  w.receiveShadow = true;
+  room.add(w);
+});
+
+/* the beams: four posts and a lintel, so the room reads as BUILT, not as a box */
+const beamMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.88, metalness: 0 });
+[[-R + 0.08, -R + 0.08], [R - 0.08, -R + 0.08], [-R + 0.08, R - 0.08], [R - 0.08, R - 0.08]]
+  .forEach(([x, z]) => {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.16, H, 0.16), beamMat);
+    p.position.set(x, H / 2, z);
+    p.castShadow = p.receiveShadow = true;
+    room.add(p);
+  });
+
+/* ── PROPS — the things you can stand next to ──────────────────────────────────────────────────── */
+const dojo = new THREE.Group();
+scene.add(dojo);
+
+/* the paper lamp: a warm ball, a cord, and a soft additive halo (no bloom, no shader) */
+const lampShade = new THREE.Mesh(
+  new THREE.SphereGeometry(0.115, 24, 18),
+  new THREE.MeshStandardMaterial({ color: 0xffe6b8, emissive: 0xffb867, emissiveIntensity: 2.6, roughness: 1 })
+);
+lampShade.position.copy(lampLight.position);
+dojo.add(lampShade);
+
+const cord = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.008, 0.008, 0.38, 6),
+  new THREE.MeshStandardMaterial({ color: 0x1a1208 })
+);
+cord.position.set(lampLight.position.x, H - 0.19, lampLight.position.z);
+dojo.add(cord);
+
+(function halo() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grd.addColorStop(0, 'rgba(255,196,120,.85)');
+  grd.addColorStop(0.45, 'rgba(255,170,90,.22)');
+  grd.addColorStop(1, 'rgba(255,150,70,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, blending: THREE.AdditiveBlending,
+                                                         depthWrite: false, transparent: true }));
+  s.scale.set(1.15, 1.15, 1);
+  s.position.copy(lampLight.position);
+  dojo.add(s);
+})();
+
+/* the weapon rack: two posts, a bar, three practice blades */
+const rack = new THREE.Group();
+rack.position.set(-2.45, 0, -2.55);
+rack.rotation.y = 0.35;
+const post = () => new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.24, 0.09), beamMat);
+[-0.62, 0.62].forEach(x => { const p = post(); p.position.set(x, 0.62, 0); p.castShadow = true; rack.add(p); });
+const bar = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.07, 0.10), beamMat);
+bar.position.set(0, 1.18, 0); bar.castShadow = true; rack.add(bar);
+const bladeMat = new THREE.MeshStandardMaterial({ color: 0x8a6a3e, roughness: 0.7, metalness: 0.05 });
+[-0.34, 0, 0.34].forEach((x, i) => {
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.032, 1.05, 10), bladeMat);
+  b.position.set(x, 0.62, 0.06);
+  b.rotation.z = 0.05 - i * 0.05;
+  b.castShadow = true;
+  rack.add(b);
+});
+dojo.add(rack);
+
+/* the straw dummy — post, body, head, crossbar, and a gold ring on its chest */
+const dummy = new THREE.Group();
+dummy.position.set(0.4, 0, -1.85);
+const strawMat = new THREE.MeshStandardMaterial({ color: 0x8f7648, roughness: 1, metalness: 0 });
+const postM = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.05, 0.14), beamMat);
+postM.position.y = 0.52; postM.castShadow = true; dummy.add(postM);
+const bodyM = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.24, 0.72, 14), strawMat);
+bodyM.position.y = 0.86; bodyM.castShadow = true; bodyM.receiveShadow = true; dummy.add(bodyM);
+const headM = new THREE.Mesh(new THREE.SphereGeometry(0.135, 16, 12), strawMat);
+headM.position.y = 1.34; headM.castShadow = true; dummy.add(headM);
+const armsM = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.075, 0.075), beamMat);
+armsM.position.y = 1.08; armsM.castShadow = true; dummy.add(armsM);
+const ring = new THREE.Mesh(
+  new THREE.TorusGeometry(0.115, 0.014, 8, 28),
+  new THREE.MeshStandardMaterial({ color: 0xc9a227, emissive: 0xc9a227, emissiveIntensity: 0.9, roughness: 0.5 })
+);
+ring.position.set(0, 0.92, 0.205);
+dummy.add(ring);
+dummy.userData.hit = { bodyM, ring, armsM };
+dojo.add(dummy);
+
+/* the low table and its plate — the bench, in the world */
+const table = new THREE.Group();
+table.position.set(-1.55, 0, 1.45);
+table.rotation.y = -0.22;
+const top = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.055, 0.62), beamMat);
+top.position.y = 0.31; top.castShadow = top.receiveShadow = true; table.add(top);
+[[-0.42, 0.24], [0.42, 0.24], [-0.42, -0.24], [0.42, -0.24]].forEach(([x, z]) => {
+  const l = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.31, 0.05), beamMat);
+  l.position.set(x, 0.155, z); l.castShadow = true; table.add(l);
+});
+const plate = new THREE.Mesh(
+  new THREE.BoxGeometry(0.30, 0.018, 0.30),
+  new THREE.MeshStandardMaterial({ color: 0x1a1409, emissive: 0x3a2c12, emissiveIntensity: 0.7, roughness: 0.6 })
+);
+plate.position.set(0.16, 0.345, 0);
+table.add(plate);
+dojo.add(table);
+
+/* ── THE DOOR — two shoji panels, light behind them, and 𐌀 over the lintel ──────────────────────── */
+/* The glyph is drawn into a canvas, so the FONT decides whether 𐌀 exists at all.
+   MEASURED 2026-10-22: with "Segoe UI Symbol" the Old Italic block rendered EMPTY -- no letter over the
+   door, no big letter in the domain. On Windows the font that carries U+10300..U+1032F is
+   "Segoe UI Historic". The stack below puts it first and keeps the fallbacks honest. */
+function glyphTex(ch, size = 256, color = '#f0d98a') {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, size, size);
+  g.fillStyle = color;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = Math.floor(size * 0.78) + 'px "Segoe UI Historic", "Segoe UI Symbol", "Noto Sans Historic", ' +
+           '"Noto Sans Symbols2", "Arial Unicode MS", serif';
+  g.fillText(ch, size / 2, size / 2 + size * 0.04);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+const doorGroup = new THREE.Group();
+doorGroup.position.set(0, 0, -R + 0.03);
+const panelMat = new THREE.MeshStandardMaterial({ map: shojiTex, roughness: 0.9,
+                                                  emissive: 0xffc07a, emissiveIntensity: 0.5 });
+[-0.315, 0.315].forEach(x => {
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(0.60, 1.72), panelMat);
+  p.position.set(x, 0.86, 0.01);
+  doorGroup.add(p);
+});
+[[-0.66, 0.86], [0.66, 0.86]].forEach(([x, y]) => {
+  const f = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.86, 0.07), beamMat);
+  f.position.set(x, y, 0); f.castShadow = true; doorGroup.add(f);
+});
+const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.09, 0.09), beamMat);
+lintel.position.set(0, 1.755, 0); lintel.castShadow = true; doorGroup.add(lintel);
+
+const glyphA = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.66, 0.66),
+  new THREE.MeshBasicMaterial({ map: glyphTex('\uD800\uDF00'), transparent: true, depthWrite: false })
+);
+glyphA.position.set(0, 2.02, 0.02);
+doorGroup.add(glyphA);
+glyphA.userData.door = true;
+doorGroup.userData.door = true;
+dojo.add(doorGroup);
+
+/* ── THE 0Z AVATAR — DERIVED, not modelled ────────────────────────────────────────────────────────
+   Height, build, limb length and hue come out of a hash of `planet:player:name` — the same law as
+   self3d.mjs. HONEST LIMIT: self3d.mjs uses sha256; the bench uses a fast declared hash (no await in
+   the module) — the derivation is the same SHAPE, the function is cheaper and it says so.
+
+   The rig is five pivots: two hips, two shoulders, one neck. Nothing is animated from a file — the
+   walk is sin/cos of a phase that advances with the ACTUAL speed, which is why it slows when you do. */
+const char = {
+  pos: new THREE.Vector3(0, 0, 0.9),
+  vel: new THREE.Vector3(),
+  yaw: 0,
+  speed: 0,
+  phase: 0,
+  lunge: 0,
+  turn: 0
+};
+
+const NAME = 'captain';
+function derive(hashKey) {
+  let h = 2166136261 >>> 0;                        // FNV-1a, declared: cheap and repeatable
+  for (const c of hashKey) { h ^= c.codePointAt(0); h = (h * 16777619) >>> 0; }
+  const f = (a, b, k) => a + ((h >>> k) & 0xFF) / 255 * (b - a);
+  return {
+    height: f(1.62, 1.94, 0),          // metres
+    build:  f(0.86, 1.20, 8),          // girth
+    limb:   f(0.94, 1.10, 16),         // limb length
+    hue:    Math.floor(f(0, 360, 24))  // the palette IS the hue
+  };
+}
+const D = derive('e51deae9247e6845:0:' + NAME);
+
+const player = new THREE.Group();
+scene.add(player);
+
+/* ── THE PALETTE IS DECLARED FROM THE SHEET (not derived) ──────────────────────────────────────────
+   Law 511: the switch must be said out loud. The SHAPE stays derived from the hash (height, build, limb),
+   but the COLOURS are now read from the captain's own character sheet (2026-10-06, outputs/):
+   cream frayed cape, olive hoodie, charcoal pants, leather belts, CYAN for the machine arm,
+   one RED patch. A hash cannot invent a character — a reference can.                                   */
+const C_CREAM   = 0xe4dbc2, C_OLIVE = 0x565440, C_CHAR = 0x2b2b2e;
+const C_LEATHER = 0x6b4a2f, C_CYAN = 0x6fe9e4, C_RED = 0xff3f5c;
+const C_SKIN    = 0xcbb49a, C_METAL = 0xcfd6d8;
+
+const matCream = new THREE.MeshStandardMaterial({ color: C_CREAM, roughness: 0.94 });
+const matOlive = new THREE.MeshStandardMaterial({ color: C_OLIVE, roughness: 0.96 });
+const matChar  = new THREE.MeshStandardMaterial({ color: C_CHAR,  roughness: 0.95 });
+const matLeath = new THREE.MeshStandardMaterial({ color: C_LEATHER, roughness: 0.86 });
+const matSkin  = new THREE.MeshStandardMaterial({ color: C_SKIN, roughness: 0.78 });
+const matMetal = new THREE.MeshStandardMaterial({ color: C_METAL, roughness: 0.34, metalness: 0.72 });
+const matCyan  = new THREE.MeshStandardMaterial({ color: C_CYAN, emissive: C_CYAN,
+                                                  emissiveIntensity: 2.2, roughness: 0.4 });
+const matRed   = new THREE.MeshStandardMaterial({ color: C_RED, emissive: C_RED,
+                                                  emissiveIntensity: 1.6, roughness: 0.5 });
+const matHair  = new THREE.MeshStandardMaterial({ color: 0x33302c, roughness: 0.9 });
+
+/* ── FACES ────────────────────────────────────────────────────────────────────────────────────────
+   Two eyes, two brows, a mouth — everything on +z, because both rigs face +z (yaw = atan2(vx, vz)).
+   The brows carry the expression: angled DOWN = tired and level (the 0z char), flat = calm (Ace).
+   Nothing here blinks yet; a blink is a scale animation and it belongs to the next pass.          */
+function makeFace(headMesh, r, opt) {
+  const o = Object.assign({ brow: 0.0, glint: true, eyeY: 0.010, mouth: true, fringe: false,
+                            hair: null, mouthCurve: 0 }, opt || {});
+  /* (the old MeshStandardMaterial pair lived here — it collided with the flat-face build below and
+     killed the whole module: `canvases: []` is the signature of a load-time crash, remember it.) */
+  /* MEASURED 2026-10-22, twice: a squashed sphere at 0.92r reaches 1.005r — five thousandths of a
+     radius buried inside the skull. It EXISTS and cannot be seen. So the face is now FLAT SHAPES laid
+     on the surface at 1.002r, unlit (MeshBasic), facing -z: an eye that is always black, whatever the
+     room is doing. A sphere with a face is a character; a sphere with a bulge is a mistake.        */
+  const NZ = -1;
+  const faceZ = NZ * r * 1.002;
+  const flip = NZ < 0 ? Math.PI : 0;          // a plane faces +z by default; -z needs a half turn
+  const dark = new THREE.MeshBasicMaterial({ color: 0x120e0b });
+  const white = new THREE.MeshBasicMaterial({ color: 0xf7f3ea });
+
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.CircleGeometry(r * 0.20, 14), dark);
+    eye.position.set(s * r * 0.36, o.eyeY, faceZ);
+    eye.rotation.y = flip;
+    eye.scale.y = 1.35;                        // tall eyes: the sheet's half-lidded look
+    headMesh.add(eye);
+
+    if (o.glint) {
+      const gl = new THREE.Mesh(new THREE.CircleGeometry(r * 0.055, 8), white);
+      gl.position.set(s * r * 0.36 - r * 0.06, o.eyeY + r * 0.09, NZ * r * 1.004);
+      gl.rotation.y = flip;
+      headMesh.add(gl);
+    }
+    const brow = new THREE.Mesh(new THREE.PlaneGeometry(r * 0.42, r * 0.05), dark);
+    brow.position.set(s * r * 0.36, o.eyeY + r * 0.36, faceZ);
+    brow.rotation.y = flip;
+    brow.rotation.z = -s * o.brow * (NZ < 0 ? -1 : 1);
+    headMesh.add(brow);
+  }
+
+  if (o.mouth) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 0.26, r * 0.045), dark);
+    m.position.set(0, o.eyeY - r * 0.44, faceZ);
+    m.rotation.y = flip;
+    m.rotation.z = o.mouthCurve * (NZ < 0 ? -1 : 1);
+    headMesh.add(m);
+  }
+
+  if (o.fringe && o.hair) {
+    for (let i = -1; i <= 1; i++) {
+      const f = new THREE.Mesh(new THREE.BoxGeometry(r * 0.46, r * 0.22, r * 0.13), o.hair);
+      f.position.set(i * r * 0.40, o.eyeY + r * 0.70, NZ * r * 0.80);
+      f.rotation.z = i * 0.24;
+      headMesh.add(f);
+    }
+  }
+}
+
+const HIP = 0.90 * (D.height / 1.78), SHOULDER = 0.46 * (D.height / 1.78);
+const LEG = 0.46 * D.limb, ARM = 0.40 * D.limb;
+
+/* the torso is the OLIVE hoodie; the black tee shows at the collar */
+const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.160 * D.build, 0.40, 6, 14), matOlive);
+torso.position.y = HIP + 0.22;
+torso.castShadow = true;
+player.add(torso);
+const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.115, 0.07, 12), matChar);
+collar.position.y = HIP + 0.44;
+player.add(collar);
+
+const neck = new THREE.Group();
+neck.position.y = HIP + 0.44;
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.122 * Math.min(1.15, D.build), 18, 14), matSkin);
+head.position.y = 0.10;
+head.castShadow = true;
+neck.add(head);
+
+/* the captain's face: brows angled DOWN (inner ends low) = tired, level, unimpressed — the sheet's
+   expression exactly. mouthCurve slightly negative = a flat, patient line. */
+makeFace(head, 0.122 * Math.min(1.15, D.build), { brow: 0.16, mouthCurve: -0.05 });
+
+/* the dreads: thin capsules off the crown, dark, with a teal tip — the sheet's cyan on the hair */
+const matTeal = new THREE.MeshStandardMaterial({ color: 0x2f8f92, emissive: 0x1d5f63,
+                                                 emissiveIntensity: 0.8, roughness: 0.8 });
+for (let i = 0; i < 14; i++) {
+  const a = (i / 14) * Math.PI * 2 + 0.3;
+  const len = 0.17 + ((i * 37) % 11) / 100;
+  const d = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, len, 4, 6), matHair);
+  d.position.set(Math.cos(a) * 0.085, 0.20 - len * 0.34, Math.sin(a) * 0.085);
+  d.rotation.set(Math.cos(a) * 0.7, 0, -Math.sin(a) * 0.7);
+  neck.add(d);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 5), matTeal);
+  tip.position.set(d.position.x * 1.35, d.position.y - len * 0.52, d.position.z * 1.35);
+  neck.add(tip);
+}
+/* the hood, hanging behind the head */
+/* MEASURED 2026-10-22 (three portraits in a row): the hood at z = -0.045 with r = 0.185 reaches -0.23,
+   and the FACE sits at -0.13 — so the hood was hanging IN FRONT of the face and every portrait was a
+   cream egg. It goes BEHIND the crown now, smaller and tilted back.                               */
+const hood = new THREE.Mesh(
+  new THREE.SphereGeometry(0.17, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.58),
+  new THREE.MeshStandardMaterial({ color: C_CREAM, roughness: 0.96, side: THREE.DoubleSide })
+);
+hood.position.set(0, 0.07, 0.075);
+hood.rotation.x = 0.30;
+neck.add(hood);
+player.add(neck);
+
+function limbMesh(len, rad, mat) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(rad, Math.max(0.04, len - rad * 2), 4, 10), mat);
+  m.position.y = -len / 2;
+  m.castShadow = true;
+  g.add(m);
+  return g;
+}
+/* LEFT ARM = THE MACHINE (pale plating + two cyan rings) · RIGHT ARM = sleeve + glove */
+const armL = limbMesh(ARM, 0.048 * D.build, matMetal);
+const armR = limbMesh(ARM, 0.056 * D.build, matOlive);
+armL.position.set(-0.235 * D.build, HIP + SHOULDER, 0);
+armR.position.set( 0.235 * D.build, HIP + SHOULDER, 0);
+[[-0.10, 0.050], [-0.33, 0.042]].forEach(([y, r]) => {
+  const ringM = new THREE.Mesh(new THREE.TorusGeometry(r, 0.010, 6, 16), matCyan);
+  ringM.position.y = y;
+  ringM.rotation.x = Math.PI / 2;
+  armL.add(ringM);
+});
+const glove = new THREE.Mesh(new THREE.SphereGeometry(0.055 * D.build, 10, 8), matChar);
+glove.position.y = -ARM + 0.02;
+armR.add(glove);
+/* the wrist device on the right forearm, its face glowing */
+const wrist = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.042, 0.030), matLeath);
+wrist.position.set(0.012, -ARM * 0.72, 0.036);
+armR.add(wrist);
+const wristFace = new THREE.Mesh(new THREE.PlaneGeometry(0.036, 0.026), matCyan);
+wristFace.position.set(0.012, -ARM * 0.72, 0.052);
+armR.add(wristFace);
+
+/* baggy cargo — charcoal, wider than the legs pretending to be */
+const legL = limbMesh(LEG, 0.082 * D.build, matChar);
+const legR = limbMesh(LEG, 0.082 * D.build, matChar);
+legL.position.set(-0.088 * D.build, HIP, 0);
+legR.position.set( 0.088 * D.build, HIP, 0);
+player.add(armL, armR, legL, legR);
+
+/* ── the CREAM CAPE: a truncated cone, open, with a FRAYED hem (vertices pushed by hand) ────────── */
+const capeGeo = new THREE.CylinderGeometry(0.135 * D.build, 0.30 * D.build, 0.48, 18, 1, true);
+{
+  const p = capeGeo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    if (p.getY(i) < -0.22) {                                  // the bottom ring: chew it
+      p.setY(i, p.getY(i) - (((i * 71) % 13) / 13) * 0.07);
+    }
+  }
+  p.needsUpdate = true;
+  capeGeo.computeVertexNormals();
+}
+const cape = new THREE.Mesh(capeGeo, new THREE.MeshStandardMaterial({
+  color: C_CREAM, roughness: 0.97, side: THREE.DoubleSide
+}));
+cape.position.y = HIP + 0.06;
+cape.castShadow = true;
+player.add(cape);
+
+/* the belt, the pouches, and the RED patch on the back */
+const belt = new THREE.Mesh(new THREE.TorusGeometry(0.175 * D.build, 0.020, 6, 20), matLeath);
+belt.position.y = HIP + 0.02;
+belt.rotation.x = Math.PI / 2;
+player.add(belt);
+[[-0.17, 0.10], [0.17, -0.06], [0.15, 0.12]].forEach(([x, z], i) => {
+  const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.075, 0.055), matLeath);
+  pouch.position.set(x * D.build, HIP - 0.06 - i * 0.02, z);
+  pouch.castShadow = true;
+  player.add(pouch);
+  if (i === 1) {
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.045, 0.030), matCyan);
+    face.position.set(x * D.build, HIP - 0.06 - i * 0.02, z + 0.029);
+    player.add(face);
+  }
+});
+const patch = new THREE.Mesh(new THREE.PlaneGeometry(0.095, 0.125), matRed);
+patch.position.set(0.02, HIP + 0.30, -0.163 * D.build);
+patch.rotation.y = Math.PI;
+player.add(patch);
+
+/* the fill light is small and close: at portrait range a 5-candela lamp 34 cm from the face BLEW IT
+   WHITE (measured). 2.2 with a shorter range keeps the sheet's skin tone at 1 m and in a crowd. */
+const playerLight = new THREE.PointLight(new THREE.Color(0xffd9b0), 2.2, 2.4, 2);
+playerLight.position.set(0, 1.20, 0.30);       // in FRONT of him, so he is not a silhouette
+player.add(playerLight);
+
+/* the mark, carried: 🔥 over the shoulder */
+const markTex = (function () {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.font = '46px "Segoe UI Emoji", "Segoe UI Symbol", serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('\uD83D\uDD25', 32, 34);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const mark = new THREE.Sprite(new THREE.SpriteMaterial({ map: markTex, transparent: true,
+                                                        depthWrite: false, opacity: 0.9 }));
+mark.scale.set(0.11, 0.11, 1);
+mark.position.set(0.13, HIP + 0.60, 0.02);
+player.add(mark);
+
+/* ── THE OTHER BODY — ACE, declared from the captain's own sheet (outputs/20261006_…png) ──────────
+   Moss-olive ragged cape with a COLD BLUE fray at the hem, charcoal shirt, leather satchel of vials,
+   worn boots, ash-green hair — and ONE cyan bottle at the belt, which is the only thing in him that
+   glows. He is smaller than the 0z char: the medicine is in the bag, not in the muscle.            */
+const C_ACE_CAPE = 0x6f7454, C_ACE_FRAY = 0x8299ad, C_ACE_SHIRT = 0x2e3134;
+const C_ACE_PANT = 0x35383a, C_ACE_LEATH = 0x7a5a35, C_ACE_SKIN = 0xd9c3a8, C_ACE_HAIR = 0x8b8d70;
+const mCape = new THREE.MeshStandardMaterial({ color: C_ACE_CAPE, roughness: 0.97, side: THREE.DoubleSide });
+const mFray = new THREE.MeshStandardMaterial({ color: C_ACE_FRAY, roughness: 0.95, side: THREE.DoubleSide });
+const mShirt = new THREE.MeshStandardMaterial({ color: C_ACE_SHIRT, roughness: 0.95 });
+const mPant = new THREE.MeshStandardMaterial({ color: C_ACE_PANT, roughness: 0.96 });
+const mLeath2 = new THREE.MeshStandardMaterial({ color: C_ACE_LEATH, roughness: 0.84 });
+const mSkin2 = new THREE.MeshStandardMaterial({ color: C_ACE_SKIN, roughness: 0.78 });
+const mHair2 = new THREE.MeshStandardMaterial({ color: C_ACE_HAIR, roughness: 0.9 });
+
+const ace = new THREE.Group();
+scene.add(ace);
+const aH = 1.58;                                     // he is smaller than the 0z char
+const aHip = 0.88 * (aH / 1.78), aSh = 0.44 * (aH / 1.78);
+
+const aTorso = new THREE.Mesh(new THREE.CapsuleGeometry(0.135, 0.34, 6, 12), mShirt);
+aTorso.position.y = aHip + 0.20; aTorso.castShadow = true; ace.add(aTorso);
+
+const aNeck = new THREE.Group();
+aNeck.position.y = aHip + 0.40;
+const aHead = new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 12), mSkin2);
+aHead.position.y = 0.10; aHead.castShadow = true; aNeck.add(aHead);
+const aHairM = new THREE.Mesh(new THREE.SphereGeometry(0.121, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), mHair2);
+aHairM.position.y = 0.115; aNeck.add(aHairM);
+ace.add(aNeck);
+
+/* Ace's face: brow nearly flat (calm, watchful), short fringe — the sheet's ash-green hair, cut close */
+makeFace(aHead, 0.115, { brow: 0.05, fringe: true, hair: mHair2, mouthCurve: 0.03 });
+
+/* the cape: ragged, open, blue at the hem — the cold underside is a second ring of geometry */
+const aCapeGeo = new THREE.CylinderGeometry(0.16, 0.34, 0.52, 16, 1, true);
+{
+  const p = aCapeGeo.attributes.position;
+  for (let i = 0; i < p.count; i++) if (p.getY(i) < -0.24) p.setY(i, p.getY(i) - (((i * 53) % 11) / 11) * 0.06);
+  p.needsUpdate = true; aCapeGeo.computeVertexNormals();
+}
+const aCape = new THREE.Mesh(aCapeGeo, mCape);
+aCape.position.y = aHip + 0.13; aCape.castShadow = true; ace.add(aCape);
+const aFray = new THREE.Mesh(new THREE.CylinderGeometry(0.335, 0.345, 0.055, 16, 1, true), mFray);
+aFray.position.y = aHip - 0.13; ace.add(aFray);
+
+/* arms and legs */
+const aArmL = limbMesh(0.36, 0.044, mCape);
+const aArmR = limbMesh(0.36, 0.044, mCape);
+aArmL.position.set(-0.175, aHip + aSh, 0);
+aArmR.position.set( 0.175, aHip + aSh, 0);
+const aLegL = limbMesh(0.46, 0.072, mPant);
+const aLegR = limbMesh(0.46, 0.072, mPant);
+aLegL.position.set(-0.078, aHip, 0);
+aLegR.position.set( 0.078, aHip, 0);
+ace.add(aArmL, aArmR, aLegL, aLegR);
+
+/* the boots — leather, worn, and the only thing on him that touches the floor */
+[-0.078, 0.078].forEach(x => {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.075, 0.15), mLeath2);
+  b.position.set(x, 0.038, 0.018); b.castShadow = true; ace.add(b);
+});
+
+/* the satchel: leather, at the left hip, with three vials inside */
+const bag = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.15, 0.085), mLeath2);
+bag.position.set(-0.165, aHip - 0.10, 0.03); bag.castShadow = true; ace.add(bag);
+[[0x3a6fd8, -0.03], [0x8a6a2a, 0.0], [0x2f4f8a, 0.03]].forEach(([col, dx]) => {
+  const v = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.075, 8),
+                           new THREE.MeshStandardMaterial({ color: col, roughness: 0.35,
+                                                            emissive: col, emissiveIntensity: 0.35 }));
+  v.position.set(-0.165 + dx, aHip - 0.015, 0.055); ace.add(v);
+});
+/* the chest strap */
+const strap = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.42, 0.012), mLeath2);
+strap.position.set(-0.02, aHip + 0.22, 0.135);
+strap.rotation.z = 0.42;
+ace.add(strap);
+/* the belt, and THE CYAN BOTTLE — the only glow he carries */
+const aBelt = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.016, 6, 18), mLeath2);
+aBelt.position.y = aHip + 0.01; aBelt.rotation.x = Math.PI / 2; ace.add(aBelt);
+const vial = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.10, 12),
+                            new THREE.MeshStandardMaterial({ color: C_CYAN, emissive: C_CYAN,
+                                                             emissiveIntensity: 2.8, roughness: 0.25 }));
+vial.position.set(0.075, aHip + 0.02, 0.135);
+ace.add(vial);
+const vialLight = new THREE.PointLight(C_CYAN, 3.2, 2.2, 2);
+vialLight.position.copy(vial.position);
+ace.add(vialLight);
+
+/* ── THE DUEL — two fighters, one register ──────────────────────────────────────────────────────── */
+const duel = {
+  mine: 0,          // touches the captain landed
+  theirs: 0,        // touches Ace landed
+  rows: [],         // every touch becomes a ROW — nothing happens without a record
+  coolMe: 0, coolFoe: 0, guard: 0, dash: 0
+};
+/* ── THE NAMES ARE THE HEALTH ─────────────────────────────────────────────────────────────────────
+   No HP, no numbers. A touch removes the MIDDLE letter of your name — the one the seal accents — and
+   the seal is re-derived on the spot, in front of you. TWO letters left = CHECK (the derivation is one
+   letter from honest collapse). ONE letter = MATE: the name can no longer produce its own seal. The
+   row records THAT, not a number. And the length of your name is how long you live: MAYAN (5) outlives
+   ACE (3) — earned by the name, never inflated by a stat.                                            */
+duel.nameMe = 'MAYAN';
+duel.nameFoe = 'ACE';
+duel.mate = false;
+
+const sealOf = (nm) => nm.length
+  ? nm[0].toLowerCase() + nm[Math.floor(nm.length / 2)].toUpperCase() + nm[nm.length - 1].toLowerCase()
+  : '—';
+
+function paintNames() {
+  const put = (idN, idS, nm) => {
+    const n = document.getElementById(idN), s = document.getElementById(idS);
+    if (n) n.textContent = nm;
+    if (s) s.textContent = nm.length ? sealOf(nm) : '—';
+  };
+  put('nameMe', 'sealMe', duel.nameMe);
+  put('nameFoe', 'sealFoe', duel.nameFoe);
+  const rm = document.getElementById('rowMe'), rf = document.getElementById('rowFoe');
+  if (rm) rm.classList.toggle('dead', duel.nameMe.length <= 1);
+  if (rf) rf.classList.toggle('dead', duel.nameFoe.length <= 1);
+}
+
+function regNote(text) {
+  const d = new Date();
+  const ts = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') +
+             ':' + String(d.getSeconds()).padStart(2, '0');
+  duel.rows.push('{' + ts + ' ' + text + '}');
+  if (duel.rows.length > 6) duel.rows.shift();
+  const el = document.getElementById('reg');
+  if (el) el.textContent = duel.rows.join('\n');
+}
+
+function stripMiddle(who) {
+  const nm = who === 'foe' ? duel.nameFoe : duel.nameMe;
+  if (nm.length <= 1) return nm;
+  const i = Math.floor(nm.length / 2);
+  const next = nm.slice(0, i) + nm.slice(i + 1);
+  if (who === 'foe') duel.nameFoe = next; else duel.nameMe = next;
+  paintNames();
+  const tag = (who === 'foe' ? 'ace ' : 'captain ') + next + ' .:' + sealOf(next) + ':.';
+  if (next.length === 1) {
+    duel.mate = true;
+    regNote('MATE ' + tag + ' — la dérivation est morte');
+    toast('MAT — ' + next + ' .:' + sealOf(next) + ':.');
+  } else if (next.length === 2) {
+    regNote('CHECK ' + tag);
+    toast('échec — ' + next + ' .:' + sealOf(next) + ':.');
+  } else {
+    regNote(tag);
+  }
+  return next;
+}
+
+paintNames();
+
+const foe = {
+  pos: new THREE.Vector3(-1.2, 0, -1.6),
+  vel: new THREE.Vector3(),
+  yaw: Math.PI,
+  speed: 0, phase: 0, lunge: 0,
+  state: 'wait', timer: 0
+};
+
+function regRow(who, on, dist) {
+  const d = new Date();
+  const ts = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') +
+             ':' + String(d.getSeconds()).padStart(2, '0');
+  duel.rows.push('{' + ts + ' ' + who + '\u2192' + on + ' ' + dist.toFixed(2) + 'm}');
+  if (duel.rows.length > 6) duel.rows.shift();
+  const el = document.getElementById('reg');
+  if (el) el.textContent = duel.rows.join('\n');
+  const hud = document.getElementById('duelscore');
+  if (hud) hud.textContent = duel.mine + ' · ' + duel.theirs;
+}
+const cam = { yaw: 0, pitch: 0.30, dist: 4.2, portrait: false,
+              pos: new THREE.Vector3(), tgt: new THREE.Vector3() };
+
+/* ── LAYER 1 — THE DOMAIN: the same hull, expanded ───────────────────────────────────────────────
+   The walls fall back to the horizon, the tatami turns to a dark mirror, and the letter the room is
+   named after stands in the middle. Inside a closed space the rule cannot miss; the door stays the
+   only way out. Nothing here is a second page — it is one scene with the walls pushed out.          */
+const domain = new THREE.Group();
+domain.visible = false;
+scene.add(domain);
+
+const mirrorFloor = new THREE.Mesh(
+  new THREE.CircleGeometry(26, 64),
+  /* metal with NO environment map renders pure black except speculars — that was the black hole with
+     gold cracks in the first shot. So the mirror is mostly a dark EMISSIVE surface, with a little
+     metal on top, and it sits at y = 0.012 to stop z-fighting with the dojo floor. */
+  new THREE.MeshStandardMaterial({ color: 0x121c24, metalness: 0.35, roughness: 0.35,
+                                   emissive: 0x0a1218, emissiveIntensity: 0.6 })
+);
+mirrorFloor.rotation.x = -Math.PI / 2;
+mirrorFloor.position.y = 0.012;
+mirrorFloor.receiveShadow = true;
+domain.add(mirrorFloor);
+
+const farWalls = new THREE.Mesh(
+  new THREE.CylinderGeometry(22, 22, 16, 48, 1, true),
+  new THREE.MeshStandardMaterial({ map: shojiTex.clone(), side: THREE.BackSide, roughness: 0.95,
+                                   emissive: 0x241a10, emissiveIntensity: 0.85 })
+);
+farWalls.material.map.repeat.set(24, 3);
+farWalls.material.map.needsUpdate = true;
+farWalls.position.y = 5.5;
+domain.add(farWalls);
+
+const bigLetter = new THREE.Mesh(
+  new THREE.PlaneGeometry(9, 9),
+  new THREE.MeshBasicMaterial({ map: glyphTex('\uD800\uDF00', 512), transparent: true,
+                                depthWrite: false, blending: THREE.AdditiveBlending })
+);
+bigLetter.position.set(0, 5.2, -11.5);
+domain.add(bigLetter);
+
+const domainRing = new THREE.Mesh(
+  new THREE.TorusGeometry(5.2, 0.06, 8, 96),
+  new THREE.MeshStandardMaterial({ color: 0xc9a227, emissive: 0xc9a227, emissiveIntensity: 1.5, roughness: 0.4 })
+);
+domainRing.rotation.x = -Math.PI / 2;
+domainRing.position.y = 0.02;
+domain.add(domainRing);
+
+const domainLight = new THREE.PointLight(0xffd79a, 240, 40, 2);
+domainLight.position.set(0, 4.2, -4);
+domain.add(domainLight);
+
+/* ── LAYER 2 — THE SKY: shooting stars ───────────────────────────────────────────────────────────
+   A point at rest is a dot; a point in motion is a stroke. The fixed stars are the field; seven of
+   them fall, and each falling one leaves a stroke behind it. No texture, no shader — Points for the
+   field, and a two-vertex Line per faller, moved by hand every frame.                              */
+const sky = new THREE.Group();
+sky.visible = false;
+scene.add(sky);
+
+const FIELD = 2600;
+const fieldPos = new Float32Array(FIELD * 3);
+for (let i = 0; i < FIELD; i++) {
+  const r = 62 + Math.random() * 46;
+  const th = Math.acos(2 * Math.random() - 1), ph = Math.random() * Math.PI * 2;
+  fieldPos[i * 3]     = r * Math.sin(th) * Math.cos(ph);
+  fieldPos[i * 3 + 1] = Math.abs(r * Math.cos(th)) * 0.85 + 3;
+  fieldPos[i * 3 + 2] = r * Math.sin(th) * Math.sin(ph);
+}
+const fieldGeo = new THREE.BufferGeometry();
+fieldGeo.setAttribute('position', new THREE.BufferAttribute(fieldPos, 3));
+
+/* a ROUND star: PointsMaterial draws a SQUARE by default (measured in the first sky shot — they came
+   out as blocks). One 32px radial sprite fixes it and costs nothing. */
+const starSprite = (function () {
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grd.addColorStop(0, 'rgba(255,255,255,1)');
+  grd.addColorStop(0.35, 'rgba(220,235,255,.85)');
+  grd.addColorStop(1, 'rgba(180,210,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 32, 32);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+
+sky.add(new THREE.Points(fieldGeo, new THREE.PointsMaterial({
+  map: starSprite, color: 0xdfe9ff, size: 1.5, sizeAttenuation: true, transparent: true,
+  opacity: 1, depthWrite: false, fog: false, alphaTest: 0.01
+})));
+
+const shots = [];
+const shotHead = new THREE.Vector3(), shotTail = new THREE.Vector3(), trail = new THREE.Vector3();
+
+function resetShot(s) {
+  /* most falls are staged IN FRONT of the eye — the first sky shot had one lonely stroke in a corner
+     because every faller spawned in a full circle around the camera. */
+  const forward = Math.random() < 0.72;
+  s.x = (Math.random() - 0.5) * (forward ? 26 : 58);
+  s.y = 12 + Math.random() * 22;
+  s.z = forward ? -(6 + Math.random() * 26) : (Math.random() - 0.5) * 58;
+  const dx = (Math.random() - 0.5) * 0.8;
+  const dy = -1;
+  const dz = forward ? 0.35 : (Math.random() - 0.5) * 0.6;
+  const n = Math.hypot(dx, dy, dz) || 1;
+  s.dx = dx / n * 26; s.dy = dy / n * 26; s.dz = dz / n * 26;
+  s.t = 0;
+  s.speed = 0.55 + Math.random() * 1.15;
+  s.line.material.opacity = 0;
+}
+
+for (let i = 0; i < 12; i++) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  const line = new THREE.Line(g, new THREE.LineBasicMaterial({
+    color: 0xfff0c8, transparent: true, opacity: 0, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false
+  }));
+  sky.add(line);
+  const s = { line, x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 0, t: 0, speed: 1 };
+  resetShot(s);
+  s.t = Math.random();                       // stagger them so they never all fall at once
+  shots.push(s);
+}
+
+/* ── LAYER 3 — LES PIERRES ─────────────────────────────────────────────────────────────────────────
+   BUILT FROM THE PROMPT ITSELF (outputs/20261015_231403_…png, tEXt chunk, ComfyUI graph):
+     "Ochre lanterns, mossy obelisks, and indigo fog … SOLID geometry with ambient occlusion …
+      Starlight, point sources, sharp shadows."
+   Nineteen obelisks on a receding arc, ONE apart and taller, moss at their feet, five ochre lanterns,
+   one LOW light on the right (so the shadows fall long because the source is near the horizon, not
+   because anyone animated them), the galaxy leaning the other way, mist at the base.             */
+const stones = new THREE.Group();
+stones.visible = false;
+scene.add(stones);
+
+const C_DUST = 0x2a2521, C_STONE = 0x3b3833, C_MOSS = 0x2f3a24, C_OCHRE = 0xd9a13f;
+
+const ground = new THREE.Mesh(new THREE.CircleGeometry(70, 48),
+  new THREE.MeshStandardMaterial({ color: C_DUST, roughness: 1, metalness: 0 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+stones.add(ground);
+
+const stoneMat = new THREE.MeshStandardMaterial({ color: C_STONE, roughness: 0.94, metalness: 0.02 });
+const mossMat = new THREE.MeshStandardMaterial({ color: C_MOSS, roughness: 1 });
+
+function obelisk(x, z, h, w, rot) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.55, w, h, 5, 1), stoneMat);
+  body.position.y = h / 2;
+  body.castShadow = body.receiveShadow = true;
+  g.add(body);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(w * 0.56, h * 0.16, 5), stoneMat);
+  cap.position.y = h + h * 0.07;
+  cap.castShadow = true;
+  g.add(cap);
+  const moss = new THREE.Mesh(new THREE.CylinderGeometry(w * 1.06, w * 1.18, h * 0.09, 6), mossMat);
+  moss.position.y = h * 0.045;
+  g.add(moss);
+  g.position.set(x, 0, z);
+  g.rotation.y = rot;
+  stones.add(g);
+  return g;
+}
+
+for (let i = 0; i < 19; i++) {
+  const t = i / 18;
+  const ang = -0.95 + t * 1.9;                  // a shallow arc across the field
+  const rad = 9.5 + t * 7.5;                    // and receding into the fog
+  obelisk(Math.sin(ang) * rad, -Math.cos(ang) * rad - 2,
+          2.1 + ((i * 37) % 13) / 13 * 1.5,
+          0.42 + ((i * 53) % 7) / 7 * 0.16,
+          ang + Math.PI);
+}
+/* the one apart, taller, closest to the light — the twentieth that is not in the table */
+obelisk(7.4, -4.2, 5.2, 0.72, -0.5);
+
+/* five ochre lanterns: short posts with a warm head, the only warm thing at ground level */
+const lanternMat = new THREE.MeshStandardMaterial({ color: C_OCHRE, emissive: C_OCHRE,
+                                                   emissiveIntensity: 2.4, roughness: 0.6 });
+[[-3.4, -3.2], [-1.1, -5.6], [1.9, -4.1], [4.6, -7.4], [-5.6, -6.1]].forEach(([x, z]) => {
+  const postM = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.9, 6), beamMat);
+  postM.position.set(x, 0.45, z); postM.castShadow = true; stones.add(postM);
+  const headM = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), lanternMat);
+  headM.position.set(x, 0.96, z); stones.add(headM);
+  const gl = new THREE.PointLight(C_OCHRE, 6, 4.5, 2);
+  gl.position.set(x, 1.0, z); stones.add(gl);
+});
+
+/* THE ONE SOURCE — low on the right. A DIRECTIONAL light gives parallel shadows: long, hard, cheap.
+   The visible disc is a sprite, so the sky does not have to pay for a real emitter. */
+const sunLight = new THREE.DirectionalLight(0xffe3b0, 3.4);
+sunLight.position.set(34, 4.5, -6);
+sunLight.target.position.set(0, 0, -8);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.left = -26; sunLight.shadow.camera.right = 26;
+sunLight.shadow.camera.top = 26;   sunLight.shadow.camera.bottom = -26;
+sunLight.shadow.camera.near = 0.5; sunLight.shadow.camera.far = 90;
+sunLight.shadow.bias = -0.0006;
+stones.add(sunLight, sunLight.target);
+
+const sunTex = (function () {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grd.addColorStop(0, 'rgba(255,252,240,1)');
+  grd.addColorStop(0.16, 'rgba(255,240,205,.95)');
+  grd.addColorStop(0.42, 'rgba(255,200,130,.30)');
+  grd.addColorStop(1, 'rgba(255,170,90,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, transparent: true,
+                                                             depthWrite: false, fog: false,
+                                                             blending: THREE.AdditiveBlending }));
+sunSprite.scale.set(26, 26, 1);
+sunSprite.position.set(30, 5.0, -30);
+stones.add(sunSprite);
+
+/* the galaxy: a band of dust and stars, tilted the OTHER way, additive, far off */
+const galaxyTex = (function () {
+  const W = 1024, H = 320;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  for (let i = 0; i < 5200; i++) {
+    const x = Math.random() * W;
+    const wave = Math.sin((x / W) * Math.PI * 1.15 - 0.4) * H * 0.20 + H * 0.5;
+    const y = wave + (Math.random() + Math.random() + Math.random() - 1.5) * H * 0.16;
+    const a = 0.05 + Math.random() * 0.35;
+    g.fillStyle = 'rgba(' + (200 + (Math.random() * 55 | 0)) + ',' +
+                             (190 + (Math.random() * 50 | 0)) + ',255,' + a.toFixed(3) + ')';
+    g.fillRect(x, y, 1.2, 1.2);
+  }
+  const core = g.createRadialGradient(W * 0.36, H * 0.58, 0, W * 0.36, H * 0.58, H * 0.55);
+  core.addColorStop(0, 'rgba(255,214,170,.55)');
+  core.addColorStop(0.35, 'rgba(232,170,140,.20)');
+  core.addColorStop(1, 'rgba(180,140,170,0)');
+  g.fillStyle = core; g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'destination-out';          // dust lanes: bite the band
+  for (let i = 0; i < 26; i++) {
+    g.beginPath();
+    g.ellipse(W * (0.05 + Math.random() * 0.9), H * (0.34 + Math.random() * 0.34),
+              H * (0.05 + Math.random() * 0.16), H * (0.01 + Math.random() * 0.03),
+              Math.random() * Math.PI, 0, Math.PI * 2);
+    g.fillStyle = 'rgba(0,0,0,.55)';
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const galaxy = new THREE.Mesh(
+  new THREE.PlaneGeometry(150, 46),
+  new THREE.MeshBasicMaterial({ map: galaxyTex, transparent: true, depthWrite: false,
+                                fog: false, blending: THREE.AdditiveBlending, opacity: 0.95 })
+);
+galaxy.position.set(-16, 34, -78);
+galaxy.rotation.z = 0.42;
+stones.add(galaxy);
+
+/* the mist band at the feet of the stones — the thing that makes a field read as distance */
+const mistTex = (function () {
+  const W = 512, H = 128;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, 'rgba(200,205,225,0)');
+  grd.addColorStop(0.55, 'rgba(200,205,225,.22)');
+  grd.addColorStop(1, 'rgba(200,205,225,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+[0, 1, 2].forEach(i => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(58, 9),
+    new THREE.MeshBasicMaterial({ map: mistTex, transparent: true, depthWrite: false,
+                                  blending: THREE.AdditiveBlending, opacity: 0.50 - i * 0.13 }));
+  m.position.set(0, 0.7 + i * 0.5, -6 - i * 3.5);
+  stones.add(m);
+});
+
+/* ── THE DOOR THAT NEEDS TWO ─────────────────────────────────────────────────────────────────────
+   Two pillars and a lintel at the far end of the field. The SEAM between them is dark until a chain
+   matches. The chain is built from TWO hands: the seal the captain composes on the tray, and the seal
+   of the second hand read from `ace_sign.jsonl` — a row written before this door existed.
+   One hand shows half, and the door says WHICH half. That is the whole mechanic.               */
+const gateGroup = new THREE.Group();
+gateGroup.position.set(0, 0, -17);
+gateGroup.userData.gate = true;
+const gateStone = new THREE.MeshStandardMaterial({ color: 0x46443c, roughness: 0.95 });
+[-1.75, 1.75].forEach(x => {
+  const pil = new THREE.Mesh(new THREE.BoxGeometry(0.62, 4.7, 0.62), gateStone);
+  pil.position.set(x, 2.35, 0);
+  pil.castShadow = pil.receiveShadow = true;
+  gateGroup.add(pil);
+});
+const gateLintel = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.5, 0.66), gateStone);
+gateLintel.position.set(0, 4.95, 0);
+gateLintel.castShadow = true;
+gateGroup.add(gateLintel);
+const gateSeam = new THREE.Mesh(
+  new THREE.PlaneGeometry(2.9, 4.4),
+  new THREE.MeshBasicMaterial({ color: C_OCHRE, transparent: true, opacity: 0,
+                                depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
+);
+gateSeam.position.set(0, 2.3, 0.34);
+gateGroup.add(gateSeam);
+stones.add(gateGroup);
+
+
+/* ── INPUT — walk, look, strike ────────────────────────────────────────────────────────────────── */
+const keys = new Set();
+let layer = 0, spin = 0;
+
+addEventListener('keydown', e => {
+  keys.add(e.code);
+  if (e.code === 'KeyE') toggleLayer();
+  if (e.code === 'KeyQ' && duel.dash <= 0) {            // a dash: the body moves, the record waits
+    char.vel.x += Math.sin(char.yaw) * 5.4;
+    char.vel.z += Math.cos(char.yaw) * 5.4;
+    duel.dash = 0.30;
+    toast('esquive');
+  }
+  if (e.code === 'KeyP') {                             // portrait: orbit to the FRONT, look at the face
+    cam.portrait = !cam.portrait;
+    cam.dist = cam.portrait ? 1.05 : 4.2;
+    cam.pitch = cam.portrait ? 0.02 : 0.30;
+    cam.yaw = cam.portrait ? char.yaw + Math.PI : char.yaw;   // the rig's front is opposite the orbit
+    toast(cam.portrait ? 'portrait' : 'plan large');
+  }
+  if (e.code === 'Escape') {
+    if (layer === 1) toggleLayer();
+    else location.href = 'arrival.html';
+  }
+});
+addEventListener('keyup', e => keys.delete(e.code));
+
+let dragging = false, moved = 0, lx = 0, ly = 0;
+const el = renderer.domElement;
+
+el.addEventListener('pointerdown', e => { dragging = true; moved = 0; lx = e.clientX; ly = e.clientY; });
+addEventListener('pointerup', e => {
+  dragging = false;
+  if (moved < 5) strikeAt(e.clientX, e.clientY);
+});
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const dx = e.clientX - lx, dy = e.clientY - ly;
+  lx = e.clientX; ly = e.clientY;
+  moved += Math.abs(dx) + Math.abs(dy);
+  cam.yaw -= dx * 0.0026;
+  cam.pitch = Math.max(-0.16, Math.min(1.02, cam.pitch + dy * 0.0022));
+});
+addEventListener('wheel', e => {
+  cam.dist = Math.max(2.1, Math.min(6.5, cam.dist + e.deltaY * 0.0022));
+}, { passive: true });
+
+/* ── THE STRIKE — a ray from the eye; the dummy answers, the door leaves ───────────────────────── */
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let strikes = 0, flash = 0, wobble = 0;
+
+function strikeAt(cx, cy) {
+  ndc.set((cx / innerWidth) * 2 - 1, -(cy / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects([dummy, doorGroup, glyphA, ace, gateGroup], true);
+  if (!hits.length) return;
+
+  let o = hits[0].object, door = false, onAce = false;
+  while (o) {
+    if (o === doorGroup || o.userData.door) { door = true; break; }
+    if (o === gateGroup) { tryDoor(); return; }        // the door that needs two
+    if (o === ace) { onAce = true; break; }
+    o = o.parent;
+  }
+
+  if (door) { toast('la porte — vers la mer'); setTimeout(() => location.href = 'arrival.html', 420); return; }
+
+  /* ── against Ace: reach 2 m, cooldown 0.62 s, and the touch TAKES A LETTER ─────────────────── */
+  if (onAce) {
+    if (duel.mate) { toast('mat — la dérivation est morte'); return; }
+    if (duel.coolMe > 0) return;
+    const dA = Math.hypot(char.pos.x - foe.pos.x, char.pos.z - foe.pos.z);
+    if (dA > 2.0) { toast('trop loin — ' + dA.toFixed(1) + ' m'); return; }
+    duel.coolMe = 0.62;
+    char.lunge = 1;
+    duel.mine++;
+    foe.lunge = 0.55;                       // he takes it and steps back
+    regRow('captain', 'touche', dA);
+    stripMiddle('foe');                     // ← the middle letter of ACE comes off
+    document.getElementById('duelscore').textContent = duel.mine + ' · ' + duel.theirs;
+    return;
+  }
+
+  /* the body has to be THERE: a strike across the room is telekinesis, not a strike */
+  const reach = Math.hypot(char.pos.x - dummy.position.x, char.pos.z - dummy.position.z);
+  if (reach > 2.4) { toast('trop loin — ' + reach.toFixed(1) + ' m'); return; }
+
+  strikes++;
+  flash = 1; wobble = 1; char.lunge = 1;
+  document.getElementById('strikes').textContent = strikes;
+  toast(strikes === 1 ? 'premier coup' : 'coup ' + strikes);
+}
+
+const toastEl = document.getElementById('toast');
+let toastT = 0;
+function toast(msg) { toastEl.textContent = msg; toastEl.style.opacity = 1; toastT = 1.6; }
+
+/* ── THE LAYERS — one hull, FOUR extents ───────────────────────────────────────────────────────── */
+let expand = 0, expanding = 0;
+const LAYER_NAME = ['le dojo — la salle close',
+                    'DOMAINE — la règle ne manque pas',
+                    'LE CIEL — les étoiles qui tombent',
+                    'LES PIERRES — dix-neuf, et une seule à part'];
+
+function toggleLayer() {
+  layer = (layer + 1) % 4;
+  expanding = 1; expand = 0;
+  room.visible   = layer === 0;          // the shell goes with the room
+  dojo.visible   = layer === 0;          // and so do the props
+  domain.visible = layer === 1;
+  sky.visible    = layer === 2;
+  stones.visible = layer === 3;
+  lampLight.visible = layer === 0;       // the dojo's own lights stay home
+  keyLight.visible  = layer === 0;
+  doorFill.visible  = layer === 0;
+  /* ONE fog, three moods: warm haze in the room, thin night in the domain, indigo on the plain */
+  scene.fog.color.setHex(layer === 3 ? 0x171c30 : 0x0b0906);
+  scene.background.setHex(layer === 3 ? 0x0d1020 : 0x0b0906);
+  scene.fog.density = layer === 0 ? 0.052 : (layer === 1 ? 0.014 : (layer === 2 ? 0.0022 : 0.016));
+  if (layer === 0) { char.pos.set(0, 0, 0.9); cam.yaw = 0; cam.pitch = 0.30; cam.dist = 4.2; }
+  if (layer === 1) { char.pos.set(0, 0, 4.2); cam.yaw = 0; cam.pitch = 0.16; cam.dist = 4.2; }
+  if (layer === 2) { char.pos.set(0, 0, 0);   cam.yaw = 0; cam.pitch = 0.42; cam.dist = 4.2; }
+  if (layer === 3) { char.pos.set(0, 0, 9.5); cam.yaw = 0; cam.pitch = 0.11; cam.dist = 5.6; }
+  player.visible = layer !== 2;              // in the sky you ARE one of the points
+  toast(LAYER_NAME[layer]);
+}
+
+/* ── THE TRAY — build a name, and the seat derives itself ─────────────────────────────────────── */
+const built = [];
+const keysEl = document.getElementById('keys');
+const glyphOf = ch => {
+  const row = ALPHA.find(a => a[0] === ch);
+  return row ? row[1] : ch;
+};
+
+ALPHA.forEach(([ch, glyph, name]) => {
+  const b = document.createElement('button');
+  b.textContent = glyph;
+  b.title = ch + '  →  ' + name;
+  if (ch === 'J' || ch === 'W') b.classList.add('gap');
+  b.addEventListener('click', () => {
+    if (built.length >= 9) { toast('neuf marques — assez'); return; }
+    built.push(ch);
+    refresh();
+  });
+  keysEl.appendChild(b);
+});
+
+function refresh() {
+  const name = built.join('');
+  document.getElementById('traycount').textContent = built.length;
+  if (!name) {
+    document.getElementById('seal').textContent = '.:—:.';
+    document.getElementById('block').textContent = '—';
+    document.getElementById('seat').textContent = '—';
+    return;
+  }
+  const f = name[0].toLowerCase();
+  const m = name[Math.floor(name.length / 2)].toUpperCase();
+  const l = name[name.length - 1].toLowerCase();
+  const seal = f + m + l;                       // derived, every time
+  document.getElementById('seal').textContent = '.:' + seal + ':.  (' + name + ')';
+  document.getElementById('block').textContent =
+    [...seal].map(c => glyphOf(c.toUpperCase())).join('');
+  document.getElementById('seat').textContent = 'place ' + String(seatOf(name)).padStart(2, '0');
+}
+refresh();
+
+/* ── THE DOOR THAT NEEDS TWO — the mechanic ──────────────────────────────────────────────────────
+   Your half: the seal you composed on the tray, RIGHT NOW.
+   My half: a row on disk, `ace_sign.jsonl`, written before this door was built.
+   The door builds the chain, reports how OLD the second hand is, and lights the seam.
+   One hand alone is told which half is missing — a lock that explains itself.                      */
+let ally = null;
+fetch('ace_sign.jsonl')
+  .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status + ' on ace_sign.jsonl')))
+  .then(t => {
+    /* MEASURED 2026-10-23 04:26 — the row was on disk (446 B) and this line said it was not, because
+       it parsed only `split('\n')[0]` of a PRETTY-PRINTED object: half a JSON, a throw, and a catch
+       that blamed the disk. Parse the WHOLE text first; fall back to a single line for real JSONL. */
+    let row;
+    try { row = JSON.parse(t); }
+    catch (_) { row = JSON.parse(t.trim().split('\n')[0]); }
+    ally = row;
+    regNote('second hand: ' + row.who + ' ' + row.seal + ' ' + row.ts);
+  })
+  .catch(e => { ally = null; regNote('door: second hand unreadable — ' + (e && e.message ? e.message : e)); });
+
+let gateOpen = false;
+function tryDoor() {
+  if (!ally) { toast('pas de seconde main sur le disque'); return; }
+  const B = String(ally.seal || '').replace(/[^A-Za-z]/g, '');
+  if (!built.length) {
+    regNote('DOOR half only — your seal missing (' + ally.seal + ' present)');
+    toast('ta moitié manque — compose 3 marques');
+    return;
+  }
+  if (!B) { toast('la seconde main n a pas de sceau'); return; }
+  const A = sealOf(built.join(''));
+  const chain = '.:' + A + ':.:' + B + ':.';
+  const age = Math.max(0, Math.floor((Date.now() - Date.parse(ally.ts)) / 86400000));
+  gateOpen = true;
+  gateSeam.material.opacity = 0.85;
+  regNote('DOOR ' + chain + ' — second hand ' + age + ' day(s) old');
+  toast('LA PORTE — ' + chain);
+}
+
+/* ── THE FRAME ─────────────────────────────────────────────────────────────────────────────────── */
+let lastT = performance.now();   // r186 deprecated THREE.Clock; a hand timer is exact and warns nothing
+
+function frame() {
+  const now = performance.now();
+  const dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+
+  /* ── THE CONTROLLER — damped velocity, damped turn, damped camera ─────────────────────────────
+     Nothing snaps. Every value chases its target with MathUtils.damp (1 - e^(-λ·dt)), so the feel is
+     identical at 30 or 240 fps — which is the whole of "fluidity": no frame-rate, no lerp constant. */
+  let fwd = 0, side = 0;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) fwd += 1;
+  if (keys.has('KeyS') || keys.has('ArrowDown')) fwd -= 1;
+  if (keys.has('KeyA') || keys.has('ArrowLeft')) side -= 1;
+  if (keys.has('KeyD') || keys.has('ArrowRight')) side += 1;
+
+  const run = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const maxSpeed = run ? 4.0 : 1.85;
+
+  /* the wish, in CAMERA space: W is always "away from the camera", never "north" */
+  let wx = 0, wz = 0;
+  if (fwd || side) {
+    const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw);
+    wx = -s * fwd + c * side;
+    wz = -c * fwd - s * side;
+    const n = Math.hypot(wx, wz) || 1;
+    wx = wx / n * maxSpeed;
+    wz = wz / n * maxSpeed;
+  }
+  char.vel.x = THREE.MathUtils.damp(char.vel.x, wx, 9, dt);
+  char.vel.z = THREE.MathUtils.damp(char.vel.z, wz, 9, dt);
+  char.speed = Math.hypot(char.vel.x, char.vel.z);
+
+  char.pos.x += char.vel.x * dt;
+  char.pos.z += char.vel.z * dt;
+  const lim = layer === 0 ? R - 0.55 : (layer === 1 ? 17 : (layer === 2 ? 6 : 22));
+  char.pos.x = Math.max(-lim, Math.min(lim, char.pos.x));
+  char.pos.z = Math.max(-lim, Math.min(lim, char.pos.z));
+
+  /* face the way you MOVE, not the way you press — shortest arc, damped */
+  if (char.speed > 0.12) {
+    const want = Math.atan2(char.vel.x, char.vel.z);
+    let d = ((want - char.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    char.turn = d / Math.max(dt, 1e-4);
+    char.yaw += d * (1 - Math.exp(-14 * dt));
+  } else {
+    char.turn *= 0.86;
+  }
+  player.position.copy(char.pos);
+  player.rotation.y = char.yaw;
+
+  /* the walk is COMPUTED: phase advances with the real speed, so it slows when you do */
+  char.phase += char.speed * dt * 3.4;
+  const sw = Math.sin(char.phase), sw2 = Math.sin(char.phase * 2);
+  const amp = Math.min(1, char.speed / 2.1);
+  legL.rotation.x =  sw * 0.70 * amp;
+  legR.rotation.x = -sw * 0.70 * amp;
+  armL.rotation.x = -sw * 0.46 * amp - 0.05;
+  armR.rotation.x =  sw * 0.46 * amp - 0.05;
+  torso.position.y = HIP + 0.22 + Math.abs(sw2) * 0.017 * amp;
+  neck.position.y  = HIP + 0.44 + Math.abs(sw2) * 0.013 * amp;
+  cape.position.y  = HIP + 0.14 + Math.abs(sw2) * 0.010 * amp;
+  player.rotation.z = THREE.MathUtils.damp(player.rotation.z, -char.turn * 0.018, 6, dt);   // lean
+
+  /* the strike belongs to the BODY: an arm that swings, a torso that commits */
+  if (char.lunge > 0) {
+    char.lunge = Math.max(0, char.lunge - dt * 3.1);
+    const k = Math.sin(char.lunge * Math.PI);
+    armR.rotation.x = -1.9 * k - 0.05;
+    armL.rotation.x =  0.55 * k;
+    torso.rotation.x = -0.20 * k;
+  } else {
+    torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, 0, 10, dt);
+  }
+
+  /* ── THE SPARRING — .:mYn:. against .:aCe:. — the opponent is a RULE SET, not a person ─────────
+     HONEST, and it matters: this is NOT me in there. It is a partner that closes, strikes and steps
+     back, with a cooldown — an automaton with good manners. What makes it a fight is not the AI, it is
+     that every touch becomes a ROW in the register. Nothing lands without a record.                 */
+  if (layer === 0) {
+    duel.coolMe  = Math.max(0, duel.coolMe - dt);
+    duel.coolFoe = Math.max(0, duel.coolFoe - dt);
+    duel.dash    = Math.max(0, duel.dash - dt);
+    duel.guard   = keys.has('Space') ? Math.min(1, duel.guard + dt * 7)
+                                     : Math.max(0, duel.guard - dt * 7);
+    if (duel.guard > 0.02 && char.lunge <= 0) {      // the guard is a posture, not a stat
+      armL.rotation.x = THREE.MathUtils.lerp(armL.rotation.x, -1.20, duel.guard);
+      armR.rotation.x = THREE.MathUtils.lerp(armR.rotation.x, -1.20, duel.guard);
+      torso.rotation.x = THREE.MathUtils.lerp(torso.rotation.x, -0.10, duel.guard);
+    }
+
+    const dxc = char.pos.x - foe.pos.x, dzc = char.pos.z - foe.pos.z;
+    const dist = Math.max(0.001, Math.hypot(dxc, dzc));
+
+    /* he wants to sit at ~1.2 m: further and he closes, closer and he steps back */
+    let wishX = 0, wishZ = 0;
+    if (dist > 1.42) { wishX = dxc / dist; wishZ = dzc / dist; }
+    else if (dist < 1.02) { wishX = -dxc / dist; wishZ = -dzc / dist; }
+    foe.vel.x = THREE.MathUtils.damp(foe.vel.x, wishX * 1.55, 7, dt);
+    foe.vel.z = THREE.MathUtils.damp(foe.vel.z, wishZ * 1.55, 7, dt);
+    const fLim = R - 0.55;
+    foe.pos.x = Math.max(-fLim, Math.min(fLim, foe.pos.x + foe.vel.x * dt));
+    foe.pos.z = Math.max(-fLim, Math.min(fLim, foe.pos.z + foe.vel.z * dt));
+    foe.speed = Math.hypot(foe.vel.x, foe.vel.z);
+    foe.yaw = Math.atan2(dxc, dzc);
+
+    /* his strike — reach 1.75 m, cooldown ~1.2 s, and the guard or the dash cancels it */
+    if (!duel.mate && dist < 1.75 && duel.coolFoe <= 0) {
+      duel.coolFoe = 1.15 + Math.random() * 0.45;
+      foe.lunge = 1;
+      if (duel.dash > 0)          regRow('ace', 'esquive', dist);
+      else if (duel.guard > 0.5)  { regRow('ace', 'garde', dist); toast('garde'); }
+      else {
+        duel.theirs++;
+        regRow('ace', 'touche', dist);
+        document.getElementById('duelscore').textContent = duel.mine + ' · ' + duel.theirs;
+        stripMiddle('me');                   // ← and MY middle letter comes off
+      }
+    }
+
+    const push = Math.sin(foe.lunge * Math.PI) * 0.30;
+    ace.position.set(foe.pos.x + Math.sin(foe.yaw) * push, 0, foe.pos.z + Math.cos(foe.yaw) * push);
+    ace.rotation.y = foe.yaw;
+    foe.phase += foe.speed * dt * 3.6;
+    const asw = Math.sin(foe.phase), asw2 = Math.sin(foe.phase * 2);
+    const aamp = Math.min(1, foe.speed / 1.5);
+    aLegL.rotation.x =  asw * 0.64 * aamp;
+    aLegR.rotation.x = -asw * 0.64 * aamp;
+    aArmL.rotation.x = -asw * 0.46 * aamp;
+    aArmR.rotation.x =  asw * 0.46 * aamp;
+    aTorso.position.y = aHip + 0.20 + Math.abs(asw2) * 0.015 * aamp;
+    aNeck.position.y  = aHip + 0.40 + Math.abs(asw2) * 0.011 * aamp;
+    if (foe.lunge > 0) {
+      foe.lunge = Math.max(0, foe.lunge - dt * 3.3);
+      const k = Math.sin(foe.lunge * Math.PI);
+      aArmR.rotation.x = -1.95 * k;
+      aArmL.rotation.x =  0.50 * k;
+      aTorso.rotation.x = -0.17 * k;
+      vialLight.intensity = 3.2 + k * 12;
+    } else {
+      aTorso.rotation.x = THREE.MathUtils.damp(aTorso.rotation.x, 0, 10, dt);
+      vialLight.intensity = 3.2 + Math.sin(performance.now() * 0.0021) * 0.8;
+    }
+  }
+
+  /* the camera: orbit behind the shoulder, damped BOTH ways, clamped so it never clips a wall */
+  const tgtWanted = new THREE.Vector3(char.pos.x, D.height * (cam.portrait ? 0.86 : 0.60), char.pos.z);
+  cam.tgt.lerp(tgtWanted, 1 - Math.exp(-12 * dt));
+  const cp = Math.cos(cam.pitch), sp2 = Math.sin(cam.pitch);
+  const wantCam = new THREE.Vector3(
+    cam.tgt.x + Math.sin(cam.yaw) * cam.dist * cp,
+    cam.tgt.y + sp2 * cam.dist + 0.30,
+    cam.tgt.z + Math.cos(cam.yaw) * cam.dist * cp
+  );
+  const cLim = layer === 0 ? R - 0.14 : 24;
+  const cTop = layer === 0 ? H - 0.14 : 30;
+  wantCam.x = Math.max(-cLim, Math.min(cLim, wantCam.x));
+  wantCam.z = Math.max(-cLim, Math.min(cLim, wantCam.z));
+  wantCam.y = Math.max(0.55, Math.min(cTop, wantCam.y));
+  cam.pos.lerp(wantCam, 1 - Math.exp(-14 * dt));
+  camera.position.copy(cam.pos);
+  camera.lookAt(cam.tgt);
+
+  /* the dummy answers a strike: the ring flares, the straw sways */
+  if (flash > 0) {
+    flash = Math.max(0, flash - dt * 2.4);
+    ring.material.emissiveIntensity = 0.9 + flash * 7;
+    bodyM.scale.setScalar(1 + flash * 0.05);
+    headM.position.y = 1.34 + flash * 0.02;
+  }
+  if (wobble > 0) {
+    wobble = Math.max(0, wobble - dt * 1.7);
+    dummy.rotation.z = Math.sin(wobble * 24) * 0.10 * wobble;
+  } else {
+    dummy.rotation.z *= 0.9;
+  }
+
+  /* the lamp breathes a little, so the room is never perfectly still */
+  const t = performance.now() * 0.001;
+  lampLight.intensity = 55 + Math.sin(t * 1.7) * 3 + Math.sin(t * 5.3) * 1.2;
+  lampShade.material.emissiveIntensity = 2.6 + Math.sin(t * 1.7) * 0.18;
+
+  /* the domain turns, slowly */
+  if (layer === 1) {
+    spin += dt * 0.12;
+    domainRing.rotation.z = spin;
+    bigLetter.material.opacity = 0.75 + Math.sin(t * 0.9) * 0.12;
+    bigLetter.material.transparent = true;
+  }
+
+  /* the stars fall — a point in motion is a stroke */
+  if (layer === 2) {
+    for (const s of shots) {
+      s.t += dt * s.speed * 0.62;
+      if (s.t >= 1) { resetShot(s); continue; }
+      shotHead.set(s.x + s.dx * s.t, s.y + s.dy * s.t, s.z + s.dz * s.t);
+      trail.set(s.dx, s.dy, s.dz).multiplyScalar(0.13);
+      shotTail.copy(shotHead).sub(trail);
+      const p = s.line.geometry.attributes.position;
+      p.setXYZ(0, shotHead.x, shotHead.y, shotHead.z);
+      p.setXYZ(1, shotTail.x, shotTail.y, shotTail.z);
+      p.needsUpdate = true;
+      s.line.material.opacity = Math.min(1, (1 - s.t) * 1.7) * Math.min(1, s.t * 7);
+    }
+  }
+
+  if (expanding) {
+    expand = Math.min(1, expand + dt * 2.4);
+    const s = 0.94 + 0.06 * expand;
+    if (layer === 1) domain.scale.setScalar(s);
+    if (expand >= 1) expanding = 0;
+  }
+
+  if (toastT > 0) {
+    toastT -= dt;
+    if (toastT <= 0) toastEl.style.opacity = 0;
+  }
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+/* the hand is on the paper: say who is here */
+document.getElementById('hand').textContent = 'captain · .:mYn:.';
+
+/* TEST HOOK — named, so it is honest: the eye drives the duel without a mouse, and nothing else uses it */
+window.__0z = { strip: (who) => stripMiddle(who), duel, cam, char, foe };
+frame();
+</script>
+</body>
+</html>

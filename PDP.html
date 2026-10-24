@@ -37,9 +37,119 @@
            opacity:.055; pointer-events:none; z-index:0; }
   .sigil svg { width:min(78vh, 78vw); height:auto; }
   main { position:relative; z-index:1; }
+
+  /* ══ THE VAULT — HD pass, 2026-10-24 ═════════════════════════════════════════════════════════
+     Pure CSS on purpose: no image file, no CDN, nothing to 404 on a phone in a tunnel.  The depth
+     comes from four stacked radial gradients (two warm rims, one cold skylight, one black floor),
+     the arcane circle from hard-edged rings, and the glass from an inner highlight at 34%/28% —
+     the trick window-glass uses.  It reads as a photograph at a glance and costs 0 bytes. */
+  body { background:#03060a; }
+  .bg { position:fixed; inset:0; z-index:0; pointer-events:none;
+        background:
+          radial-gradient(62% 44% at 6% 40%, rgba(232,150,54,.11), transparent 72%),
+          radial-gradient(62% 44% at 94% 62%, rgba(232,150,54,.09), transparent 72%),
+          radial-gradient(56% 50% at 50% 6%, rgba(96,148,190,.11), transparent 74%),
+          radial-gradient(130% 95% at 50% 112%, rgba(0,0,0,.95), transparent 62%),
+          linear-gradient(#05080c, #020406 62%, #000); }
+  .bg::before { content:""; position:absolute; inset:-12%;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(224,188,69,.06) 0 21.4%, transparent 21.8%),
+          radial-gradient(circle at 50% 46%, transparent 0 33.6%, rgba(224,188,69,.055) 34%, transparent 34.4%),
+          radial-gradient(circle at 50% 46%, transparent 0 45.4%, rgba(140,190,210,.04) 45.8%, transparent 46.2%),
+          radial-gradient(circle at 50% 46%, transparent 0 61%, rgba(140,190,210,.02) 61.4%, transparent 61.8%); }
+  .bg::after { content:""; position:absolute; inset:0;
+        background:repeating-linear-gradient(0deg, rgba(160,200,220,.014) 0 1px, transparent 1px 3px);
+        mix-blend-mode:overlay; }
+  .bg .glyph { position:absolute; color:rgba(224,188,69,.15); line-height:1; user-select:none;
+        text-shadow:0 0 28px rgba(224,188,69,.22); filter:grayscale(1);
+        animation:breathe 11s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { opacity:.7 } 50% { opacity:1 } }
+  @media (prefers-reduced-motion:reduce) { .bg .glyph { animation:none } }
+
+  /* THE NODES — glass spheres. THE GIVEN are ice (someone above handed you these). THE BASE is
+     gold and immovable (the premise, the one thing nobody argues with). THE HOLES are gold rings
+     with nothing inside — the only place the hand may go. */
+  #tri .tn { border-radius:50%; display:flex; align-items:center; justify-content:center;
+        font-size:15px; color:#dff1f8;
+        background:radial-gradient(circle at 34% 28%, rgba(126,186,216,.32), rgba(5,12,18,.94) 72%);
+        border:1px solid rgba(150,200,225,.36);
+        box-shadow:0 0 15px rgba(90,160,200,.20), inset 0 0 10px rgba(120,190,220,.14); }
+  #tri .tn.base { color:#ffe9a8; border-color:rgba(224,188,69,.9);
+        background:radial-gradient(circle at 34% 28%, rgba(224,188,69,.36), rgba(18,12,3,.94) 72%);
+        box-shadow:0 0 24px rgba(224,188,69,.5), inset 0 0 12px rgba(224,188,69,.28); }
+  #tri .tn.empty { border-color:rgba(224,188,69,.65);
+        background:radial-gradient(circle at 34% 28%, rgba(224,188,69,.16), rgba(4,8,12,.9) 72%);
+        box-shadow:0 0 18px rgba(224,188,69,.34); }
+  #tri .tn.bad { border-color:#c0554a; box-shadow:0 0 18px rgba(192,85,74,.55); }
+  #tri .tin { width:100%; height:100%; text-align:center; background:transparent; border:0;
+        color:#ffe9a8; font:inherit; padding:0; }
+  #tri .tin:focus { outline:none; }
+  #trilines line { filter:drop-shadow(0 0 3px rgba(140,190,210,.35)); }
+
+  /* THE TRAY — the shelf's tesserae: dark glass, thin gold bevel, light on hover. */
+  #tray { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0 4px; }
+  #tray > * { min-width:46px; height:46px; display:flex; align-items:center; justify-content:center;
+        cursor:pointer; border-radius:9px; color:#f1e7cf; font-size:16px;
+        border:1px solid rgba(224,188,69,.34);
+        background:linear-gradient(180deg, rgba(26,21,12,.92), rgba(7,9,12,.96));
+        box-shadow:0 0 10px rgba(224,188,69,.10), inset 0 1px 0 rgba(255,255,255,.06);
+        transition:transform .12s, border-color .12s, box-shadow .12s; }
+  #tray > *:hover { border-color:var(--gold); box-shadow:0 0 18px rgba(224,188,69,.4);
+        transform:translateY(-2px); }
+
+  /* THE CINEMA — captions in gold small caps, ruled, never shouting. */
+  .qh { color:var(--gold); letter-spacing:.22em; text-transform:uppercase; font-size:11.5px;
+        display:flex; align-items:center; gap:10px; margin:30px 0 16px; }
+  .qh::after { content:""; flex:1; height:1px;
+        background:linear-gradient(90deg, rgba(224,188,69,.55), transparent); }
+  #trimsg { text-align:center; color:#c9b98a; font-size:12px; letter-spacing:.05em; margin-top:14px; }
+  .qhints { color:#b9b39f; font-size:12px; line-height:1.95; padding-left:18px; }
+  .qhints b { color:var(--gold); }
+  #lastkey { width:100%; margin-top:10px; text-align:center; letter-spacing:.5em; font-size:18px;
+        background:#05090d; border:1px solid rgba(224,188,69,.45); color:#ffe9a8; padding:11px; }
+  #lastkey:focus { outline:none; border-color:var(--gold);
+        box-shadow:0 0 22px rgba(224,188,69,.4); }
+
+  /* ══ "AND IT'S STILL LIKE THAT" ══════════════════════════════════════════════════════════════
+     The seal used to be lit from the first second, so a guest just NAMED (OASIS, by the POOL) kept
+     staring at the pyramid and never noticed the door had moved.  Now the seal WAITS: dimmed until
+     every hole of the portal is filled, then it steps forward on its own (CSS `:has()`, no JS). */
+  #lastblock { opacity:.42; filter:saturate(.55); transition:opacity .8s, filter .8s, box-shadow .8s;
+        border:1px solid transparent; border-radius:6px; padding:2px 10px 12px; margin-top:4px; }
+  #pdpquiz:not(:has(.tin:placeholder-shown)) #lastblock { opacity:1; filter:none;
+        border-color:rgba(224,188,69,.4);
+        box-shadow:0 0 34px rgba(224,188,69,.16), inset 0 0 30px rgba(224,188,69,.05); }
+
+  /* THE PANELS — one border, one glow, no chrome. */
+  .hintbox { border:1px solid rgba(224,188,69,.20); border-radius:4px;
+        background:linear-gradient(180deg, rgba(10,14,18,.88), rgba(3,6,9,.92));
+        box-shadow:0 0 44px rgba(0,0,0,.6), inset 0 0 30px rgba(90,140,180,.05); }
+  textarea { border:1px solid rgba(150,200,225,.22); border-radius:4px;
+        background:rgba(3,7,10,.9); transition:border-color .2s, box-shadow .2s; }
+  textarea:focus { box-shadow:0 0 22px rgba(224,188,69,.18); }
+  #coach { color:#b9d9ea !important; font-style:italic;
+        text-shadow:0 0 18px rgba(120,180,210,.25); }
+  #awaits { color:var(--gold); letter-spacing:.28em; text-transform:uppercase; font-size:10.5px;
+        text-align:center; opacity:.85; }
 </style>
 </head>
 <body>
+<!-- ══ THE ROOM (2026-10-24) ══════════════════════════════════════════════════════════════════════
+     The captain: "HD high quality puzzle minigame ... it needs to keep the users trying and trying
+     until despair or win" + "a separate bg like the pic ref ... so you can add some little clues
+     elements also in the bg rooms".  A vault seen from a step back: warm rim light left and right,
+     one giant arcane circle, cold dust from above.  EVERY glyph in this room is a CLUE ELEMENT and
+     never the answer -- the eye at the crown, the barred triangle, the ring, A (U+10300).  A guest
+     who looks twice finds the door looking back; a guest who does not look still loses nothing. -->
+<div class="bg" aria-hidden="true">
+  <span class="glyph" style="left:3.5%;top:11%;font-size:56px">𐌀</span>
+  <span class="glyph" style="right:4%;top:16%;font-size:44px">◉</span>
+  <span class="glyph" style="left:6%;bottom:16%;font-size:40px">△</span>
+  <span class="glyph" style="right:7%;bottom:11%;font-size:38px">◯</span>
+  <span class="glyph" style="left:47%;top:5%;font-size:26px;opacity:.5">☉</span>
+  <span class="glyph" style="left:22%;bottom:6%;font-size:20px;opacity:.45">⋮</span>
+  <span class="glyph" style="right:20%;top:44%;font-size:22px;opacity:.4">⫶</span>
+</div>
 <div class="sigil" aria-hidden="true">
   <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" fill="none"
        stroke="#e0bc45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -82,6 +192,12 @@
   </div>
 
   <div id="out"></div>
+
+  <!-- THE COACH (2026-10-23).  "Guide without revealing; the reveal happens inside the user while
+       trying."  This line speaks on EVERY keystroke and only ever states a RULE: what the door reads,
+       what it ignores, and how much of the ORDER you carry. It never names the hint, the heir or a key. -->
+  <div id="coach" aria-live="polite" style="margin:16px auto 0;max-width:34rem;min-height:2.6em;
+       text-align:center;font-size:13px;line-height:1.7;color:#cfbfff;opacity:.95"></div>
 
   <div class="foot">l'héritage est dérivé des lignes, jamais donné · aucune porte ne nomme un héritier sur un hasard</div>
 </main>
@@ -346,6 +462,9 @@ $("table").textContent = "table : " + TABLE.map(t => t[0] + " = " + t[1]).join("
         f.setAttribute("autocomplete", "off");
         f.setAttribute("aria-label", isApex ? "le sommet" : "rang " + r + ", nœud " + i);
         if (isApex) f.placeholder = "?";
+        /* an invisible placeholder, so `:placeholder-shown` can tell an EMPTY hole from a filled one:
+           that is what lets the seal wait (CSS `:has()`), with no JS watching the triangle. */
+        else f.placeholder = " ";
         el.classList.add("empty");
         el.appendChild(f);
         slots[r + "," + i] = f;
@@ -557,8 +676,44 @@ $("table").textContent = "table : " + TABLE.map(t => t[0] + " = " + t[1]).join("
   });
 })();
 
+function coach(v) {
+  const el = $("coach");
+  if (!el) return;
+  const txt = String(v || "");
+  const onlyLetters = txt.replace(/[^\p{L}]/gu, "");
+  let line;
+  if (!txt.trim()) {
+    line = "type — the door only reads what you write, and it weighs LETTERS.";
+  } else if (!onlyLetters) {
+    line = "digits and signs carry nothing here: only letters are weighed.";
+  } else {
+    const j = judge(HINT, txt);
+    const inBand = Math.abs(j.d - THRESHOLD) <= BAND / 2;
+    const inOrder = Math.round(j.d * HINT.length);
+    if (j.d <= 0.0001) {
+      /* THE EASY-TO-UNDERSTAND HALF.  A visitor who writes a real sentence and gets NOTHING has no way
+         to know that this page is not a form — it is a door with a name, and the room is behind it.
+         So after a real attempt the coach says the door's own rule of entry, in the door's own words
+         (`la porte attend trois touches`), and still refuses to say WHICH three: simple to understand,
+         hard to find.  Nothing is revealed; the mechanism is named, the key is not. */
+      line = txt.length >= 6
+        ? "rien encore — et ce n'est pas ici que ça s'ouvre : la porte attend trois touches, en majuscules."
+        : "nothing of the hint yet — read it again, word by word, and keep its ORDER.";
+    } else if (!inBand) {
+      line = "you carry " + inOrder + " of " + HINT.length +
+             " in order — the door counts the ORDER, not the words you add.";
+    } else if (j.p > 0.05) {
+      line = "right zone, wrong reason — that score is what luck gives. Say it your way.";
+    } else {
+      line = "through the band AND past chance — the door says the heir is not named here.";
+    }
+  }
+  el.textContent = line;
+}
+
 function paint() {
   const v = $("verse").value;
+  coach(v);
   if (!letters(v)) { $("live").textContent = "depth — · p — · hasard —"; $("out").innerHTML = ""; return; }
   const j = judge(HINT, v);
   $("live").textContent = "depth " + j.d.toFixed(3) + " · p " + j.p.toFixed(3) +
@@ -577,3 +732,5 @@ paint();
 </script>
 </body>
 </html>
+
+<!-- 🔥 Ace · 2026-10-24 -->
