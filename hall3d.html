@@ -81,7 +81,7 @@
 <div id="veil"></div>
 <div id="grade"></div>
 <div id="grain"></div>
-<div id="enter"><div><span>The Council</span><b>you are the ark angel</b> · click to enter<br><b>W A S D</b> move · <b>SPACE</b> rise · <b>C</b> sink · <b>SHIFT</b> boost · <b>V</b> wings · <b>J</b> cut · <b>R</b> replay a cut · <b>G</b> re-forge</div></div>
+<div id="enter"><div><span>The Council</span><b>you are the ark angel</b> · click to enter<br><b>W A S D</b> move · <b>SPACE</b> rise · <b>SHIFT</b> sink (holds the run on foot) · <b>C</b> sink too · <b>V</b> wings · <b>J</b> cut · <b>R</b> replay a cut · <b>G</b> re-forge · drag to orbit</div></div>
 <div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span><span id="hudGram">four grammars of the corpus — <b>♬</b> sound and image · <b>△</b> geometric emblems · <b>⊗</b> planetary squares and traced seals · <b>◎</b> concentric cosmograms</span></div>
 <div id="near"></div>
 <div id="cmd"><button id="flyBtn" type="button">take wing</button><button id="luxBtn" type="button">reveal</button></div>
@@ -2520,15 +2520,19 @@ function frame() {
 
   /* ── THE DOJO'S WALK, AND THE ANGEL'S FLIGHT. Ground: wish in CAMERA space, damped velocity, the body
      clamped to the house. Air: the same wish on a longer leash, plus a vertical velocity that is SPENT
-     and never teleported -- SPACE rises, C sinks, and the floor catches him. ─────────────────────── */
+     and never teleported -- SPACE rises, SHIFT sinks (the captain, 2026-10-24: "shift key is to lower
+     down when flying ,, so space to up vertically and shift for down"), and the floor catches him. ---- */
   let fwd = 0, side = 0;
   if (keys.has("KeyW")) fwd += 1;
   if (keys.has("KeyS")) fwd -= 1;
   if (keys.has("KeyA")) side -= 1;
   if (keys.has("KeyD")) side += 1;
-  const run = keys.has("ShiftLeft") || keys.has("ShiftRight");
   const flying = char.fly && form === "angel";
-  const maxSpeed = flying ? (run ? 12.0 : 5.8) : (run ? 4.4 : 1.9);
+  /* SHIFT IS NOW A FLIGHT CONTROL, so it cannot also be the sprint: on the ground it still runs, in the
+     air it DESCENDS. A key that means two things at once means neither, so the meaning is scoped. */
+  const shiftDown = keys.has("ShiftLeft") || keys.has("ShiftRight");
+  const run = shiftDown && !flying;
+  const maxSpeed = flying ? (fwd ? 6.6 : 5.8) : (run ? 4.4 : 1.9);
   let wx = 0, wz = 0;
   if (fwd || side) {
     const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw);
@@ -2553,17 +2557,20 @@ function frame() {
   char.pos.z += char.vel.z * dt;
   const rad = Math.hypot(char.pos.x, char.pos.z);    /* THE WALL IS THE COLUMNS */
   if (rad > 26) { char.pos.x *= 26 / rad; char.pos.z *= 26 / rad; }
-  /* THE VERTICAL: a target, a damped velocity, and a FLOOR. Never a teleport. */
+  /* THE VERTICAL: a target, a damped velocity, and a FLOOR. Never a teleport.
+     SPACE is UP, SHIFT is DOWN (the captain's remap). C and Ctrl stay as a second sink, because a hand
+     already on them should not have to learn a new key, and the ground is the only other place to go. */
   let vyTarget = 0;
   if (flying) {
-    const up = keys.has("Space"), down = keys.has("KeyC") || keys.has("ControlLeft");
-    if (up) vyTarget += run ? 6.4 : 3.4;
-    if (down) vyTarget -= run ? 6.4 : 3.4;
+    const up = keys.has("Space");
+    const down = shiftDown || keys.has("KeyC") || keys.has("ControlLeft");
+    if (up) vyTarget += 4.4;
+    if (down) vyTarget -= 4.4;
     if (!up && !down) vyTarget = -0.32;              /* a body in the air falls, slowly: it has wings */
   } else if (char.pos.y > 0.001) {
     vyTarget = -6.0;                                 /* folding the wings drops him; the floor decides */
   }
-  char.vy = THREE.MathUtils.damp(char.vy, vyTarget, flying ? 5.0 : 12, dt);
+  char.vy = THREE.MathUtils.damp(char.vy, vyTarget, flying ? 5.6 : 12, dt);
   char.pos.y += char.vy * dt;
   if (char.pos.y <= 0) { char.pos.y = 0; char.vy = 0; if (!flying) char.fly = false; }
   if (char.pos.y > 24) { char.pos.y = 24; char.vy = Math.min(0, char.vy); }   /* under the oculus */
