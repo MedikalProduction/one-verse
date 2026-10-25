@@ -2729,6 +2729,11 @@ const keys = new Set();
    `willBody` is MODULE scope on purpose: the first attempt at this declared it inside the ship's own
    block, where the keyboard handler could not see it, and the page threw on the first frame. */
 let willBody = "holy";            /* "holy" = the angel in the council · "pirate" = the body on the deck */
+/* THE FLOOR IS NOT ALWAYS y = 0 (the captain, 2026-10-27: "i cant go down on the ship"). The deck of the
+   flagship sits 34 m BELOW the hall, and the ground test was a hard zero -- so a body carried to the deck
+   was snapped back to y = 0 the same frame, i.e. hovering 34 m over the water, and any attempt to go down
+   was undone instantly. `floorY` is where the feet belong, and the hall and the deck each own one. */
+let floorY = 0;
 const deckWillStart = new THREE.Vector3(0, 0, 0);   /* where the will leaves the deck from */
 const cam = { yaw: 0, pitch: 0.30, dist: 6.4 };
 const char = { pos: new THREE.Vector3(0, 0, 10.2), vel: new THREE.Vector3(), yaw: Math.PI,
@@ -2981,9 +2986,11 @@ addEventListener("keydown", e => {
                      ship.position.z - lx * Math.sin(yaw) + lz * Math.cos(yaw));
         deckWillStart.copy(char.pos);
       }
+      floorY = ship ? ship.position.y + 6.9 : 0;
       willBody = "pirate";
       say("<b>the will crosses the water</b> — the holy body is empty until you return");
     } else {
+      floorY = 0;
       if (char.saved) char.pos.copy(char.saved);
       willBody = "holy";
       say("<b>back in the holy land</b>");
@@ -3134,20 +3141,20 @@ function frame() {
     if (up) vyTarget += 4.4;
     if (down) vyTarget -= (char.plunge > 0 ? 9.5 : 5.2);
     if (!up && !down) vyTarget = (char.plunge > 0 ? -15.0 : -1.4);
-  } else if (char.pos.y > 0.001) {
+  } else if (char.pos.y > floorY + 0.001) {
     vyTarget = -9.0;                                 /* free fall: nothing is holding him up */
   }
   char.plunge = Math.max(0, (char.plunge || 0) - dt);   /* the plunge is a state with an END */
   char.vy = THREE.MathUtils.damp(char.vy, vyTarget, flying ? 5.6 : 12, dt);
   char.pos.y += char.vy * dt;
-  if (char.pos.y <= 0) {
+  if (char.pos.y <= floorY) {
     if ((char.plunge > 0) && (char.vy < -6.0)) { shockwave(char.pos.x, char.pos.z); }
-    char.pos.y = 0;
+    char.pos.y = floorY;
     char.vy = 0;
     char.plunge = 0;
     if (!flying) char.fly = false;
   }
-  if (char.pos.y > 24) { char.pos.y = 24; char.vy = Math.min(0, char.vy); }   /* under the oculus */
+  if (char.pos.y > floorY + 24) { char.pos.y = floorY + 24; char.vy = Math.min(0, char.vy); }
   char.alt = char.pos.y;
   char.flap += dt * (flying ? (2.2 + Math.max(0, char.vy) * 0.55 + char.speed * 0.10) : 1.1);
   /* face the way you MOVE, not the way you press — shortest arc, damped */
@@ -3376,9 +3383,16 @@ function frame() {
      so past that the orbit collapsed onto him and every arrow press did nothing -- the third "blocks"
      report. The camera's ring now FOLLOWS the body's radius (body + 3.2 m), and only the outer wall at
      26 m is absolute. */
+  /* ── THE WALL IS THE HALL'S, NOT THE WORLD'S (the captain, 2026-10-27: "the camera is getting too close
+     sometimes"). The colonnade clamp was being applied EVERYWHERE, and the flagship lies ~89 m out --
+     past the 86 m cap -- so on the deck the camera was pinned onto the body, i.e. 40 cm from his ear.
+     Outside the hall there is nothing to clamp against, so there is no clamp. ------------------- */
+  const bodyRad = Math.hypot(char.pos.x, char.pos.z);
   const cRad = Math.hypot(wantX, wantZ);
-  const camWall = Math.max(18.6, Math.min(86.0, Math.hypot(char.pos.x, char.pos.z) + 3.2));
-  if (cRad > camWall) { wantX *= camWall / cRad; wantZ *= camWall / cRad; }
+  if (bodyRad < 34.0) {                            /* inside the council: the colonnade is the wall */
+    const camWall = Math.max(18.6, Math.min(26.0, bodyRad + 3.2));
+    if (cRad > camWall) { wantX *= camWall / cRad; wantZ *= camWall / cRad; }
+  }
   /* ── THE CAMERA CANNOT SEE THROUGH MARBLE. Before this it could sit inside a column and fill the frame
      with stone (MEASURED: the old comment cites "shot 3" doing exactly that). Now the segment from the
      aim point to the wanted eye is walked in twelve steps; the first step that is inside an obstacle
