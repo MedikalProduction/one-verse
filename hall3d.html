@@ -1416,7 +1416,17 @@ const HUMAN = [], ANGELV = [];                 /* the two skins, toggled by setF
 const EYELIDS = [];                             /* the lids, so the eyes can BLINK -- one array, no rig */
 let hairPivot = null;                           /* the mane's own pivot, handed out of the head block */
 const rig = new THREE.Group();
-player.add(rig);
+/* ── THE PIVOT OF GRAVITY (the captain, 2026-10-26: "my char is tilted way too far when moving.. its not
+   the good point of gravity"). `player` spins about its ORIGIN, and that origin is at the FEET, so every
+   degree of bank swung the whole figure around the ankles -- the body was not leaning, it was toppling.
+   A `tilt` group at HIP height carries bank and pitch instead: the hips stay under the shoulders, and
+   the feet stay planted where the walk put them. Yaw still belongs to `player`, because turning in place
+   IS a rotation about the feet. --------------------------------------------------------------- */
+const tilt = new THREE.Group();
+tilt.position.y = HIP;
+rig.position.y = -HIP;
+tilt.add(rig);
+player.add(tilt);
 
 /* TORSO: lofted from the measured bands, shoulder (0.80) down to waist (0.60). The chest carries the
    depth the law declares (kRef.depth = 0.62 of the width), and the arm zone is SUBTRACTED, because a
@@ -3102,11 +3112,16 @@ function frame() {
   }
   /* BANK AND PITCH: a flyer leans into the turn and noses up when climbing -- driven by what the body is
      ACTUALLY doing, never by which key is down. */
+  /* the lean: 0.020 rad per rad/s of turn instead of 0.055, CLAMPED to 11 degrees, and measured against
+     the ground the body is actually on -- the old 0.5 rad pitch (28 degrees) was a ski jumper. */
   char.bank = THREE.MathUtils.damp(char.bank, flying
-    ? -char.turn * 0.055 * Math.min(1, char.speed / 5) : -char.turn * 0.018, 5, dt);
-  char.pitch = THREE.MathUtils.damp(char.pitch, flying ? -Math.min(0.5, char.vy * 0.10) : 0, 5, dt);
+    ? -char.turn * 0.020 * Math.min(1, char.speed / 5) : -char.turn * 0.008, 4.5, dt);
+  char.bank = Math.max(-0.19, Math.min(0.19, char.bank));
+  char.pitch = THREE.MathUtils.damp(char.pitch,
+    flying ? -Math.max(-0.26, Math.min(0.26, char.vy * 0.055)) : 0, 4.5, dt);
   player.position.copy(char.pos);
-  player.rotation.set(char.pitch, char.yaw, char.bank);
+  player.rotation.set(0, char.yaw, 0);            /* yaw only: turning in place is about the feet */
+  tilt.rotation.set(char.pitch, 0, char.bank);    /* the LEAN comes from the hips */
   /* the contact pool follows him on the floor and dies as he climbs -- grounding, in four lines */
   {
     const alt = Math.max(0, char.pos.y);
@@ -3233,25 +3248,25 @@ function frame() {
     /* THE BEAT IS DRIVEN BY WHAT THE BODY IS DOING: a climb beats fast and deep, a glide barely moves.
        MEASURED reason: a constant flap reads as a wind-up toy however fast it runs. ----------------- */
     const climb = Math.max(0, char.vy), dive = Math.max(0, -char.vy);
-    const beatAmp = 0.52 + Math.min(0.28, climb * 0.06) - Math.min(0.16, dive * 0.04);
+    const beatAmp = 0.44 + Math.min(0.16, climb * 0.04) - Math.min(0.12, dive * 0.03);
     angelWings.sides.forEach(function (s) {
       /* MEASURED (grid, 2026-10-24): with a base lift of -0.30 the tips reached 2.1 m on a 1.75 m body,
          so the wings sat ABOVE the head -- the "pawn with a plume". -0.62 keeps the span at shoulder
          height and the flap lifts it from there. --------------------------------------------------- */
       s.side.rotation.z = -0.20 + fold * (0.10 + fl * beatAmp) - (1 - fold) * 0.95;
       s.side.rotation.y = (1 - fold) * 0.55 + fold * (0.06 + fl2 * 0.11);
-      s.side.rotation.x = fold * (-0.05 + Math.cos(char.flap) * 0.06);
+      s.side.rotation.x = fold * (-0.03 + Math.cos(char.flap) * 0.025);
       s.rows.forEach(function (row, ri) {
         row.rotation.z = -fl * (0.24 - ri * 0.05) * fold;
         /* the rows lag the root, and each row lags a little more: that phase offset is the whole
            difference between a wing and a butterfly net bolted to a back. */
-        row.rotation.x = Math.sin(char.flap - ri * 0.55) * 0.11 * fold;
+        row.rotation.x = Math.sin(char.flap - ri * 0.55) * 0.05 * fold;
         /* AND THE FEATHERS BEAT THEMSELVES: each vane flutters about its rest angle with its own phase,
            lagging further down the fan. */
         for (let fi = 0; fi < row.children.length; fi++) {
           const f = row.children[fi];
           f.rotation.x = (f.userData.rotX0 || 0)
-            + Math.sin(char.flap * 0.85 - f.userData.ph - ri * 0.35) * 0.10 * fold;
+            + Math.sin(char.flap * 0.85 - f.userData.ph - ri * 0.35) * 0.038 * fold;
         }
       });
     });
