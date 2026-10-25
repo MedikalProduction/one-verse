@@ -81,7 +81,7 @@
 <div id="veil"></div>
 <div id="grade"></div>
 <div id="grain"></div>
-<div id="enter"><div><span>The Council</span><b>you are the ark angel</b> · click to enter<br><b>W A S D</b> move · <b>SPACE</b> rise · <b>SHIFT</b> sink (holds the run on foot) · <b>C</b> sink too · <b>V</b> wings · <b>J</b> cut · <b>R</b> replay a cut · <b>G</b> re-forge · drag to orbit</div></div>
+<div id="enter"><div><span>The Council</span><b>you are the ark angel</b> · click to enter<br><b>W A S D</b> move · <b>SPACE</b> up · <b>SHIFT</b> down / run · <b>&#8593;&#8595;&#8592;&#8594;</b> camera (free) · <b>J</b> cut — in a fall, <b>plunge</b> · <b>E</b> reveal · <b>V</b> wings · <b>T</b> body · <b>R</b> replay · <b>G</b> re-forge</div></div>
 <div id="hud"><b>the council</b><span id="hudRows"></span><span id="hudLaw">seven seals on the floor · each row, each column and both diagonals = n(n²+1)/2 · 15 · 34 · 65 · 111 · 175 · 260 · 369</span><span id="hudGram">four grammars of the corpus — <b>♬</b> sound and image · <b>△</b> geometric emblems · <b>⊗</b> planetary squares and traced seals · <b>◎</b> concentric cosmograms</span></div>
 <div id="near"></div>
 <div id="cmd"><button id="flyBtn" type="button">take wing</button><button id="luxBtn" type="button">reveal</button></div>
@@ -1486,8 +1486,8 @@ neck.add(headG);
      on it is a doll's eye no matter how it is lit. ------------------------------------------------- */
   for (const sx of [-1, 1]) {                    /* brow ridges: two arcs, not one bar */
     const b = new THREE.Mesh(loft([
-      { y: 0.000, rx: 0.0055, rz: 0.005 }, { y: 0.013, rx: 0.0075, rz: 0.0068 },
-      { y: 0.026, rx: 0.0055, rz: 0.005 }], 8), mSkin);
+      { y: 0.000, rx: 0.0080, rz: 0.0060 }, { y: 0.014, rx: 0.0110, rz: 0.0080 },
+      { y: 0.028, rx: 0.0075, rz: 0.0055 }], 8), mHair);
     b.position.set(sx * 0.032, 0.104, 0.069);
     b.rotation.z = sx * 1.42;
     b.rotation.x = -0.22;
@@ -1535,19 +1535,28 @@ neck.add(headG);
   const chin = new THREE.Mesh(loft([
     { y: 0.000, rx: 0.019, rz: 0.009 }, { y: -0.012, rx: 0.013, rz: 0.007 }], 12), mSkin);
   chin.position.set(0, -0.002, 0.060);
-  headG.add(lipU, lipL, chin);
-  HUMAN.push(lipU, lipL, chin);
+  const seam = new THREE.Mesh(loft([
+    { y: 0.0022, rx: 0.0230, rz: 0.0022 }, { y: -0.0022, rx: 0.0210, rz: 0.0020 }], 14), mDarkM);
+  seam.position.set(0, 0.0112, 0.0712);
+  headG.add(lipU, lipL, chin, seam);
+  HUMAN.push(lipU, lipL, chin, seam);
   /* the eyes: white, iris, pupil, and a lid that CUTS the top */
   const mSclera = new THREE.MeshStandardMaterial({ color: 0xe9e2d4, roughness: 0.30, metalness: 0.0 });
   const mPupil = new THREE.MeshBasicMaterial({ color: 0x05070a });
   for (const sx of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0152, 16, 12), mSclera);
-    eye.position.set(sx * 0.0332, 0.0860, 0.0605);
-    eye.scale.set(1, 0.84, 0.74);
-    const iris = new THREE.Mesh(new THREE.CircleGeometry(0.0080, 18), mDarkM);
-    iris.position.set(sx * 0.0332, 0.0858, 0.0742);
-    const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.0034, 12), mPupil);
-    pupil.position.set(sx * 0.0332, 0.0858, 0.0749);
+    /* a socket first: a dark almond that reads at 6 m even when the white inside it does not */
+    const socket = new THREE.Mesh(loft([
+      { y: 0.012, rx: 0.0255, rz: 0.004 }, { y: 0.000, rx: 0.0275, rz: 0.006 },
+      { y: -0.011, rx: 0.0235, rz: 0.004 }], 14), mDarkM);
+    socket.position.set(sx * 0.0332, 0.0862, 0.0722);
+    socket.rotation.x = -0.08;
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0195, 16, 12), mSclera);
+    eye.position.set(sx * 0.0332, 0.0860, 0.0630);
+    eye.scale.set(1, 0.82, 0.72);
+    const iris = new THREE.Mesh(new THREE.CircleGeometry(0.0112, 18), mDarkM);
+    iris.position.set(sx * 0.0332, 0.0858, 0.0812);
+    const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.0048, 12), mPupil);
+    pupil.position.set(sx * 0.0332, 0.0858, 0.0820);
     const lid = new THREE.Mesh(loft([
       { y: 0.010, rx: 0.0165, rz: 0.005 }, { y: 0.000, rx: 0.0185, rz: 0.008 },
       { y: -0.008, rx: 0.0155, rz: 0.004 }], 12), mSkin);
@@ -1557,8 +1566,8 @@ neck.add(headG);
       { y: 0.004, rx: 0.0145, rz: 0.0035 }, { y: -0.003, rx: 0.0110, rz: 0.0030 }], 10), mSkin);
     lower.position.set(sx * 0.0332, 0.0762, 0.0672);
     lower.rotation.x = 0.30;
-    headG.add(eye, iris, pupil, lid, lower);
-    HUMAN.push(eye, iris, pupil, lid, lower);
+    headG.add(socket, eye, iris, pupil, lid, lower);
+    HUMAN.push(socket, eye, iris, pupil, lid, lower);
     EYELIDS.push(lid, lower);                    /* the blink owns these two, and nothing else does */
   }
   /* THE HAIR: tubes along real curves with a taper and the teal tips -- not fourteen capsules. */
@@ -2030,7 +2039,7 @@ scene.add(contact);
    (shot 8): at 1.62 the primaries swallowed the head and read as leaves; at 1.30 with the root 0.10
    below the shoulder the face is visible from a 3/4 view. ---------------------------------------- */
 const angelWings = wingPair(1.45, mWing, 0.11);
-angelWings.group.position.set(0, SHOULDER - 0.12, -0.20);
+angelWings.group.position.set(0, SHOULDER - 0.02, -0.34);   /* a gap: mounted, not fused to the back */
 angelWings.group.rotation.x = -0.16;
 rig.add(angelWings.group);
 ANGELV.push(angelWings.group);
@@ -2740,7 +2749,30 @@ function reforge(voluntary) {
   lame.charges = lame.max; lame.scars = 0; lame.rec = null; lame.recBuf = []; lame.forged++;
   if (typeof say === "function") say("<b>re-forged</b> — the fruit forgets everything");
 }
+/* ── THE IMPACT RING. A plunge ends in ONE thing on the floor: a ring that expands and fades in half a
+   second. It needs no particles to read as force, and it costs one torus. -------------------------- */
+const SHOCKWAVES = [];
+function shockwave(x, z) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.06, 6, 48),
+    new THREE.MeshBasicMaterial({ color: 0x9fe7ff, transparent: true, opacity: 0.9,
+      blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(x, 0.05, z);
+  scene.add(m);
+  SHOCKWAVES.push({ mesh: m, t: 0 });
+}
+
 function strike() {
+  /* ── THE PLUNGE (2026-10-26): a sword strike is not only a horizontal cut. Pressed while the body is
+     already FALLING, J commits the fall -- wings tuck, the blade leads, and the landing is the hit. That
+     is the pairing the captain asked for: free fall, then the sword. --------------------------------- */
+  if (char.pos.y > 0.25 && (char.vy || 0) < -2.5) {
+    char.plunge = 0.9;
+    char.vy = Math.min(char.vy, -13.0);
+    char.pitch = Math.min(char.pitch, -0.22);        /* nose down, through the hips */
+    say("<b>plunge</b> — the blade leads the fall");
+    return;
+  }
   if (lame.swing >= 0) return;
   if (lame.charges <= 0) {
     if (typeof say === "function") say("<b>lame</b> will not take a fourth — it turns in the hand rather than lie");
@@ -3085,19 +3117,36 @@ function frame() {
   /* THE VERTICAL: a target, a damped velocity, and a FLOOR. Never a teleport.
      SPACE is UP, SHIFT is DOWN (the captain's remap). C and Ctrl stay as a second sink, because a hand
      already on them should not have to learn a new key, and the ground is the only other place to go. */
+  /* ── THE VERTICAL, WITH GRAVITY IN IT (the captain, 2026-10-26: "im stuck in the air sometime we need a
+     free fall mechanic that can be paired with a sword strike"). The old idle descent was -0.32 m/s: TEN
+     METRES TOOK THIRTY SECONDS, so a body with no key held looked STUCK rather than gliding. Now:
+       · idle descent is -1.4 m/s -- a glide that arrives;
+       · C / SHIFT is a DIVE at -5.2, and harder while plunging;
+       · on foot with no support the body FALLS at -9.0, because wings folded is wings folded;
+       · a plunge (J while falling fast) commits to -15 and folds the wings -- the blade goes first. */
   let vyTarget = 0;
   if (flying) {
     const up = keys.has("Space");
-    const down = shiftDown || keys.has("KeyC") || keys.has("ControlLeft");
+    /* SPACE up, SHIFT down -- ONE pair, two keys (the captain, 2026-10-26: "remap all keys so there are
+       around wasd"). C and Ctrl did the same job as SHIFT and are gone: a duplicate binding is not a
+       convenience, it is one more key to explain. */
+    const down = shiftDown;
     if (up) vyTarget += 4.4;
-    if (down) vyTarget -= 4.4;
-    if (!up && !down) vyTarget = -0.32;              /* a body in the air falls, slowly: it has wings */
+    if (down) vyTarget -= (char.plunge > 0 ? 9.5 : 5.2);
+    if (!up && !down) vyTarget = (char.plunge > 0 ? -15.0 : -1.4);
   } else if (char.pos.y > 0.001) {
-    vyTarget = -6.0;                                 /* folding the wings drops him; the floor decides */
+    vyTarget = -9.0;                                 /* free fall: nothing is holding him up */
   }
+  char.plunge = Math.max(0, (char.plunge || 0) - dt);   /* the plunge is a state with an END */
   char.vy = THREE.MathUtils.damp(char.vy, vyTarget, flying ? 5.6 : 12, dt);
   char.pos.y += char.vy * dt;
-  if (char.pos.y <= 0) { char.pos.y = 0; char.vy = 0; if (!flying) char.fly = false; }
+  if (char.pos.y <= 0) {
+    if ((char.plunge > 0) && (char.vy < -6.0)) { shockwave(char.pos.x, char.pos.z); }
+    char.pos.y = 0;
+    char.vy = 0;
+    char.plunge = 0;
+    if (!flying) char.fly = false;
+  }
   if (char.pos.y > 24) { char.pos.y = 24; char.vy = Math.min(0, char.vy); }   /* under the oculus */
   char.alt = char.pos.y;
   char.flap += dt * (flying ? (2.2 + Math.max(0, char.vy) * 0.55 + char.speed * 0.10) : 1.1);
@@ -3121,6 +3170,19 @@ function frame() {
     flying ? -Math.max(-0.26, Math.min(0.26, char.vy * 0.055)) : 0, 4.5, dt);
   player.position.copy(char.pos);
   player.rotation.set(0, char.yaw, 0);            /* yaw only: turning in place is about the feet */
+  for (let wi = SHOCKWAVES.length - 1; wi >= 0; wi--) {
+    const w = SHOCKWAVES[wi];
+    w.t += dt;
+    const k = w.t / 0.55;
+    w.mesh.scale.setScalar(1 + k * 7);
+    w.mesh.material.opacity = Math.max(0, 0.9 * (1 - k));
+    if (k >= 1) {
+      scene.remove(w.mesh);
+      w.mesh.geometry.dispose();
+      w.mesh.material.dispose();
+      SHOCKWAVES.splice(wi, 1);
+    }
+  }
   tilt.rotation.set(char.pitch, 0, char.bank);    /* the LEAN comes from the hips */
   /* the contact pool follows him on the floor and dies as he climbs -- grounding, in four lines */
   {
@@ -3242,19 +3304,19 @@ function frame() {
   {
     const fl = Math.sin(char.flap);
     const fl2 = Math.sin(char.flap * 2 + 0.5);         /* the second harmonic: the whip at the tips */
-    const open = flying ? 1 : 0;
+    const open = (flying && !(char.plunge > 0)) ? 1 : 0;   /* a plunge folds them: blade first */
     const fold = THREE.MathUtils.damp(angelWings.group.userData.fold || 0, open, 4, dt);
     angelWings.group.userData.fold = fold;
     /* THE BEAT IS DRIVEN BY WHAT THE BODY IS DOING: a climb beats fast and deep, a glide barely moves.
        MEASURED reason: a constant flap reads as a wind-up toy however fast it runs. ----------------- */
     const climb = Math.max(0, char.vy), dive = Math.max(0, -char.vy);
-    const beatAmp = 0.44 + Math.min(0.16, climb * 0.04) - Math.min(0.12, dive * 0.03);
+    const beatAmp = 0.86 + Math.min(0.20, climb * 0.05) - Math.min(0.18, dive * 0.04);
     angelWings.sides.forEach(function (s) {
       /* MEASURED (grid, 2026-10-24): with a base lift of -0.30 the tips reached 2.1 m on a 1.75 m body,
          so the wings sat ABOVE the head -- the "pawn with a plume". -0.62 keeps the span at shoulder
          height and the flap lifts it from there. --------------------------------------------------- */
       s.side.rotation.z = -0.20 + fold * (0.10 + fl * beatAmp) - (1 - fold) * 0.95;
-      s.side.rotation.y = (1 - fold) * 0.55 + fold * (0.06 + fl2 * 0.11);
+      s.side.rotation.y = (1 - fold) * 0.55 + fold * (0.10 + fl2 * 0.24);
       s.side.rotation.x = fold * (-0.03 + Math.cos(char.flap) * 0.025);
       s.rows.forEach(function (row, ri) {
         row.rotation.z = -fl * (0.24 - ri * 0.05) * fold;
@@ -3270,7 +3332,17 @@ function frame() {
         }
       });
     });
-    angelWings.group.rotation.x = -0.10 - fold * 0.16;
+    /* ── NOT WELDED (the captain, 2026-10-26: "the wings must not be attached.. when moving in air it
+       should feel as wing flap, with ample and full movement"). Parenting is unavoidable; INERTIA is not.
+       The wing root chases the body's lean with a lag and then counters part of it, so a bank turns the
+       body INSIDE the wings instead of dragging them like a plastic part, and the root bobs with the
+       stroke so the mass of them reads. ---------------------------------------------------------- */
+    char.wingLag = THREE.MathUtils.damp(char.wingLag || 0, char.bank, 3.0, dt);
+    char.wingPitchLag = THREE.MathUtils.damp(char.wingPitchLag || 0, char.pitch, 3.0, dt);
+    const bob = Math.sin(char.flap * 2.0) * 0.045 * fold;
+    angelWings.group.rotation.x = -0.10 - fold * 0.16 - char.wingPitchLag * 0.55 + bob;
+    angelWings.group.rotation.z = -char.wingLag * 0.50;
+    angelWings.group.position.y = SHOULDER - 0.02 + bob * 0.8;
   }
   /* the camera is a body too: it FOLLOWS with damp, it never snaps. In the air it pulls back and up,
      so the whole man is in frame with the wings spread -- a third-person view that can SEE the flight. */
