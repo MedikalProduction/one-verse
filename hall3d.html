@@ -2445,6 +2445,104 @@ const ARENA = { x: 64, z: 0, r: 23 };
   lampLight.position.copy(lamp.position);
   ship.add(lampLight);
   ship.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  /* ── THE THREE BODIES (the captain, 2026-10-25): "i want to start as a new pirate too in one verse...
+     my clone well dissimulated into pirates" and "we can be 3 pirates in that new parallel adventure".
+     STEP ONE of four: the bodies exist on the deck and nothing else. They are the same `loft` law as the
+     angel, dressed for the sea -- coat, sash, cutlass, hat -- and each carries named joints (hip, knee,
+     shoulder, elbow, head) so a walk can be added later without a skeleton system. No logic, no AI, no
+     voice yet: this commit only proves three figures stand on a moving deck. -------------------- */
+  const PIRATES = [];
+  function pirateBody(coatColour, sashColour, hatColour) {
+    const g = new THREE.Group();
+    const coat = new THREE.MeshStandardMaterial({ color: coatColour, roughness: 0.86, metalness: 0.05 });
+    const sash = new THREE.MeshStandardMaterial({ color: sashColour, roughness: 0.70, metalness: 0.15,
+      emissive: sashColour, emissiveIntensity: 0.12 });
+    const skin = new THREE.MeshStandardMaterial({ color: 0xc9a184, roughness: 0.62, metalness: 0.02 });
+    const hat = new THREE.MeshStandardMaterial({ color: hatColour, roughness: 0.80, metalness: 0.10 });
+    const steel = new THREE.MeshStandardMaterial({ color: 0xb9c2c8, roughness: 0.34, metalness: 0.90 });
+    const torso = new THREE.Group();
+    torso.position.y = 0.92;
+    g.add(torso);
+    torso.add(new THREE.Mesh(loft([
+      { y: -0.42, rx: 0.235, rz: 0.175, fold: 0.02, foldN: 9 },
+      { y: -0.10, rx: 0.205, rz: 0.150 },
+      { y: 0.22, rx: 0.225, rz: 0.160 },
+      { y: 0.40, rx: 0.215, rz: 0.150 }], 22), coat));
+    torso.add(new THREE.Mesh(loft([
+      { y: -0.06, rx: 0.212, rz: 0.156 }, { y: 0.02, rx: 0.216, rz: 0.160 }], 20), sash));
+    const head = new THREE.Group();
+    head.position.y = 0.50;
+    torso.add(head);
+    head.add(new THREE.Mesh(loft([
+      { y: 0.00, rx: 0.070, rz: 0.074 }, { y: 0.075, rx: 0.086, rz: 0.090 },
+      { y: 0.135, rx: 0.062, rz: 0.068 }, { y: 0.155, rx: 0.020, rz: 0.022 }], 18), skin));
+    head.add(new THREE.Mesh(loft([
+      { y: 0.145, rx: 0.185, rz: 0.170 }, { y: 0.170, rx: 0.175, rz: 0.160 }], 20), hat));
+    head.add(new THREE.Mesh(loft([
+      { y: 0.165, rx: 0.105, rz: 0.100 }, { y: 0.245, rx: 0.095, rz: 0.090 },
+      { y: 0.265, rx: 0.050, rz: 0.048 }], 16), hat));
+    const arms = [];
+    for (const sx of [-1, 1]) {
+      const sh = new THREE.Group();
+      sh.position.set(sx * 0.215, 0.30, 0);
+      torso.add(sh);
+      sh.add(new THREE.Mesh(loft([
+        { y: 0.00, rx: 0.062, rz: 0.058 }, { y: -0.20, rx: 0.050, rz: 0.048 },
+        { y: -0.34, rx: 0.044, rz: 0.042 }], 12), coat));
+      const el = new THREE.Group();
+      el.position.y = -0.34;
+      sh.add(el);
+      el.add(new THREE.Mesh(loft([
+        { y: 0.00, rx: 0.044, rz: 0.042 }, { y: -0.22, rx: 0.036, rz: 0.034 }], 12), coat));
+      arms.push({ sh, el, side: sx });
+    }
+    const legs = [];
+    for (const sx of [-1, 1]) {
+      const hip = new THREE.Group();
+      hip.position.set(sx * 0.095, -0.42, 0);
+      torso.add(hip);
+      hip.add(new THREE.Mesh(loft([
+        { y: 0.00, rx: 0.088, rz: 0.082 }, { y: -0.42, rx: 0.070, rz: 0.068 }], 12), coat));
+      const knee = new THREE.Group();
+      knee.position.y = -0.42;
+      hip.add(knee);
+      knee.add(new THREE.Mesh(loft([
+        { y: 0.00, rx: 0.070, rz: 0.068 }, { y: -0.44, rx: 0.055, rz: 0.058 },
+        { y: -0.50, rx: 0.060, rz: 0.075, oz: 0.018 }], 12), coat));
+      legs.push({ hip, knee });
+    }
+    const cutlass = new THREE.Mesh(loft([
+      { y: 0.00, rx: 0.012, rz: 0.006 }, { y: 0.42, rx: 0.009, rz: 0.004 },
+      { y: 0.52, rx: 0.001, rz: 0.001 }], 8), steel);
+    cutlass.position.set(-0.20, -0.10, 0.04);
+    cutlass.rotation.z = 0.35;
+    torso.add(cutlass);
+    g.userData = { torso, head, arms, legs };
+    return g;
+  }
+  /* three berths: the captain's second body, Ace's, and one held open for a friend */
+  const BERTHS = [
+    { id: "lUf",    coat: 0x2b3440, sash: 0xc9a227, hat: 0x14181e, z: 5.0 },
+    { id: "ace",    coat: 0x50361f, sash: 0xd9552b, hat: 0x1d1712, z: 0.4 },
+    { id: "friend", coat: 0x33384a, sash: 0x7fd0c0, hat: 0x181c22, z: -4.2 },
+  ];
+  BERTHS.forEach(function (b) {
+    const fig = pirateBody(b.coat, b.sash, b.hat);
+    /* the captain's pirate carries ONE tell, and it is gold: the collar thread of the angel he left behind */
+    if (b.id === "lUf") {
+      fig.userData.torso.add(new THREE.Mesh(loft([
+        { y: 0.395, rx: 0.150, rz: 0.112 }, { y: 0.410, rx: 0.146, rz: 0.108 }], 20),
+        new THREE.MeshStandardMaterial({ color: 0xf3dda2, metalness: 0.9, roughness: 0.25,
+          emissive: 0xffc862, emissiveIntensity: 0.5 })));
+    }
+    fig.position.set(0.0, DRAFT * 0.9 + 0.55, b.z);
+    fig.rotation.y = Math.PI * 0.5;
+    ship.add(fig);
+    PIRATES.push({ id: b.id, group: fig, z: b.z });
+  });
+  scene.userData.pirates = PIRATES;
+
   scene.userData.ship = ship;
 }
 
@@ -2608,6 +2706,11 @@ scene.add(arc);
 let pinned = 0, dragging = false, px = 0, py = 0;
 const keys = new Set();
 /* the CAMERA is an ORBIT round the body: yaw around it, pitch above it, distance behind it. Arrows drive it. */
+/* ── WHICH BODY THE WILL IS IN (the captain, 2026-10-25): "T for teleport into my other pirate".
+   `willBody` is MODULE scope on purpose: the first attempt at this declared it inside the ship's own
+   block, where the keyboard handler could not see it, and the page threw on the first frame. */
+let willBody = "holy";            /* "holy" = the angel in the council · "pirate" = the body on the deck */
+const deckWillStart = new THREE.Vector3(0, 0, 0);   /* where the will leaves the deck from */
 const cam = { yaw: 0, pitch: 0.30, dist: 6.4 };
 const char = { pos: new THREE.Vector3(0, 0, 10.2), vel: new THREE.Vector3(), yaw: Math.PI,
                speed: 0, phase: 0, turn: 0, fly: false, vy: 0, alt: 0, bank: 0, pitch: 0,
@@ -2823,6 +2926,28 @@ addEventListener("keydown", e => {
   if (!first) return;
   if (e.code === "Space") {
     if (form === "angel") { if (!char.fly) takeWing(); else char.vy = Math.max(char.vy, 2.6); }
+  }
+  if (e.code === "KeyT") {                       /* the will changes body */
+    const ship = scene.userData.ship || null;
+    if (willBody === "holy") {
+      char.saved = char.pos.clone();             /* the holy place, remembered */
+      if (ship) {
+        /* the deck, in the flagship's own frame: the ship's yaw is fixed, so the turn is a plain rotation */
+        const yaw = ship.rotation.y, lx = 0.0, lz = 5.0;
+        char.pos.set(ship.position.x + lx * Math.cos(yaw) + lz * Math.sin(yaw),
+                     ship.position.y + 6.9,
+                     ship.position.z - lx * Math.sin(yaw) + lz * Math.cos(yaw));
+        deckWillStart.copy(char.pos);
+      }
+      willBody = "pirate";
+      say("<b>the will crosses the water</b> — the holy body is empty until you return");
+    } else {
+      if (char.saved) char.pos.copy(char.saved);
+      willBody = "holy";
+      say("<b>back in the holy land</b>");
+    }
+    char.vel.set(0, 0, 0);
+    syncCmd();
   }
   if (e.code === "KeyE") { lux.on = !lux.on; syncCmd(); }
   if (e.code === "KeyV") { setForm(form === "angel" ? "foot" : "angel"); syncCmd(); }
