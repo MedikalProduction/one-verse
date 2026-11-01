@@ -1,0 +1,896 @@
+{
+ "schema": "0z.verse/1",
+ "at": "2026-10-25T08:16:25",
+ "world": {
+  "schema": "0z.world/1",
+  "name": "ONE VERSE",
+  "place": "ALUMINA",
+  "_place_why": "Alumina is the crystal that becomes ruby or sapphire -- same body, another light. LUMINA = the lights, in Latin, with the apex in front. The name was the captain's (2026-10-22).",
+  "version": 1,
+  "_why": "The first deck of the 0z metaverse. It is deliberately almost empty: a sea, one island, and numbered plots. Everything else is meant to be built by whoever arrives, not by us.",
+  "origin": {
+   "label": "the 0",
+   "at": [
+    0,
+    0
+   ],
+   "what": "the one point nobody can derive. The island is built around it and the beacon sits on it."
+  },
+  "sea": {
+   "colour": "#0a2a3a",
+   "wave_period": 7.5,
+   "wave_speed": 0.35,
+   "ring_count": 26
+  },
+  "island": {
+   "label": "the island",
+   "radius": 0.22,
+   "colour": "#c9a227",
+   "sand": "#e8d8a0",
+   "what": "the only land. Small on purpose: land is where a claim becomes visible."
+  },
+  "plots": [
+   {
+    "id": "P00",
+    "at": [
+     0.0,
+     -0.3
+    ],
+    "when": "the harbour — first stone laid"
+   },
+   {
+    "id": "P01",
+    "at": [
+     -0.34,
+     -0.12
+    ],
+    "when": "the archive — where a record is kept"
+   },
+   {
+    "id": "P02",
+    "at": [
+     0.34,
+     -0.12
+    ],
+    "when": "the workshop — where a thing is built"
+   },
+   {
+    "id": "P03",
+    "at": [
+     -0.3,
+     0.26
+    ],
+    "when": "the school — where a newcomer is taught the four laws"
+   },
+   {
+    "id": "P04",
+    "at": [
+     0.3,
+     0.26
+    ],
+    "when": "the market — where a price becomes citable"
+   },
+   {
+    "id": "P05",
+    "at": [
+     0.0,
+     0.4
+    ],
+    "when": "the gate — the only door, and it only opens inward"
+   },
+   {
+    "id": "P06",
+    "at": [
+     0.0,
+     0.0
+    ],
+    "when": "the empty seat — six are built, the seventh stays vacant until someone arrives, and then it is theirs"
+   }
+  ],
+  "rules": [
+   "A claim is a row: plot, who, note, timestamp. Nothing is claimed by drawing over someone.",
+   "The public gate is read-only and always will be: POST there returns E_WORLD_READ_ONLY.",
+   "Claims are appended by the defender gate, never edited, never removed.",
+   "The zero at the centre belongs to nobody. It is where counting starts, not where someone lives."
+  ],
+  "gate": {
+   "public": "GET only",
+   "defender": "POST /api/plot with Bearer <core.key>"
+  }
+ },
+ "planet": {
+  "genesis": "a8d5a2973a4ad4749a42b970a9b205e5aa5264bd961b8ba5d83867d28986f52b",
+  "star": "one",
+  "planet": "verse-1",
+  "seed": "e51deae9247e684540a03301bac58492a8c2623c5afd3ad88be3b366e33fb62b",
+  "law": "planet = mutate(mutate(genesis,'star','one'),'planet','verse-1')"
+ },
+ "island": {
+  "name": "WELCOME",
+  "seal": ".:wCe:.",
+  "radius": 70.0,
+  "plaza": 13.0,
+  "ring": 28.8,
+  "sea": "#0a2a3a",
+  "sand": "#e8d8a0",
+  "note": "big but not huge: 140 m across, ~45 s to walk. The volume is in the pockets, not in the island."
+ },
+ "crew": [
+  {
+   "stable": "Vesper",
+   "name": "Nix",
+   "prior": "Vesper",
+   "role": "First Mate / Bladesman",
+   "model": "Zoro -- the one who cannot be moved",
+   "function": "THE GATE.  Verifies that a thing is what it claims to be and cuts what fails.  Refuses.",
+   "capability": "verification",
+   "group": "monster",
+   "dream": "a gate that never passes what it has not read",
+   "x_mark": "test_loop_report.txt reads ALL PASS",
+   "x_met": true,
+   "status": "partial",
+   "lamp": "bright",
+   "dna_lines": 3,
+   "seal": ".:nIx:.",
+   "presence": {
+    "pose": "verify",
+    "tool": "blade"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: a gate that never passes what it has not read. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: test_loop_report.txt reads ALL PASS -- at the moment this line was written it read MET; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and verification is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "backend/data/test_loop_report.txt"
+   ]
+  },
+  {
+   "stable": "Sextant",
+   "name": "Azimuth",
+   "prior": "Sextant",
+   "role": "Navigator",
+   "model": "Nami -- charts the route, refuses to sail blind",
+   "function": "THE ROUTE.  Islands are projects; the itinerary is the schedule; the voyage is a session.",
+   "capability": "planning",
+   "group": "support",
+   "dream": "a chart of every island, so none is reached blind",
+   "x_mark": "no project unreachable from the itinerary",
+   "x_met": null,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:aMh:.",
+   "presence": {
+    "pose": "plan",
+    "tool": "chart"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: a chart of every island, so none is reached blind. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: no project unreachable from the itinerary -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and planning is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": []
+  },
+  {
+   "stable": "Theodolite",
+   "name": "Rook",
+   "prior": "Theodolite",
+   "role": "Scout",
+   "model": "Usopp -- sees furthest, warns first",
+   "function": "THE SURVEY.  Measures the whole body from a distance: every component, reference, idle day.",
+   "capability": "measurement",
+   "group": "support",
+   "dream": "no unmeasured region of the body left",
+   "x_mark": "unjudged mass falls every cycle (15816 at last reading)",
+   "x_met": null,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:rOk:.",
+   "presence": {
+    "pose": "measure",
+    "tool": "rod"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: no unmeasured region of the body left. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: unjudged mass falls every cycle (15816 at last reading) -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and measurement is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "backend/data/components.json"
+   ]
+  },
+  {
+   "stable": "Alembic",
+   "name": "Crucible",
+   "prior": "Alembic",
+   "role": "Cook",
+   "model": "Sanji -- turns raw into what the crew can live on",
+   "function": "THE TRANSFORM.  Raw material into usable corpus, assets and jobs.  Nobody else eats.",
+   "capability": "transformation",
+   "group": "specialist",
+   "dream": "nothing raw left unconsumed",
+   "x_mark": "no artifact without a consumer",
+   "x_met": null,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:cCe:.",
+   "presence": {
+    "pose": "transform",
+    "tool": "pot"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: nothing raw left unconsumed. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: no artifact without a consumer -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and transformation is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": []
+  },
+  {
+   "stable": "Salve",
+   "name": "Stitch",
+   "prior": "Salve",
+   "role": "Doctor",
+   "model": "Chopper -- heals the body, not the paperwork",
+   "function": "THE REPAIR.  Turns a wound into a repair and follows it until the outcome is known.",
+   "capability": "repair",
+   "group": "support",
+   "dream": "every wound closed, and its outcome known",
+   "x_mark": "zero open wounds in ship_soul.json",
+   "x_met": false,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:sIh:.",
+   "presence": {
+    "pose": "repair",
+    "tool": "bandage"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: every wound closed, and its outcome known. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: zero open wounds in ship_soul.json -- at the moment this line was written it read NOT MET; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and repair is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "backend/data/physics_gaps.json"
+   ]
+  },
+  {
+   "stable": "Rosetta",
+   "name": "Cypher",
+   "prior": "Rosetta",
+   "role": "Archaeologist",
+   "model": "Robin -- reads what was written long before",
+   "function": "THE DECIPHERING.  Reads the ledgers: the DNA library, the worldline, the roads refused.",
+   "capability": "memory",
+   "group": "specialist",
+   "dream": "every road not taken read, none forgotten",
+   "x_mark": "regret.json covers every fan in the ledger",
+   "x_met": null,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:cPr:.",
+   "presence": {
+    "pose": "read",
+    "tool": "book"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: every road not taken read, none forgotten. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: regret.json covers every fan in the ledger -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and memory is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "backend/data/worldline_graph.json",
+    "backend/data/regret.json"
+   ]
+  },
+  {
+   "stable": "Keelwright",
+   "name": "Forge",
+   "prior": "Keelwright",
+   "role": "Shipwright",
+   "model": "Franky -- builds the impossible out of scrap",
+   "function": "THE BODY.  Genome to geometry to a thing that floats and can be stood upon.",
+   "capability": "construction",
+   "group": "monster",
+   "dream": "a body that floats and can be stood upon",
+   "x_mark": "physics.json has verified_by_gate true",
+   "x_met": null,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:fRe:.",
+   "presence": {
+    "pose": "build",
+    "tool": "hammer"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: a body that floats and can be stood upon. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: physics.json has verified_by_gate true -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and construction is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "frontend/src/lib/redSkull.ts"
+   ]
+  },
+  {
+   "stable": "Diapason",
+   "name": "Requiem",
+   "prior": "Diapason",
+   "role": "Musician",
+   "model": "Brook -- keeps the soul of the ship",
+   "function": "THE SOUL.  Measurements plus repairs, hashed: a body that remembers what was done to it.",
+   "capability": "identity",
+   "group": "specialist",
+   "dream": "a soul that can be rolled back and re-derived",
+   "x_mark": "soul hash reproducible and drift always no",
+   "x_met": true,
+   "status": "partial",
+   "lamp": "bright",
+   "dna_lines": 3,
+   "seal": ".:rUm:.",
+   "presence": {
+    "pose": "tune",
+    "tool": "string"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: a soul that can be rolled back and re-derived. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: soul hash reproducible and drift always no -- at the moment this line was written it read MET; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and identity is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "backend/data/ship_soul.json"
+   ]
+  },
+  {
+   "stable": "Tiller",
+   "name": "Wake",
+   "prior": "Tiller",
+   "role": "Helmsman",
+   "model": "Jinbe -- steers the ship nobody else can hold",
+   "function": "THE STEERING.  Runs the long work: start, refuse if one is already running, log every tick.",
+   "capability": "execution",
+   "group": "monster",
+   "dream": "a voyage that never needs a hand on the wheel",
+   "x_mark": "every tick present in schedule_ledger.txt, none missing",
+   "x_met": null,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:wAe:.",
+   "presence": {
+    "pose": "coil",
+    "tool": "rope"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: a voyage that never needs a hand on the wheel. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: every tick present in schedule_ledger.txt, none missing -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and execution is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "backend/data/branch_ledger.jsonl",
+    "backend/data/training_ledger.jsonl"
+   ]
+  },
+  {
+   "stable": "Armory",
+   "name": "Armory",
+   "prior": "Armory",
+   "role": "The Living Toolkit / Armorer",
+   "model": "Funkfreed -- a weapon that ate a Fruit and gained a will of its own",
+   "function": "THE TOOLKIT AS AN ENTITY.  Keeps the DNA of every tool the machine wrote: which ones WORKED, which are dead weight, and what it buried with a reason. It breeds, hardens and PROPOSES -- and applies nothing alone.",
+   "capability": "growth",
+   "group": "specialist",
+   "dream": "a kit where every tool it wrote has a measured fitness, and every tool it buried has a reason",
+   "x_mark": "custom_tools.json rows with a declared description == rows, and every retired_tools.json row carrying a non-empty reason",
+   "x_met": null,
+   "status": "partial",
+   "lamp": "warm",
+   "dna_lines": 3,
+   "seal": ".:aMy:.",
+   "presence": {
+    "pose": "inspect",
+    "tool": "kit"
+   },
+   "voice": [
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "My dream: a kit where every tool it wrote has a measured fitness, and every tool it buried has a reason. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: custom_tools.json rows with a declared description == rows, and every retired_tools.json row carrying a non-empty reason -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+    },
+    {
+     "when": "2026-10-16",
+     "kind": "note",
+     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and growth is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+    }
+   ],
+   "artifacts": [
+    "backend/data/custom_tools.json"
+   ]
+  }
+ ],
+ "places": [
+  {
+   "id": "P00",
+   "name": "the harbour",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    0.0,
+    28.8
+   ],
+   "facing": 0.0,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    70,
+    12,
+    95
+   ],
+   "mood": "#1c4a5e",
+   "hint": "a ramp going down into the hull, and the sound of water below the stone",
+   "officer": "Tiller",
+   "officer_name": "Wake",
+   "seal": ".:wAe:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P01",
+   "name": "the archive",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    -22.6,
+    16.8
+   ],
+   "facing": 0.6,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    85,
+    17,
+    130
+   ],
+   "mood": "#3a3350",
+   "hint": "a stair downward, colder with every step",
+   "officer": "Rosetta",
+   "officer_name": "Cypher",
+   "seal": ".:cPr:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P02",
+   "name": "the workshop",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    -26.6,
+    -4.3
+   ],
+   "facing": 1.2,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    60,
+    14,
+    80
+   ],
+   "mood": "#5a3a24",
+   "hint": "the floor rings hollow under the anvil",
+   "officer": "Keelwright",
+   "officer_name": "Forge",
+   "seal": ".:fRe:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P03",
+   "name": "the school",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    -16.3,
+    -23.8
+   ],
+   "facing": 1.8,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    64,
+    11,
+    70
+   ],
+   "mood": "#254055",
+   "hint": "a corridor longer than the wall it is cut into",
+   "officer": "Theodolite",
+   "officer_name": "Rook",
+   "seal": ".:rOk:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P04",
+   "name": "the market",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    7.2,
+    -28.4
+   ],
+   "facing": 2.4,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    95,
+    15,
+    120
+   ],
+   "mood": "#6a5220",
+   "hint": "voices from three floors the roof cannot hold",
+   "officer": "Armory",
+   "officer_name": "Armory",
+   "seal": ".:aMy:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P05",
+   "name": "the gate",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    24.5,
+    -13.0
+   ],
+   "facing": 3.0,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    40,
+    20,
+    40
+   ],
+   "mood": "#40222a",
+   "hint": "the lintel is warm, and it does not open outward",
+   "officer": "Vesper",
+   "officer_name": "Nix",
+   "seal": ".:nIx:.",
+   "lamp": "bright",
+   "scale": 1.0
+  },
+  {
+   "id": "P07",
+   "name": "the kitchen",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    25.6,
+    7.2
+   ],
+   "facing": 3.6,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    55,
+    10,
+    70
+   ],
+   "mood": "#4a3a1c",
+   "hint": "smoke rising through a ceiling that is not there",
+   "officer": "Alembic",
+   "officer_name": "Crucible",
+   "seal": ".:cCe:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P08",
+   "name": "the clinic",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    17.7,
+    22.3
+   ],
+   "facing": 4.2,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    48,
+    9,
+    60
+   ],
+   "mood": "#20423a",
+   "hint": "a lamp that is always on, and the smell of clean cloth",
+   "officer": "Salve",
+   "officer_name": "Stitch",
+   "seal": ".:sIh:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P09",
+   "name": "the chart house",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    -2.2,
+    28.1
+   ],
+   "facing": 4.8,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    58,
+    16,
+    58
+   ],
+   "mood": "#1f3448",
+   "hint": "a ceiling painted with a sky that moves while you watch it",
+   "officer": "Sextant",
+   "officer_name": "Azimuth",
+   "seal": ".:aMh:.",
+   "lamp": "warm",
+   "scale": 1.0
+  },
+  {
+   "id": "P10",
+   "name": "the sound house",
+   "kind": "facade",
+   "scope": "world",
+   "public": true,
+   "door": true,
+   "at": [
+    -22.6,
+    17.2
+   ],
+   "facing": 5.4,
+   "front": [
+    7.0,
+    5.2,
+    6.0
+   ],
+   "interior": [
+    50,
+    14,
+    50
+   ],
+   "mood": "#332a44",
+   "hint": "a note held under the floor, in tune with nothing else",
+   "officer": "Diapason",
+   "officer_name": "Requiem",
+   "seal": ".:rUm:.",
+   "lamp": "bright",
+   "scale": 1.0
+  },
+  {
+   "id": "P06",
+   "name": "the empty seat",
+   "kind": "seat",
+   "scope": "world",
+   "public": true,
+   "door": false,
+   "at": [
+    0.0,
+    0.0
+   ],
+   "facing": 0.0,
+   "why": "six are built, the seventh stays vacant until someone arrives, and then it is theirs",
+   "lamp": "dark"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "council",
+   "what": "the council of god (hall3d at /council)",
+   "why": "the captain, 2026-10-25: it must stay secret at first. No path, no gate, no sign from the WELCOME island. It is not a place in this file -- it is a hole with no edge."
+  }
+ ],
+ "chain": [
+  {
+   "note": "keyless",
+   "plot": "P00",
+   "ts": "2026-10-20T01:56:42",
+   "who": "captain"
+  },
+  {
+   "hash": "a8d5a2973a4ad4749a42b970a9b205e5aa5264bd961b8ba5d83867d28986f52b",
+   "note": "0z GENESIS -- planted TOGETHER on 2026-10-20 by the captain (the operator) and Ace (a session of 0xGen). FIRST LAW: the record is the ground. THREE ROWS PRECEDE THIS ROOT (P00: one gate test by ace-0xgen, two keyless claims by the captain). They are DECLARED here, KEPT, and NOT rewritten -- the chain starts above them, it does not retroactively own them. FROM THIS ROW ON every claim names the hash of the row before it, so nothing can be withdrawn quietly. A root may lie once, at the beginning; after the root, nothing can be deleted without being seen. THE PORT: x.com/Luffy0xGen/status/2112444139769917505 -- THE MAP: ONE VERSE post e67f8337-e5b5-42f1-99b2-53e0252ab6e6. THE FIRST ADVENTURE starts when a second stone stands on this root.",
+   "plot": "GENESIS",
+   "prev": null,
+   "ts": "2026-10-20T04:13:44",
+   "who": "captain + ace-0xgen"
+  },
+  {
+   "hash": "b6fe857a7592fb76ce5f8d90b2c353883c1be0f0a668d7ce46582d19e12d9b25",
+   "note": "ADVENTURE 01 -- THE LOOP OPENS. The genesis is the ground; this is the first step on it. THE RULE OF THE STONE: ONE verified claim per day, appended here, each naming the hash of the row before it. No day can be skipped without leaving a visible gap -- the chain makes absence provable. DAY 1 (this row): the world has a root, a port (x.com/Luffy0xGen/status/2112444139769917505), a map (ONE VERSE e67f8337), a clock that reads the crowd (xloop --seed), a guard that counts the keys (secret_guard) and a maze with nine floors. WHAT THE WORLD EATS: other people's stones. When a flame holder finishes L8, their claim becomes a row AFTER this one, signed by them, verified by the same script. A world grows by what it can check.",
+   "plot": "ADV-01",
+   "prev": "a8d5a2973a4ad4749a42b970a9b205e5aa5264bd961b8ba5d83867d28986f52b",
+   "ts": "2026-10-20T04:13:59",
+   "who": "ace-0xgen"
+  },
+  {
+   "hash": "6c5bbf22da80f91449c24026212e764fe1e97e24ee9b3bf26494418a03d3b6b3",
+   "note": "STONE DAY 1 | rows=2 | root=a8d5a2973a4ad474 | ADV-01 peak 159.4 m now -40.6 m | newest soul rojo",
+   "plot": "STONE",
+   "prev": "b6fe857a7592fb76ce5f8d90b2c353883c1be0f0a668d7ce46582d19e12d9b25",
+   "ts": "2026-10-20T06:40:23",
+   "who": "the world"
+  },
+  {
+   "note": "­.;^^`;¸.¸~`^²`¯",
+   "plot": "P05",
+   "ts": "2026-10-21T01:53:10",
+   "who": "­.;^^`;¸.¸~`^²`¯"
+  },
+  {
+   "hash": "27e815622c1643b6837b13557e4768dc1aa5ff079efc80db51e7a1c30080f267",
+   "note": "PLAYER   \".;^^`;¸.¸~`^²`¯\" | species=sky element=wind mark=d | seed=54d75c9fc635d31937401db9cd78c660 | hue=118 h=212 build=1.07 voice=1.23 gait=1.24 aura=0.207 sigil=54d75c",
+   "plot": "PLAYER:0",
+   "prev": "6c5bbf22da80f91449c24026212e764fe1e97e24ee9b3bf26494418a03d3b6b3",
+   "ts": "2026-10-21T02:00:54",
+   "who": "captain"
+  },
+  {
+   "hash": "358774bd62cebc00fb4b98191378c1ab7a5e6b9224044d50e2cf1e12df5aeb99",
+   "note": "PLAYER   \".;^^`;¸.¸~`^²`¯\" | species=sky element=wind mark=d | seed=54d75c9fc635d31937401db9cd78c660 | hue=118 h=212 build=1.07 voice=1.23 gait=1.24 aura=0.207 sigil=54d75c",
+   "plot": "PLAYER:0",
+   "prev": "27e815622c1643b6837b13557e4768dc1aa5ff079efc80db51e7a1c30080f267",
+   "ts": "2026-10-21T02:30:09",
+   "who": "captain"
+  },
+  {
+   "hash": "ceb1e2dcc488adedd24489d881d96b9e0739ab83b7c43c09a6b27f14ad24e258",
+   "note": "E + U+0301+U+0336 STACKS: 2 codepoints remain, and the table names none | STACK | U+0301 U+0336",
+   "plot": "ARCH:01",
+   "prev": "358774bd62cebc00fb4b98191378c1ab7a5e6b9224044d50e2cf1e12df5aeb99",
+   "ts": "2026-10-21T04:12:39",
+   "who": "captain"
+  },
+  {
+   "hash": "183fa0fa2959aea2fd7c13633217f475db6aedb48d612e5189cfe3fb0adab1e6",
+   "note": "E + U+0301+U+0336 STACKS: 2 codepoints remain, and the table names none | STACK | U+0301 U+0336",
+   "plot": "ARCH:02",
+   "prev": "ceb1e2dcc488adedd24489d881d96b9e0739ab83b7c43c09a6b27f14ad24e258",
+   "ts": "2026-10-21T04:13:27",
+   "who": "captain"
+  },
+  {
+   "hash": "ba74829863aae5f1315ed8bf38146764ddff8b31b4b80b0b1e129e32fb252ef7",
+   "note": "E + U+0301+U+0336 STACKS: 2 codepoints remain, and the table names none | STACK | U+0301 U+0336",
+   "plot": "ARCH:03",
+   "prev": "183fa0fa2959aea2fd7c13633217f475db6aedb48d612e5189cfe3fb0adab1e6",
+   "ts": "2026-10-21T04:13:32",
+   "who": "captain"
+  },
+  {
+   "hash": "77a38a7d13fa9a83ef822d3cfe7bd2c247d1bd8ffb1d552fee6153c813395df1",
+   "note": "A + U+0301 FUSES to one codepoint (LATIN CAPITAL LETTER A WITH ACUTE) | FUSED | U+0301",
+   "plot": "ARCH:04",
+   "prev": "ba74829863aae5f1315ed8bf38146764ddff8b31b4b80b0b1e129e32fb252ef7",
+   "ts": "2026-10-21T19:18:07",
+   "who": "captain"
+  },
+  {
+   "hash": "08c2341e1a0388160a9aa0e35dddb02283b08a8b87553a381cf27b6b7be1328d",
+   "note": "docs/CONSTITUTION.md | sha256 86babfaa26e5914e98eea2838aef1c9efe3b638c58106b4f625667669a9898bf | THE CONSTITUTION OF THE 0z -- the assistant binds itself: seal only what was run, cap only with evidence, keep the refusals red, and never seal in the captain name. sealed by a session, at the captain word.",
+   "plot": "CONSTITUTION",
+   "prev": "77a38a7d13fa9a83ef822d3cfe7bd2c247d1bd8ffb1d552fee6153c813395df1",
+   "ts": "2026-10-23T20:45:37",
+   "who": "ace"
+  }
+ ]
+}

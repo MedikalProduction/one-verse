@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>0z · THE BOAT ATELIER</title>
+<!-- 🔥 Ace · 2026-10-28 · THE GARAGE — the boat atelier's 3D bench.
+     WHAT THIS IS: a prompt becomes a boat (boat.mjs derives it), the boat is DRAWN from the same
+     stations the numbers came from, and every part is a thing you can TOUCH. Tap a part, nudge it,
+     replace it, remove it, save it to the library and use it on another build.
+     WHY POINTER EVENTS AND NOT MOUSE EVENTS: the captain asked for a pen (2026-10-28). A stylus, a
+     finger and a mouse all emit `pointerdown/move/up`, so there is ONE input path, not three that rot
+     separately. Nothing here needs hover: on a phone there is no hover, so a hover-only affordance is a
+     feature that exists for nobody.
+     WHAT IT DOES NOT DO: it does not claim a boat is safe. `verdict()` from boat.mjs is printed at the
+     top, including the UNMEASURED list -- GM, heel, waves, panel stress -- so a green chip is never the
+     whole story. Road/snow/air are refused by the engine, not by this page.
+     NOTHING IS SAVED BEHIND YOUR BACK: no localStorage, no auto-save. EXPORT writes a JSON file you keep;
+     IMPORT reads one back. The record is authored, never silently stored. -->
+<style>
+  :root { --ink: #e8e4dc; --dim: #8d949b; --gold: #c9a227; --water: #4a7c8c; --earth: #8a6b4a;
+          --fire: #b4552d; --mercury: #9aa6b2; --air: #b9c6cc; --ok: #6fcf97; --bad: #eb5757; --warn: #f2c94c; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #070a0c; color: var(--ink);
+               font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+
+  #hud { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; gap: 8px; align-items: center;
+         flex-wrap: wrap; padding: 8px 10px; background: #070a0ce6; border-bottom: 1px solid #ffffff14;
+         backdrop-filter: blur(8px); }
+  #urn { font: 600 15px/1 ui-monospace, Menlo, Consolas, monospace; color: var(--gold); letter-spacing: .06em; }
+  #fam { color: var(--dim); font-size: 13px; }
+  #chip { margin-left: auto; padding: 6px 10px; border-radius: 999px; font-size: 13px; font-weight: 600;
+          border: 1px solid currentColor; }
+  .pass { color: var(--ok); } .fail { color: var(--bad); } .un { color: var(--warn); }
+
+  #panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; max-height: 56vh; overflow-y: auto;
+           overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 10px 12px 18px;
+           background: #0a1016f7; border-top: 1px solid #ffffff1a; }
+  @media (min-width: 900px) {
+    #panel { left: auto; top: 0; bottom: 0; width: 392px; max-height: none; border-left: 1px solid #ffffff1a;
+             border-top: 0; padding-top: 62px; }
+  }
+  h2 { margin: 14px 0 6px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  input[type=text] { flex: 1 1 160px; min-height: 44px; padding: 10px 12px; font: inherit; color: var(--ink);
+                     background: #0f161c; border: 1px solid #ffffff26; border-radius: 10px; }
+  button { min-height: 44px; padding: 10px 14px; font: inherit; font-weight: 600; color: var(--ink);
+           background: #16202a; border: 1px solid #ffffff26; border-radius: 10px; cursor: pointer; }
+  button:active { transform: translateY(1px); background: #1e2c38; }
+  button.gold { background: #2a2415; border-color: #c9a22766; color: var(--gold); }
+  button.wide { flex: 1 1 auto; }
+  .note { color: var(--dim); font-size: 13px; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 14px; }
+  .kv b { font-weight: 600; color: var(--ink); }
+  .kv span { color: var(--dim); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px 4px; text-align: right; border-bottom: 1px solid #ffffff12; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--dim); font-weight: 600; }
+  .adv { margin: 8px 0; padding: 9px 10px; border-radius: 10px; background: #0f161c; border-left: 3px solid var(--dim); }
+  .adv b { display: block; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .adv.gap { border-left-color: var(--bad); } .adv.emergent { border-left-color: var(--gold); }
+  .adv.upgrade { border-left-color: var(--water); } .adv.speed { border-left-color: var(--ok); }
+  .adv .why { color: var(--ink); font-size: 13px; }
+  .adv .do { color: var(--dim); font-size: 13px; margin-top: 3px; }
+  #sel { padding: 10px; border-radius: 10px; background: #101a22; border: 1px solid #ffffff1a; }
+  #sel.empty { color: var(--dim); text-align: center; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .pad button { min-height: 46px; padding: 6px; font-size: 13px; }
+  .badge { display: inline-block; min-width: 22px; text-align: center; }
+  details { margin-top: 8px; } summary { cursor: pointer; color: var(--dim); font-size: 13px; }
+  ul { margin: 6px 0 0 18px; padding: 0; color: var(--dim); font-size: 13px; }
+  #lib { font-size: 13px; }
+  /* ── THE HELM. Big targets because a helm is used with a thumb or a pen, never with a mouse in a chair. */
+  #tspeed { display: flex; gap: 6px; flex-wrap: wrap; }
+  #tspeed button { min-width: 54px; }
+  #helm { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+  #helm button { min-height: 54px; font-size: 14px; }
+  #readout { font: 600 13px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--gold); }
+  #readout span { color: var(--dim); }
+  .librow { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid #ffffff10; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<header id="hud">
+  <span id="urn">····</span>
+  <span id="fam">—</span>
+  <span id="chip" class="un">…</span>
+</header>
+
+<aside id="panel">
+  <h2>the prompt · the seed</h2>
+  <div class="row">
+    <input id="prompt" type="text" spellcheck="false" autocomplete="off" value="the ark angel's skiff"
+           placeholder="name the boat — the same words always give the same hull">
+    <button id="build" class="gold">DERIVE</button>
+  </div>
+  <div class="note" id="seednote">prompt → seed → urn. Same words, same boat, forever.</div>
+
+  <h2>the helm · .:T:. time</h2>
+  <div id="tspeed">
+    <button data-t="0">⏸ 0</button>
+    <button data-t="0.25">¼×</button>
+    <button data-t="1" class="gold">1×</button>
+    <button data-t="4">4×</button>
+    <button id="play" class="gold" style="flex:1 1 auto">▶ RUN</button>
+  </div>
+  <div id="readout">.:T:. 1.00× · stopped</div>
+  <div id="helm">
+    <button data-drive="port">◀ PORT</button>
+    <button data-drive="fwd">▲ AHEAD</button>
+    <button data-drive="stop">■ STOP</button>
+    <button data-drive="stbd">STBD ▶</button>
+  </div>
+  <div class="note" id="simnote">Sandbox, not a sea trial: the swell is visual and the speed is kinematic.
+    Nothing here is a hydrodynamic calculation — the verdict above is the only thing that judges her.</div>
+
+  <h2>compare the hulls</h2>
+  <table id="cmp"><thead><tr><th>family</th><th>LOA</th><th>beam</th><th>draft</th><th>disp.</th><th>payload</th><th>sheets</th></tr></thead><tbody></tbody></table>
+  <div class="note">Tap a row to build THAT hull with the same prompt.</div>
+
+  <h2>the verdict</h2>
+  <div id="verdict"></div>
+
+  <h2>the part you touched</h2>
+  <div id="sel" class="empty">nothing selected — tap a part in the model</div>
+
+  <h2>the advisor</h2>
+  <div id="advice"></div>
+  <details><summary>what the advisor does not know</summary><ul id="norule"></ul></details>
+
+  <h2>the library · lego, with provenance</h2>
+  <div id="lib" class="note">empty — select a part and SAVE IT</div>
+  <div class="row" style="margin-top:8px">
+    <button id="bp" class="wide gold">EXPORT BLUEPRINT</button>
+    <button id="exp" class="wide">EXPORT bench + lib</button>
+    <button id="imp" class="wide">IMPORT</button>
+    <input id="file" type="file" accept="application/json,.json,.jsonl,text/plain" style="display:none">
+  </div>
+
+  <h2>the light · projector</h2>
+  <div id="lightctl" class="row">
+    <button data-light="on">ON / OFF</button>
+    <button data-light="int+">LIGHT +</button>
+    <button data-light="int-">LIGHT −</button>
+    <button data-light="ang+">BEAM +</button>
+    <button data-light="ang-">BEAM −</button>
+    <button data-light="up">▲ UP</button>
+    <button data-light="reset">RESET</button>
+    <button data-light="move" class="wide">MOVE</button>
+  </div>
+  <div class="note" id="lightnote">a spot with a gizmo: turn MOVE on, then tap the water to place it — Blender's lamp, in the bench.</div>
+
+  <details style="margin-top:12px">
+    <summary>how to use it</summary>
+    <ul>
+      <li><b>Tap</b> a part to select it. With a pen: touch it and drag to move it on the water plane.</li>
+      <li><b>Drag</b> on empty water to orbit · <b>two fingers</b> to pin · wheel/middle-drag to zoom.</li>
+      <li>The pad moves the selected part; ↑↓ in Y-mode lifts it.</li>
+      <li>Nothing is saved unless you EXPORT. The green chip is the verdict, and the unmeasured list is
+          printed above it — read both.</li>
+      <li>Everything is in millimetres: the numbers you see are the numbers you cut.</li>
+    </ul>
+  </details>
+</aside>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { derive, deriveAll, kFamilyNames, kFamilies, kElements, advise, verdict, kNoRuleFor,
+         savePart, fromLibrary, usePart, kSupports, parseDna, dnaRow, dnaAppend, dnaToJsonl,
+         blueprint, bomOf } from "./boat.mjs";
+
+/* ── UNITS. The engine speaks millimetres; the scene speaks metres. ONE conversion, in ONE place, so a
+   number can never be read in the wrong unit without it being visible here. */
+const M = (mm) => mm / 1000;
+
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));   // a pen does not need 3x pixels
+renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070a0c);
+scene.fog = new THREE.Fog(0x070a0c, 14, 42);
+
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.05, 200);
+
+scene.add(new THREE.HemisphereLight(0x9fc4d4, 0x0b0e10, 1.15));
+const sun = new THREE.DirectionalLight(0xfff2d8, 1.5);
+sun.position.set(4.5, 9, 3.5);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x6fa8c8, 0.55);
+fill.position.set(-6, 3, -5);
+scene.add(fill);
+
+/* THE WATER is the design waterline, and it is a REAL reference: y = 0 in the engine is this plane, so a
+   part that sits below it is wet and a freeboard that looks small here IS small. */
+const water = new THREE.Mesh(
+  new THREE.PlaneGeometry(90, 90, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0x0d2a36, roughness: 0.25, metalness: 0.15,
+                                   transparent: true, opacity: 0.82 })
+);
+water.rotation.x = -Math.PI / 2;
+water.position.y = -0.0015;
+scene.add(water);
+const grid = new THREE.GridHelper(40, 80, 0x1d4a5a, 0x123540);
+grid.position.y = 0;
+scene.add(grid);
+
+/* ── THE CAMERA IS ORBITED BY HAND, not by a control library, because the pen is the point: one pointer
+   drags, two pointers pinch, and neither needs a hover state. */
+const orbit = { target: new THREE.Vector3(0, 0.25, 0), radius: 6, theta: 0.85, phi: 1.02 };
+function applyOrbit() {
+  const r = orbit.radius, t = orbit.theta, p = Math.min(Math.PI - 0.12, Math.max(0.12, orbit.phi));
+  camera.position.set(
+    orbit.target.x + r * Math.sin(p) * Math.sin(t),
+    orbit.target.y + r * Math.cos(p),
+    orbit.target.z + r * Math.sin(p) * Math.cos(t)
+  );
+  camera.lookAt(orbit.target);
+}
+function frameFor(loaMm) {
+  const L = M(loaMm);
+  orbit.radius = L * 1.55;
+  orbit.target.set(0, L * 0.06, 0);
+  orbit.theta = 0.9; orbit.phi = 1.06;
+  applyOrbit();
+}
+
+function onResize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", onResize);
+onResize();
+/* ── THE MODEL. Three things are drawn, and they are the three the engine actually has: the HULL (the
+   lofted skin, drawn from the station table), the PARTS (each one a pickable box on the boat), and the
+   WATER (the design waterline at y = 0). Nothing is drawn that has no number behind it. */
+const boat = new THREE.Group();
+scene.add(boat);
+
+const matOf = (() => {
+  const cache = new Map();
+  const hex = { water: 0x4a7c8c, earth: 0x8a6b4a, air: 0xb9c6cc, fire: 0xb4552d, mercury: 0x9aa6b2 };
+  return (el) => {
+    if (!cache.has(el)) cache.set(el, new THREE.MeshStandardMaterial({
+      color: hex[el] || 0x9aa6b2, roughness: 0.72, metalness: 0.06,
+    }));
+    return cache.get(el);
+  };
+})();
+
+let hullMesh = null, hullEdges = null;
+let selBox = null;
+const pickables = [];
+
+function disposeGroup(g) {
+  for (let i = g.children.length - 1; i >= 0; i--) {
+    const c = g.children[i];
+    if (c.geometry) c.geometry.dispose();
+    g.remove(c);
+  }
+}
+
+/* THE HULL: five points per station (port sheer → port chine → keel → stbd chine → stbd sheer) lofted to
+   the next station. The skin is translucent so the frames inside are visible -- a workshop view, not a
+   product render. */
+function buildHull(spec) {
+  const S = spec.sections;
+  const P = S.map((s) => [
+    [-s.hb, s.sheerY], [-s.chineX, s.chineY], [0, s.keelY], [s.chineX, s.chineY], [s.hb, s.sheerY],
+  ]);
+  const pos = [], idx = [];
+  for (let i = 0; i < S.length; i++) {
+    for (let j = 0; j < 5; j++) {
+      pos.push(M(P[i][j][0]), M(P[i][j][1]), M(S[i].z));
+    }
+  }
+  for (let i = 1; i < S.length; i++) {
+    for (let j = 1; j < 5; j++) {
+      const a = (i - 1) * 5 + (j - 1), b = (i - 1) * 5 + j, c = i * 5 + j, d = i * 5 + (j - 1);
+      idx.push(a, b, c, a, c, d);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  hullMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    color: 0x9fc4d4, roughness: 0.55, metalness: 0.05, transparent: true, opacity: 0.24,
+    side: THREE.DoubleSide, depthWrite: false,
+  }));
+  boat.add(hullMesh);
+
+  /* THE SEAMS — the same quads as lines. On a phone this is what makes a hull read as a SHAPE rather than
+     a smudge: flat shaded transparency alone loses its edges at 400 px wide. */
+  const eg = new THREE.EdgesGeometry(geo, 1);
+  hullEdges = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: 0x63b7d6, transparent: true, opacity: 0.5 }));
+  boat.add(hullEdges);
+}
+
+function buildParts(res) {
+  for (const p of res.parts) {
+    if (p.gone || p.kind === "ref") continue;
+    const g = new THREE.BoxGeometry(M(p.size[0]), M(p.size[1]), M(p.size[2]));
+    const m = new THREE.Mesh(g, matOf(p.el));
+    m.position.set(M(p.at[0]), M(p.at[1]), M(p.at[2]));
+    m.rotation.set(
+      THREE.MathUtils.degToRad(p.rot[0] || 0),
+      THREE.MathUtils.degToRad(p.rot[1] || 0),
+      THREE.MathUtils.degToRad(p.rot[2] || 0)
+    );
+    m.userData.partId = p.id;
+    boat.add(m);
+    pickables.push(m);
+  }
+}
+
+/* ── STATE. `base` is the boat the PROMPT gives; `res` is that boat with the captain's edits applied. Two
+   derivations, so a drag is a DELTA from the truth and can always be undone by clearing the edit. */
+let state = {
+  prompt: "the ark angel's skiff",
+  family: "skiff",
+  base: null,
+  res: null,
+  edits: new Map(),        // id -> { at:[dx,dy,dz], size, material, gone }
+  lib: [],
+  added: [],               // library instances placed on THIS build
+  cmp: null,               // the three-family comparison, cached per prompt
+  selected: null,          // part id
+  yMode: false,
+};
+
+function rebuild() {
+  disposeGroup(boat);
+  pickables.length = 0;
+  state.base = derive(state.prompt, state.family);
+  const rows = [...state.edits.entries()].map(([id, e]) => ({ id, ...e }));
+  state.res = rows.length ? derive(state.prompt, state.family, { edits: rows }) : state.base;
+  /* THE LIBRARY ON THE BOAT. A placed part goes through `usePart`, so the float and the cut list are
+     RECOMPUTED for the boat that received it -- a library part that did not change the numbers would be
+     a sticker, not a part. */
+  for (const a of state.added) {
+    const def = state.lib.find((d) => d.id === a.defId);
+    if (def) state.res = usePart(state.res, def, { id: a.id, at: a.at, mate: a.mate });
+  }
+  buildHull(state.res.spec);
+  buildParts(state.res);
+  if (state.selected) select(state.selected);
+  paint();
+}
+
+/* ── SELECTION. Tap = select. The box around the part is gold because gold is what this world uses for
+   "this one, held". */
+function select(id) {
+  state.selected = id;
+  if (selBox) { boat.remove(selBox); selBox.dispose?.(); selBox = null; }
+  const mesh = pickables.find((m) => m.userData.partId === id);
+  if (mesh) {
+    selBox = new THREE.BoxHelper(mesh, 0xc9a227);
+    boat.add(selBox);
+  }
+  paintSelection();
+}
+
+const pickRay = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+function pickAt(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+  pickRay.setFromCamera(ndc, camera);
+  const hits = pickRay.intersectObjects(pickables, false);
+  return hits.length ? hits[0].object.userData.partId : null;
+}
+/* ── THE HANDS. One Pointer Events path for mouse, finger and stylus. `pointerType` is read only to make
+   the pen behave a touch more gently (a pen is more precise than a finger, and it is often used to TRACE,
+   so a small dead-zone stops a tremor from becoming a 3 mm edit).
+   ORBIT: drag on empty water.  DRAG: touch a part and move.  PINCH: two pointers change the distance. */
+const pointers = new Map();
+let mode = null;      // "orbit" | "drag" | "pinch"
+let drag = null;      // the part being moved
+let orbitStart = null;
+let pinchFrom = 0;
+
+const hp = new THREE.Plane();
+const hv = new THREE.Vector3();
+const hr = new THREE.Raycaster();
+
+function rayAt(e) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  hr.setFromCamera(ndc, camera);
+  return hr.ray;
+}
+function planeThrough(pos, vertical) {
+  if (!vertical) { hp.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), pos); return hp; }
+  /* vertical plane FACING the camera: the part is lifted and lowered in the screen's own up direction,
+     which is the only one a person can aim at with a pen. */
+  const n = new THREE.Vector3();
+  camera.getWorldDirection(n);
+  n.y = 0;
+  if (n.lengthSq() < 1e-6) n.set(0, 0, 1);
+  n.normalize().cross(new THREE.Vector3(0, 1, 0)).normalize();
+  hp.setFromNormalAndCoplanarPoint(n, pos);
+  return hp;
+}
+function hitOn(plane, e) {
+  const ray = rayAt(e);
+  return ray.intersectPlane(plane, hv.clone());
+}
+const partOf = (id) => (state.res ? state.res.parts.find((p) => p.id === id) : null);
+
+canvas.addEventListener("pointerdown", (e) => {
+  canvas.setPointerCapture?.(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    mode = "pinch";
+    const [a, b] = [...pointers.values()];
+    pinchFrom = Math.hypot(a.x - b.x, a.y - b.y);
+    drag = null;
+    return;
+  }
+  /* MOVE MODE for the lamp: while it is on, the next tap on the water PLACES the light there. It runs before
+     picking, because a lamp you are moving must not fight with the part under your pen. */
+  if (lightMove) {
+    const p = groundAt(e);
+    if (p) { lamp.position.set(p.x, Math.max(1.5, lamp.position.y), p.z); syncLamp(); return; }
+  }
+  const id = pickAt(e.clientX, e.clientY);
+  if (id) {
+    select(id);
+    const p = partOf(id);
+    const pos = new THREE.Vector3(M(p.at[0]), M(p.at[1]), M(p.at[2]));
+    const plane = planeThrough(pos, state.yMode);
+    const start = hitOn(plane, e);
+    if (!start) return;
+    mode = "drag";
+    drag = { id, plane, start, from: [p.at[0], p.at[1], p.at[2]],
+             mesh: pickables.find((m) => m.userData.partId === id), moved: false };
+  } else {
+    mode = "orbit";
+    orbitStart = { x: e.clientX, y: e.clientY, theta: orbit.theta, phi: orbit.phi };
+    select(null);
+  }
+}, { passive: true });
+
+canvas.addEventListener("pointermove", (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (mode === "pinch" && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinchFrom > 0) {
+      orbit.radius = Math.min(40, Math.max(0.8, orbit.radius * (pinchFrom / d)));
+      applyOrbit();
+    }
+    pinchFrom = d;
+    return;
+  }
+  if (mode === "orbit" && orbitStart) {
+    const dx = (e.clientX - orbitStart.x) / Math.max(300, window.innerWidth);
+    const dy = (e.clientY - orbitStart.y) / Math.max(300, window.innerHeight);
+    orbit.theta = orbitStart.theta - dx * 4.2;
+    orbit.phi = orbitStart.phi - dy * 3.0;
+    applyOrbit();
+    return;
+  }
+  if (mode === "drag" && drag) {
+    const now = hitOn(drag.plane, e);
+    if (!now) return;
+    hv.copy(now).sub(drag.start);
+    const dead = e.pointerType === "pen" ? 0.0012 : 0.002;      // 1.2 mm for a pen, 2 mm for a finger
+    if (Math.abs(hv.x) + Math.abs(hv.y) + Math.abs(hv.z) < dead) return;
+    drag.moved = true;
+    drag.mesh.position.set(
+      M(drag.from[0]) + hv.x, M(drag.from[1]) + hv.y, M(drag.from[2]) + hv.z
+    );
+    if (selBox) selBox.update();
+  }
+}, { passive: true });
+
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (mode === "drag" && drag && drag.moved) {
+    const p = drag.mesh.position;
+    const e0 = state.edits.get(drag.id) || {};
+    state.edits.set(drag.id, { ...e0, at: [
+      Math.round((p.x - M(drag.from[0])) * 1000),
+      Math.round((p.y - M(drag.from[1])) * 1000),
+      Math.round((p.z - M(drag.from[2])) * 1000),
+    ] });
+    const id = drag.id;
+    drag = null; mode = null;
+    rebuild();
+    select(id);
+    return;
+  }
+  drag = null;
+  if (pointers.size === 0) { mode = null; orbitStart = null; }
+}
+
+canvas.addEventListener("pointerup", endPointer, { passive: true });
+canvas.addEventListener("pointercancel", endPointer, { passive: true });
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  orbit.radius = Math.min(40, Math.max(0.8, orbit.radius * (1 + Math.sign(e.deltaY) * 0.08)));
+  applyOrbit();
+}, { passive: false });
+
+/* ── THE LOOP. One frame does one thing: draw. No physics in the loop, because the numbers come from the
+   derivation, not from a simulation that could drift from it. */
+function tick() {
+  /* ONE CLOCK, ONE PLACE. `.:T:.` scales the delta, so 4× is four times the world per frame -- not a faster
+     renderer. At T=0 the sandbox is frozen and the bench is exactly as you left it. */
+  const dt = Math.min(0.05, simClock.getDelta());
+  if (sim.on && sim.T > 0) simStep(dt * sim.T);
+  if (selBox) selBox.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+/* ── THE PANEL. Everything printed here comes from boat.mjs: the verdict, the advisor's numbers, the cut
+   list. The page adds NO claim of its own -- if a number is on screen, it was derived. */
+const $ = (id) => document.getElementById(id);
+
+function paintVerdict() {
+  const v = verdict(state.res);
+  const un = v.unmeasured.length;
+  const chip = $("chip");
+  chip.className = v.ok ? (un ? "un" : "pass") : "fail";
+  chip.textContent = v.ok ? (un ? "PASS · " + un + " UNMEASURED" : "PASS") : "FAIL";
+  $("verdict").innerHTML =
+    '<div class="note">' + v.verdict.replace(/</g, "&lt;") + "</div>" +
+    "<details><summary>unmeasured (" + un + ") — read this before trusting a green chip</summary><ul>" +
+    v.unmeasured.map((u) => "<li>" + u.replace(/</g, "&lt;") + "</li>").join("") + "</ul></details>";
+}
+
+function paintCompare() {
+  if (!state.cmp) state.cmp = deriveAll(state.prompt);
+  const tb = $("cmp").querySelector("tbody");
+  tb.innerHTML = state.cmp.map((r) => {
+    const f = r.float, s = r.spec;
+    const on = r.family === state.family ? ' style="color:var(--gold)"' : "";
+    const keys = Object.keys(r.cuts.sheets);
+    return '<tr data-fam="' + r.family + '"' + on + "><td>" + r.family + "</td><td>" + s.loa + "</td><td>" +
+      s.beam + "</td><td>" + s.draft + "</td><td>" + f.displace_kg + "</td><td>" + f.payload_kg + "</td><td>" +
+      (keys.length ? r.cuts.sheets[keys[0]] : 0) + "</td></tr>";
+  }).join("");
+}
+
+function paintAdvice() {
+  const lines = advise(state.res);
+  $("advice").innerHTML = lines.length
+    ? lines.map((a) => '<div class="adv ' + a.kind + '"><b>' + a.kind + '</b><div class="why">' +
+        a.why + '</div><div class="do">→ ' + a.do + "</div></div>").join("")
+    : '<div class="note">nothing to suggest on this hull: no gap, no missing joint, nothing repeated.</div>';
+  $("norule").innerHTML = kNoRuleFor.map((s) => "<li>" + s + "</li>").join("");
+}
+
+function paintLib() {
+  $("lib").innerHTML = state.lib.length
+    ? state.lib.map((d) => '<div class="librow"><span>' + d.id + ' <span class="note">· ' +
+        d.size.map((n) => Math.round(n)).join("×") + " mm · " + d.material + " · from " + d.from.urn +
+        '</span></span><button data-def="' + d.id + '">PLACE</button></div>').join("")
+    : "empty — select a part and SAVE IT";
+}
+
+function paintSelection() {
+  const box = $("sel");
+  const p = state.selected ? partOf(state.selected) : null;
+  if (!p) {
+    box.className = "empty";
+    box.innerHTML = "nothing selected — tap a part in the model";
+    return;
+  }
+  box.className = "";
+  const el = kElements[p.el] || { glyph: "·", label: p.el };
+  const cut = p.cut ? p.cut.map((n) => Math.round(n)).join(" × ") + " mm flat" : "—";
+  box.innerHTML =
+    '<div class="kv">' +
+    "<b>" + p.name + "</b><span>" + el.glyph + " " + el.label + "</span>" +
+    "<span>id</span><b>" + p.id + "</b>" +
+    "<span>size</span><b>" + p.size.map((n) => Math.round(n)).join(" × ") + " mm</b>" +
+    "<span>at</span><b>" + p.at.map((n) => Math.round(n)).join(", ") + " mm</b>" +
+    "<span>cut</span><b>" + cut + "</b>" +
+    "<span>mate</span><b>" + p.mate + "</b>" +
+    "<span>material</span><b>" + (p.material || "—") + "</b>" +
+    (p.def ? "<span>from lib</span><b>" + p.def + "</b>" : "") +
+    "</div>" +
+    '<div class="pad">' +
+    '<button data-act="xm">−X 10</button><button data-act="zm">−Z 10</button><button data-act="xp">+X 10</button>' +
+    '<button data-act="ym">−Y 10</button><button data-act="yp">+Y 10</button><button data-act="zp">+Z 10</button>' +
+    "</div>" +
+    '<div class="row" style="margin-top:8px">' +
+    '<button class="wide" data-act="rep">REPLACE</button>' +
+    '<button class="wide ' + (state.yMode ? "gold" : "") + '" data-act="y">Y-MODE ' +
+    (state.yMode ? "ON" : "OFF") + "</button>" +
+    "</div>" +
+    '<div class="row" style="margin-top:8px">' +
+    '<button class="wide gold" data-act="save">SAVE TO LIB</button>' +
+    '<button class="wide" data-act="del">REMOVE</button>' +
+    '<button class="wide" data-act="reset">RESET</button>' +
+    "</div>";
+}
+
+function paint() {
+  $("urn").textContent = "." + state.res.urn + ".";
+  $("fam").textContent = state.res.label + " · " + state.res.spec.loa + " × " + state.res.spec.beam +
+    " × " + state.res.spec.depth + " mm";
+  paintVerdict(); paintCompare(); paintAdvice(); paintLib(); paintSelection();
+}
+/* ── THE ACTIONS. One delegated listener per container, because a panel that re-renders its own buttons
+   cannot afford one listener per button (re-binding on every paint is how a UI leaks). */
+$("sel").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-act]");
+  const id = state.selected;
+  if (!b || !id) return;
+  const act = b.dataset.act;
+  const e0 = state.edits.get(id) || {};
+  const step = 10;
+  if (["xm", "xp", "ym", "yp", "zm", "zp"].includes(act)) {
+    const at = (e0.at || [0, 0, 0]).slice();
+    if (act === "xm") at[0] -= step;
+    if (act === "xp") at[0] += step;
+    if (act === "ym") at[1] -= step;
+    if (act === "yp") at[1] += step;
+    if (act === "zm") at[2] -= step;
+    if (act === "zp") at[2] += step;
+    state.edits.set(id, { ...e0, at });
+  } else if (act === "rep") {
+    const p = partOf(id);
+    if (p.kind === "panel") {
+      const T = [4, 6, 9, 12];                        // the thicknesses a supplier actually stocks
+      const t = T[(T.indexOf(Math.round(p.size[1])) + 1) % T.length];
+      state.edits.set(id, { ...e0, size: [p.size[0], t, p.size[2]],
+                            material: "ply " + t + "mm + glass both sides" });
+    } else {
+      state.edits.set(id, { ...e0, size: [Math.round(p.size[0]) + 10, p.size[1], p.size[2]],
+                            material: (p.material || "") + " (widened)" });
+    }
+  } else if (act === "del") state.edits.set(id, { ...e0, gone: true });
+  else if (act === "undel") state.edits.set(id, { ...e0, gone: false });
+  else if (act === "reset") state.edits.delete(id);
+  else if (act === "save") {
+    /* THE SAVE IS A ROW, not a mutation: append to the ledger, and let the shelf index follow. O(1) append,
+       one filter over a small list -- no parse, no scan of the file. */
+    const p = partOf(id);
+    const row = dnaRow("part", {
+      id: p.def || p.id, name: p.name, pk: p.kind, el: p.el,
+      size: p.size.map((n) => Math.round(n)), material: p.material, cut: p.cut || null,
+      note: p.note || "",
+      from: { urn: state.res.urn, family: state.res.family, prompt: state.prompt },
+    });
+    dna = Object.assign({}, dna, { rows: dnaAppend(dna.rows, row) });
+    state.lib = [{ ...row, kind: row.pk }].concat(state.lib.filter((d) => d.id !== row.id));
+  }
+  else if (act === "y") state.yMode = !state.yMode;
+  rebuild();
+  if (!state.edits.get(id)?.gone) select(id); else paintSelection();
+});
+
+$("cmp").addEventListener("click", (ev) => {
+  const tr = ev.target.closest("tr[data-fam]");
+  if (!tr) return;
+  state.family = tr.dataset.fam;
+  state.cmp = null;
+  rebuild();
+  frameFor(state.res.spec.loa);
+});
+
+$("lib").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-def]");
+  if (!b) return;
+  const def = state.lib.find((d) => d.id === b.dataset.def);
+  if (!def) return;
+  state.added.push({ defId: def.id, id: def.id + ".use" + (state.added.length + 1),
+                     at: [0, 0, 0], mate: "keel" });
+  rebuild();
+});
+
+$("build").addEventListener("click", () => {
+  state.prompt = $("prompt").value || "untitled";
+  state.edits.clear(); state.added.length = 0; state.cmp = null; state.selected = null;
+  rebuild();
+  frameFor(state.res.spec.loa);
+});
+$("prompt").addEventListener("keydown", (e) => { if (e.key === "Enter") $("build").click(); });
+
+/* ── EXPORT / IMPORT. ONE FILE: `dna.jsonl`. The bench is written as a `design` row, the parts as `part`
+   rows, and the whole ledger comes down as text. There is no localStorage here on purpose -- the record is
+   authored, exported and committed, never silently written. */
+$("exp").addEventListener("click", () => {
+  const design = dnaRow("design", {
+    urn: state.res.urn, prompt: state.prompt, family: state.family,
+    edits: [...state.edits.entries()].map(([id, e]) => ({ id, ...e })),
+    added: state.added,
+  });
+  const rows = dnaAppend(dna.rows, design);
+  dna = Object.assign({}, dna, { rows });
+  const blob = new Blob([dnaToJsonl(rows)], { type: "application/x-ndjson" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "dna.jsonl";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+$("imp").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const text = await f.text();
+  let parsed;
+  try {
+    parsed = parseDna(text);
+    if (!parsed.rows.length) throw new Error("no rows in that file");
+  } catch (err) {
+    alert("could not read that ledger: " + err.message);
+    return;
+  }
+  dna = parsed;
+  state.lib = parsed.shelf().map((s) => ({ ...s, kind: s.pk }));
+  const designs = [...parsed.designs.values()];
+  const last = designs[designs.length - 1];
+  if (last) {
+    state.prompt = last.prompt || state.prompt;
+    state.family = last.family || state.family;
+    state.edits = new Map((last.edits || []).map((r) => { const { id, ...rest } = r; return [id, rest]; }));
+    state.added = last.added || [];
+    $("prompt").value = state.prompt;
+  }
+  state.cmp = null; state.selected = null;
+  rebuild();
+  frameFor(state.res.spec.loa);
+  if (parsed.bad.length) {
+    alert(parsed.bad.length + " line(s) in that ledger could not be read and were skipped.");
+  }
+});
+
+/* ── THE LIGHT. A projector you can PLACE, not a sun you must live under. One spot, a brass gizmo you can see
+   and tap, and a MOVE mode where the next tap on the water puts the lamp there -- the Blender gesture, on a
+   phone, with a pen. It lights the bench; it has no opinion about the boat, and it never touches the verdict. */
+const lamp = new THREE.SpotLight(0xfff2d8, 160, 90, 0.55, 0.42, 1.1);
+lamp.position.set(4, 9, 4);
+lamp.castShadow = false;
+scene.add(lamp);
+scene.add(lamp.target);
+
+const gizmo = new THREE.Mesh(
+  new THREE.ConeGeometry(0.24, 0.55, 14),
+  new THREE.MeshStandardMaterial({ color: 0xffe6a8, emissive: 0xffc861, emissiveIntensity: 1.2 })
+);
+gizmo.rotation.x = Math.PI;                     // point the cone at what it lights
+scene.add(gizmo);
+
+let lightMove = false;
+const lightBase = { value: 160 };
+
+function syncLamp() {
+  gizmo.position.copy(lamp.position);
+  lamp.target.position.set(boat.position.x, 0, boat.position.z);
+  lamp.target.updateMatrixWorld();
+  $("lightnote").textContent = "intensity " + Math.round(lamp.intensity) + " · beam " +
+    ((lamp.angle * 180) / Math.PI).toFixed(0) + "° · " +
+    (lightMove ? "MOVE ON — tap the water to place it" : "MOVE off");
+}
+
+/* Where the pen meets the water plane -- the same ray the parts are picked with, so a lamp and a part are
+   placed by the same hand. */
+function groundAt(e) {
+  const ray = rayAt(e);
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  return ray.intersectPlane(plane, new THREE.Vector3()) || null;
+}
+
+$("lightctl").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-light]");
+  if (!b) return;
+  const k = b.dataset.light;
+  if (k === "on") { lamp.intensity = lamp.intensity > 0 ? 0 : lightBase.value; gizmo.visible = lamp.intensity > 0; }
+  if (k === "int+") { lightBase.value = Math.min(900, lightBase.value + 40); lamp.intensity = lightBase.value; }
+  if (k === "int-") { lightBase.value = Math.max(0, lightBase.value - 40); lamp.intensity = lightBase.value; }
+  if (k === "ang+") lamp.angle = Math.min(1.25, lamp.angle + 0.08);
+  if (k === "ang-") lamp.angle = Math.max(0.10, lamp.angle - 0.08);
+  if (k === "up") lamp.position.y = Math.min(30, lamp.position.y + 1);
+  if (k === "reset") { lamp.position.set(4, 9, 4); lamp.angle = 0.55; lightBase.value = 160; lamp.intensity = 160; gizmo.visible = true; }
+  if (k === "move") { lightMove = !lightMove; b.classList.toggle("gold", lightMove); }
+  syncLamp();
+});
+syncLamp();
+
+/* ── THE SANDBOX. `.:T:.` is the clock: 0 frozen, ¼× slow, 1× real, 4× to watch her run. The physics here is
+   KINEMATIC ON PURPOSE -- throttle toward a top speed this hull's length makes plausible, rudder turning her
+   in proportion to the water flowing past, and a sine swell that is declared VISUAL. It cannot tell you if she
+   is safe: that is the verdict's job, and this loop may never override it. */
+const sim = { on: false, T: 1, t: 0, v: 0, hdg: 0, thr: 0, rud: 0 };
+const simClock = new THREE.Clock();
+const simTop = () => Math.max(2.0, M(state.res.spec.loa) * 0.62);   // m/s: length sets a sane top speed
+
+function simStep(dt) {
+  sim.t += dt;
+  sim.v += (sim.thr * simTop() - sim.v) * Math.min(1, dt * 1.4);
+  if (sim.v > 0.02) sim.hdg += sim.rud * dt * (0.22 + sim.v * 0.10);
+  boat.position.x += Math.sin(sim.hdg) * sim.v * dt;
+  boat.position.z += Math.cos(sim.hdg) * sim.v * dt;
+  boat.rotation.y = sim.hdg;
+  /* THE SWELL IS A SINE, NOT A WAVE MODEL. It makes her read alive; it proves nothing about the sea. */
+  boat.position.y = Math.sin(sim.t * 1.35 + boat.position.x * 0.35) * 0.045 * (1 + sim.v * 0.25);
+  boat.rotation.z = Math.sin(sim.t * 0.85) * 0.014;
+  boat.rotation.x = Math.sin(sim.t * 1.9) * 0.007;
+  const deg = (((sim.hdg * 180) / Math.PI) % 360 + 360) % 360;
+  $("readout").textContent = ".:T:. " + sim.T.toFixed(2) + "× · " + (sim.on ? "running" : "stopped") +
+    " · " + (sim.v * 1.944).toFixed(1) + " kt · hdg " + deg.toFixed(0) + "° · thr " + Math.round(sim.thr * 100) + "%";
+}
+
+$("tspeed").addEventListener("click", (ev) => {
+  const tb = ev.target.closest("button[data-t]");
+  if (tb) { sim.T = parseFloat(tb.dataset.t); simStep(0); return; }
+  const play = ev.target.closest("#play");
+  if (!play) return;
+  const v = verdict(state.res);
+  if (!v.ok) {                                       // THE VERDICT GATES THE SANDBOX. She cannot run on a fail.
+    $("simnote").textContent = "she cannot run — " + v.verdict;
+    return;
+  }
+  sim.on = !sim.on;
+  play.textContent = sim.on ? "⏸ STOP" : "▶ RUN";
+  if (!sim.on) { sim.thr = 0; sim.rud = 0; }
+  simStep(0);
+});
+
+for (const b of $("helm").querySelectorAll("button")) {
+  const d = b.dataset.drive;
+  b.addEventListener("pointerdown", () => { if (d === "port") sim.rud = -1; else if (d === "stbd") sim.rud = 1; });
+  b.addEventListener("pointerup", () => { if (d === "port" || d === "stbd") sim.rud = 0; });
+  b.addEventListener("pointercancel", () => { sim.rud = 0; });
+  b.addEventListener("click", () => {
+    if (d === "fwd") sim.thr = Math.min(1, sim.thr + 0.25);
+    if (d === "stop") { sim.thr = 0; sim.rud = 0; }
+  });
+}
+addEventListener("keydown", (e) => {
+  if (e.target && e.target.tagName === "INPUT") return;
+  if (e.key === "w") sim.thr = Math.min(1, sim.thr + 0.2);
+  if (e.key === "s") sim.thr = Math.max(0, sim.thr - 0.2);
+  if (e.key === "a") sim.rud = -1;
+  if (e.key === "d") sim.rud = 1;
+  if (e.key === " ") { $("play").click(); e.preventDefault(); }
+});
+addEventListener("keyup", (e) => { if (e.key === "a" || e.key === "d") sim.rud = 0; });
+
+/* ── THE BLUEPRINT OUT. The bridge to the One Verse: geometry, materials, verdict — and the unmeasured list,
+   so the game cannot claim more than the bench proved. */
+$("bp").addEventListener("click", () => {
+  const b = blueprint(state.res);
+  const blob = new Blob([JSON.stringify(b, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "blueprint-" + b.urn + ".json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+
+/* ── BOOT. THE DNA IS READ FIRST, before a single triangle is drawn: the shelf is the memory, and the
+   garage opens on what the ledger already knows. Parsed ONCE (one pass, two Maps); every lookup after this
+   is O(1). If the file is missing -- file:// or a fresh clone -- the garage still opens, with an empty
+   shelf, and says nothing about it that isn't true. */
+let dna = { rows: [], bad: [], shelf: () => [], at: () => null, design: () => null };
+try {
+  const r = await fetch("./parts/dna.jsonl", { cache: "no-store" });
+  if (r.ok) {
+    dna = parseDna(await r.text());
+    state.lib = dna.shelf().map((s) => ({ ...s, kind: s.pk }));
+  }
+} catch (e) {
+  /* no shelf: the atelier works, it just remembers nothing */
+}
+
+rebuild();
+frameFor(state.res.spec.loa);
+tick();
+
+
+
+
+
+</script>
+
+
+</body>
+</html>

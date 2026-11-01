@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>a space · the 0z</title>
+<!-- 🔥 Ace · 2026-10-25 · THE POCKET — L2, and LD (the gate) in one page.
+     THE CAPTAIN'S ORDER (verbatim): "we dont need to make the interieur at the same place of the shop,,
+     mking the possibility to make ex a small entrepot,, but then when u enter it becomes very big,, ,,
+     un peux comme dans les film animaux fantastque" — and: "we only compute the facade ,, and then when
+     entering than that load that specific layer".
+
+     SO THIS IS THE WHOLE ARCHITECTURE IN ONE FILE:
+       · the volume comes from the place's own `interior` row — NEVER from the facade (L1 knows 7x5x6 m;
+         this room is 95x15x120 m, and it says so on screen, because the bigness must be MEASURED, not
+         implied);
+       · the room is destroyed when you leave (cost ∝ occupancy);
+       · the gate asks verse.can(sigil, place) BEFORE it builds anything — no destination without a row;
+       · the officer inside may only speak what it RECORDED (its own DNA lines, dated); the wall of
+         records is that memory, printed at the scale of the room.
+
+     WHAT IS NOT DONE YET, AND SAYS SO: the crossing is a LOCAL receipt. It is not on the chain, because
+     the write path is the captain's door (backend, /api/cross) and it does not exist yet. A receipt that
+     pretended to be a row would be the exact lie this ship refuses, so the HUD prints NOT ON THE CHAIN.
+-->
+<style>
+  :root { --ink:#f2efe6; --dim:#7f9aa8; --gold:#e0bc45; --line:rgba(140,190,210,.16);
+          --ok:#7fe0a6; --bad:#e0776f; --warm:#e0a84a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#05080c; color:var(--ink); overflow:hidden;
+    font:13px/1.55 ui-monospace,"Cascadia Mono",Consolas,monospace; }
+  canvas { display:block; }
+  .hud { position:fixed; pointer-events:none; }
+
+  #top { top:22px; left:26px; max-width:min(560px,80vw); }
+  #top h1 { margin:0; font-size:22px; letter-spacing:.3em; font-weight:300; }
+  #top .seal { color:var(--gold); letter-spacing:.18em; }
+  #top .sub { color:var(--dim); font-size:10.5px; letter-spacing:.18em; margin-top:5px;
+    text-transform:uppercase; }
+
+  /* THE POCKET LINE: the number that makes the architecture visible. */
+  #pocket { position:fixed; right:26px; top:22px; text-align:right; font-size:10.5px;
+    letter-spacing:.1em; color:var(--dim); line-height:1.9; text-transform:uppercase; }
+  #pocket b { color:var(--gold); font-weight:500; }
+  #pocket .big { font-size:15px; letter-spacing:.08em; color:var(--ink); }
+
+  #officer { position:fixed; left:26px; bottom:64px; width:min(430px,88vw); font-size:12.3px;
+    border-left:2px solid var(--gold); padding:10px 0 10px 14px; }
+  #officer h2 { margin:0 0 2px; font-size:12.5px; letter-spacing:.18em; color:var(--gold); }
+  #officer .role { color:var(--dim); font-size:10px; letter-spacing:.16em; text-transform:uppercase; }
+  #officer .say { color:#cfd8dd; margin-top:7px; }
+  #officer .say i { color:var(--dim); font-style:normal; font-size:10px; }
+  #officer .dream { color:#9aa8b0; margin-top:7px; font-size:11.5px; }
+
+  #bar { position:fixed; left:26px; right:26px; bottom:18px; display:flex; gap:14px; align-items:center;
+    font-size:10.5px; color:var(--dim); letter-spacing:.08em; padding-top:10px;
+    border-top:1px solid var(--line); }
+  #bar .sp { flex:1; }
+  #bar b { color:var(--gold); font-weight:500; }
+  #receipt { color:var(--warm); }
+
+  #refuse { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 45%,rgba(28,10,10,.9),rgba(3,4,6,.98)); z-index:40; }
+  #refuse .box { text-align:center; max-width:640px; padding:0 26px; }
+  #refuse h2 { margin:0; font-size:24px; letter-spacing:.3em; font-weight:300; color:var(--bad); }
+  #refuse p { color:var(--dim); font-size:12px; line-height:1.9; margin-top:16px; }
+  #refuse a { color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(224,188,69,.4); }
+  #fade { position:fixed; inset:0; background:#05080c; opacity:0; pointer-events:none;
+    transition:opacity .3s ease; z-index:30; }
+  #toast { position:fixed; left:50%; bottom:92px; transform:translateX(-50%); background:rgba(6,16,22,.94);
+    border:1px solid var(--line); padding:8px 14px; font-size:11.5px; opacity:0;
+    transition:opacity .22s ease; pointer-events:none; }
+  #toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<div id="fade"></div>
+<div id="refuse"><div class="box"><h2 id="rwhy">E_NO_ROW</h2><p id="rwhat"></p>
+  <p><a href="welcome.html">← back to the WELCOME island</a></p></div></div>
+
+<div class="hud" id="top">
+  <h1 id="pname">—</h1>
+  <div class="sub"><span class="seal" id="pseal">—</span> · the officer's house
+    · <span id="psource">reading…</span></div>
+</div>
+<div id="pocket">
+  <div class="big" id="pvol">—</div>
+  <div>the pocket behind <b id="pfront">—</b></div>
+  <div>the door you came through is <b>1.9 m</b></div>
+</div>
+<div id="officer"></div>
+<div id="toast"></div>
+<div id="bar">
+  <span id="sigline">who you are <b>—</b></span>
+  <span class="sp"></span>
+  <span><b>W A S D</b> walk</span><span><b>SHIFT</b> run</span>
+  <span><b>Q</b> leave</span>
+  <span id="receipt">crossing: not on the chain yet</span>
+</div>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from "three";
+import * as V from "./verse.js";
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const PID = q.get("place") || "";
+const SIG = q.get("sig") || "";
+
+await V.load("./");
+$("psource").textContent = V.V.source || "offline";
+
+const place = V.place(PID);
+const officer = place ? V.officer(place.officer) : null;
+const verdict = V.can(SIG, place);
+
+function refuse(why, what) {
+  $("rwhy").textContent = why;
+  $("rwhat").innerHTML = what;
+  $("refuse").style.display = "flex";
+  throw new Error("gate refused: " + why);
+}
+
+if (!place) {
+  refuse("E_NO_PLACE", `No place carries the id <b>${PID || "(none)"}</b>. A door that leads nowhere
+    in the record does not exist — that is the point of the gate, not a bug.`);
+}
+if (!verdict.ok) {
+  refuse(verdict.why, `The gate asked the record whether <b>${SIG || "an anonymous face"}</b> may enter
+    <b>${place.name}</b>, and the record has no row that says yes.<br><br>
+    <span style="color:#7f9aa8">NO DESTINATION WITHOUT A ROW — the gate is the only verb.</span>`);
+}
+
+/* ── the labels: the volume is MEASURED here, and it is never the facade's ──────────────────────── */
+const [IW, IH, ID] = place.interior || [40, 10, 50];
+const [FW, FH, FD] = place.front || [7, 5.2, 6];
+$("pname").textContent = place.name;
+$("pseal").textContent = place.seal || "";
+$("pvol").textContent = `${IW} × ${IH} × ${ID} m`;
+$("pfront").textContent = `${FW} × ${FH} × ${FD} m`;
+$("sigline").innerHTML = SIG ? `who you are <b>${SIG}</b>` : `who you are <b>anonymous</b>`;
+
+/* THE RECEIPT IS LOCAL AND SAYS SO. The chain write path is the captain's door and does not exist yet. */
+try {
+  const key = "0z.crossings";
+  const list = JSON.parse(localStorage.getItem(key) || "[]");
+  list.push({ place: place.id, sig: SIG, at: new Date().toISOString(), on_chain: false });
+  localStorage.setItem(key, JSON.stringify(list.slice(-40)));
+  $("receipt").textContent = `crossing ${list.length}: local receipt · NOT on the chain`;
+} catch (e) { /* a browser with no storage must still be able to walk in */ }
+
+/* ── THE SCENE. One room, built for this crossing and destroyed on exit. ───────────────────────── */
+const scene = new THREE.Scene();
+const mood = new THREE.Color(place.mood || "#22303a");
+scene.background = mood.clone().multiplyScalar(0.22);
+scene.fog = new THREE.Fog(scene.background.getHex(), IW * 0.45, IW * 2.4);
+
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.08, 900);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xa8c6d8, 0x1a1410, 0.42));
+const lampA = new THREE.PointLight(0xffd9a0, 90, Math.max(IW, ID), 2.0);
+lampA.position.set(0, IH * 0.7, 0);
+scene.add(lampA);
+const lampB = new THREE.PointLight(new THREE.Color(place.mood || "#33506a").getHex(), 60, Math.max(IW, ID), 2);
+lampB.position.set(-IW * 0.3, IH * 0.55, -ID * 0.3);
+scene.add(lampB);
+const sun = new THREE.DirectionalLight(0xfff0d0, 0.35);
+sun.position.set(IW * 0.4, IH * 2.2, ID * 0.5);
+
+/* ── THE ROOM. Built from `interior`, never from the facade. ─────────────────────────────────────── */
+const stone = new THREE.MeshStandardMaterial({ color: 0x2f2b26, roughness: 0.93 });
+const stoneDark = new THREE.MeshStandardMaterial({ color: 0x1b1916, roughness: 0.97 });
+const wood = new THREE.MeshStandardMaterial({ color: 0x6a4a2e, roughness: 0.9 });
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(IW, ID), stone);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(IW, ID), stoneDark);
+ceil.rotation.x = Math.PI / 2;
+ceil.position.y = IH;
+scene.add(ceil);
+
+function wall(w, h, x, y, z, ry) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), stoneDark);
+  m.position.set(x, y, z);
+  m.rotation.y = ry;
+  m.receiveShadow = true;
+  scene.add(m);
+}
+wall(IW, IH, 0, IH / 2, -ID / 2, 0);             /* the far wall: the record wall lives here */
+wall(IW, IH, 0, IH / 2, ID / 2, Math.PI);         /* behind you: where the door is */
+wall(ID, IH, -IW / 2, IH / 2, 0, Math.PI / 2);
+wall(ID, IH, IW / 2, IH / 2, 0, -Math.PI / 2);
+
+/* the measured floor: one line every 10 m, so distance is a number you can count */
+const lineMat = new THREE.MeshBasicMaterial({ color: 0x3d4a52 });
+for (let x = -IW / 2 + 10; x < IW / 2; x += 10) {
+  const l = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.02, ID), lineMat);
+  l.position.set(x, 0.012, 0);
+  scene.add(l);
+}
+
+/* the door you came through: 1.9 m, and the only bright thing in the room */
+const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3.6, 0.4), wood);
+doorFrame.position.set(0, 1.8, ID / 2 - 0.2);
+scene.add(doorFrame);
+const daylight = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 3.2),
+  new THREE.MeshBasicMaterial({ color: 0xbfe0ff, transparent: true, opacity: 0.86 }));
+daylight.position.set(0, 1.6, ID / 2 - 0.42);
+daylight.rotation.y = Math.PI;
+scene.add(daylight);
+const doorLight = new THREE.PointLight(0xbfe0ff, 40, 26, 2);
+doorLight.position.set(0, 2.2, ID / 2 - 1.2);
+scene.add(doorLight);
+
+/* shelves and crates: the stock of a room that is bigger inside than out */
+for (let i = 0; i < 7; i++) {
+  const s = 1.6 + (i % 3) * 0.7;
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.8, s), i % 2 ? wood : stoneDark);
+  crate.position.set(-IW / 2 + 3 + i * (IW - 6) / 7, s * 0.4, -ID / 2 + 2.4);
+  crate.castShadow = true;
+  scene.add(crate);
+}
+for (let i = 0; i < 3; i++) {
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.5, IH * 0.62, Math.min(8, ID * 0.2)), wood);
+  shelf.position.set(IW / 2 - 0.9, IH * 0.31, -ID / 4 + i * 6);
+  shelf.castShadow = true;
+  scene.add(shelf);
+}
+
+/* ── THE WALL OF RECORDS. An officer may only say what it recorded, so its memory is what this ────
+   room is built around: every panel is a real row from its own DNA, dated. */
+function textPanel(line, when, kind, w, h) {
+  const c = document.createElement("canvas");
+  c.width = 1024; c.height = 512;
+  const g = c.getContext("2d");
+  g.fillStyle = "#0a0f13"; g.fillRect(0, 0, 1024, 512);
+  g.strokeStyle = "#8a6a22"; g.lineWidth = 5; g.strokeRect(8, 8, 1008, 496);
+  g.fillStyle = "#6d7f88"; g.font = "300 26px ui-monospace, Consolas, monospace";
+  g.fillText(`${kind || "record"} · ${when || "undated"}`, 40, 62);
+  g.fillStyle = "#e6e2d6"; g.font = "400 30px ui-monospace, Consolas, monospace";
+  const words = String(line || "").replace(/\n/g, " ").split(/\s+/);
+  let row = 0, buf = "";
+  for (const wd of words) {
+    const test = buf ? buf + " " + wd : wd;
+    if (g.measureText(test).width > 940 && row < 11) {
+      g.fillText(buf, 40, 130 + row * 34); buf = wd; row += 1;
+    } else buf = test;
+  }
+  if (buf && row < 12) g.fillText(buf, 40, 130 + row * 34);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t }));
+}
+
+const voices = (officer && officer.voice) || [];
+if (voices.length) {
+  voices.forEach((v, i) => {
+    const panel = textPanel(v.text, v.when, v.kind, 12, 6);
+    panel.position.set(-IW / 4 + i * (IW / 2.4), IH * 0.55, -ID / 2 + 0.09);
+    scene.add(panel);
+  });
+} else {
+  const quiet = textPanel(
+    "nothing recorded yet — and this officer will not invent a line. A voice here is a row, or it is silence.",
+    "", "no rows", 14, 7);
+  quiet.position.set(0, IH * 0.55, -ID / 2 + 0.09);
+  scene.add(quiet);
+}
+const plaque = textPanel(`${place.seal || ""}   ${place.name} — ${place.hint || ""}`,
+  "the facade's hint", "L1 → L2", 16, 4);
+plaque.position.set(0, IH * 0.88, -ID / 2 + 0.08);
+scene.add(plaque);
+
+/* ── THE OFFICER, INSIDE. Same body as the street, at the scale of the room it keeps. ──────────── */
+const skin = new THREE.MeshStandardMaterial({ color: 0x8d6b52, roughness: 0.9 });
+let hue = 0;
+{ const s = (officer && officer.seal) || "x";
+  let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; hue = h / 360; }
+const cloth = new THREE.MeshStandardMaterial({
+  color: new THREE.Color().setHSL(hue, 0.34, 0.42), roughness: 0.86 });
+const fig = new THREE.Group();
+const hips = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.44, 0.86, 14), cloth);
+hips.position.y = 0.9; hips.castShadow = true; fig.add(hips);
+const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.34, 0.95, 14), cloth);
+chest.position.y = 1.74; chest.castShadow = true; fig.add(chest);
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 14), skin);
+head.position.y = 2.5; head.castShadow = true; fig.add(head);
+const armPivot = new THREE.Group();
+armPivot.position.set(0.46, 2.04, 0);
+const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.66, 8), cloth);
+arm.position.y = -0.33; armPivot.add(arm);
+fig.add(armPivot);
+fig.position.set(0, 0, -ID / 2 + Math.min(9, ID * 0.22));
+fig.rotation.y = Math.PI;
+scene.add(fig);
+const figLight = new THREE.PointLight(0xffcf8a, 22, 14, 2);
+figLight.position.set(0, 2.9, fig.position.z + 1.2);
+scene.add(figLight);
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* the officer's card, printed once, in the room where it stands */
+const lastVoice = voices.slice(-1)[0];
+$("officer").innerHTML = `
+  <h2>${escapeHtml((officer && officer.name) || place.officer_name || "")}
+      ${escapeHtml((officer && officer.seal) || "")}</h2>
+  <div class="role">${escapeHtml(((officer && officer.role) || "") +
+      ((officer && officer.model) ? " · " + officer.model : ""))}</div>
+  <div class="dream">${escapeHtml((officer && officer.function) || "")}</div>
+  ${lastVoice ? `<div class="say">“${escapeHtml(lastVoice.text.slice(0, 300))}”
+      <br><i>${escapeHtml(lastVoice.when || "recorded")} · its own words, not a line written for you</i></div>`
+    : `<div class="say" style="color:#5a666e"><i>silent: no row to speak from</i></div>`}`;
+
+/* ── THE BODY THAT WALKS IN THE ROOM. Small steps, because a 120 m hall is walked, not teleported. ─ */
+/* MEASURED (2026-10-25, first render): yaw = PI made the player face the DOOR — you walked in and
+   stared at the light you came from. Entering a room means facing the room: yaw 0 looks toward -z,
+   which is where the officer, the crates and the wall of records are. */
+const player = { pos: new THREE.Vector3(0, 0, ID / 2 - 4.0), yaw: 0, pitch: 0, keys: {},
+                 locked: false, bob: 0 };
+const EYE = 1.7;
+
+renderer.domElement.addEventListener("click", () => renderer.domElement.requestPointerLock());
+document.addEventListener("pointerlockchange", () => {
+  player.locked = document.pointerLockElement === renderer.domElement;
+});
+document.addEventListener("mousemove", (e) => {
+  if (!player.locked) return;
+  player.yaw -= e.movementX * 0.0022;
+  player.pitch = Math.max(-1.05, Math.min(0.7, player.pitch - e.movementY * 0.0019));
+});
+addEventListener("keydown", (e) => {
+  player.keys[e.code] = true;
+  if (e.code === "KeyQ" || e.code === "Escape") leave();
+});
+addEventListener("keyup", (e) => { player.keys[e.code] = false; });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+function leave() {
+  $("fade").style.opacity = "1";
+  /* THE SEAMLESS RETURN: you come out of the SAME door you went in, and the island knows it — that is why
+     the id travels back with you. Without it you would reappear at the plaza's edge and the threshold
+     would feel like a teleport instead of a door. */
+  setTimeout(() => { location.href = `welcome.html?arrived=${encodeURIComponent(place.id)}`; }, 240);
+}
+
+/* ── THE LOOP. The room stays alive only while someone crosses it. ─────────────────────────────── */
+const clock = new THREE.Clock();
+const LIMIT = { x: IW / 2 - 0.9, z: ID / 2 - 0.9 };
+let saidDoor = false;
+
+function tick() {
+  const dt = Math.min(0.05, clock.getDelta());
+  const t = clock.elapsedTime;
+
+  const k = player.keys;
+  const fwd = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
+  const str = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
+  const run = (k.ShiftLeft || k.ShiftRight) ? 2.0 : 1;
+  let vx = 0, vz = 0;
+  if (fwd || str) {
+    const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+    vx = (-sy * fwd + cy * str); vz = (-cy * fwd - sy * str);
+    const n = Math.hypot(vx, vz) || 1;
+    vx = vx / n * 4.0 * run; vz = vz / n * 4.0 * run;
+  }
+  player.pos.x = Math.max(-LIMIT.x, Math.min(LIMIT.x, player.pos.x + vx * dt));
+  player.pos.z = Math.max(-LIMIT.z, Math.min(LIMIT.z, player.pos.z + vz * dt));
+  player.bob += Math.hypot(vx, vz) * dt * 1.5;
+
+  camera.position.set(player.pos.x, EYE + Math.sin(player.bob) * 0.03, player.pos.z);
+  camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
+
+  /* the officer turns to face you, and its arm moves only when you are far: a person, not a loop */
+  const dx = player.pos.x - fig.position.x;
+  const dz = player.pos.z - fig.position.z;
+  const dist = Math.hypot(dx, dz);
+  const want = dist < 9 ? 1 : 0;
+  fig.rotation.y += ((Math.atan2(dx, dz) - fig.rotation.y) * Math.min(1, dt * 2.2)) * want;
+  armPivot.rotation.x = -0.9 * (1 - 0.9 * want) + (1 - want) * 0.25 * Math.sin(t * 1.1 + hue * 9);
+
+  lampA.intensity = 82 + 8 * Math.sin(t * 0.8);
+  figLight.intensity = 20 + 4 * Math.sin(t * 1.4);
+  daylight.material.opacity = 0.80 + 0.08 * Math.sin(t * 0.5);
+
+  const atDoor = player.pos.z > ID / 2 - 3.0 && Math.abs(player.pos.x) < 2.2;
+  if (atDoor && !saidDoor) {
+    saidDoor = true;
+    $("toast").textContent = "the door behind you is 1.9 m wide. Q — go back to the island.";
+    $("toast").classList.add("on");
+    setTimeout(() => $("toast").classList.remove("on"), 3600);
+  }
+  if (!atDoor) saidDoor = false;
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+
+console.log(`[SPACE] ${place.id} ${place.name} · facade ${FW}x${FH}x${FD} m · pocket ${IW}x${IH}x${ID} m ` +
+            `· officer=${place.officer} · gate=${verdict.why} · sig=${SIG || "anonymous"}`);
+</script>
+</script>
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-25 -->

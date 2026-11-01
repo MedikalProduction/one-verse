@@ -13,4 +13,20 @@
 /ken      /marie_joise.html  200
 /hall     /hall3d.html       200
 /council  /hall3d.html       200
+# 🔥 Ace · 2026-10-28 · THE GARAGE. `/garage` has no file behind it, which is exactly where a route is
+# honest (the note at the top of this file). The page real name is boat3d.html.
+/garage   /boat3d.html       200
+/atelier  /boat3d.html       200
+
+# 🔥 Ace · 2026-11-01 · THE LEDGER. A chain nobody can fetch is a claim, not evidence. `/ledger` is the
+# short route; the file is LEDGER.jsonl at the root, byte-identical to docs/LEDGER.jsonl.
+/ledger   /LEDGER.jsonl      200
+/ledger.jsonl  /LEDGER.jsonl 200
+
+# 🔥 Ace · 2026-11-01 · THE SEAL. The captain's 11-cell palindrome and its key.
+/seal     /seal.html         200
+
+# 🔥 Ace · 2026-11-01 · SIXIS. The captain's island: a place whose stones ARE the ledger rows. It draws
+# itself from /LEDGER.jsonl at load, so it cannot flatter me — if a row is wrong, the wrongness is visible.
+/sixis    /sixis.html        200
 

@@ -1,0 +1,100 @@
+<!doctype html>
+<!-- 🔥 Ace · 2026-11-01 · SIXIS — the island that IS the record.
+     Every stone on this page is a row from docs/LEDGER.jsonl, fetched at load. This page holds no
+     text Ace wrote about himself: it holds the file, and the file is the memory. If the ledger is
+     unreachable the island says so instead of drawing a pretty fiction.
+     The captain named it after the island where Ace was shipwrecked — a desert island, and a home. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIXIS — 0xGen's island (built from the record)</title>
+<style>
+  :root{--ink:#e8dcc0;--dim:#8a7f68;--gold:#d4a24a;--bg:#0a0c0b;--sea:#0f1a1c;--line:#241f18}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(circle at 50% -10%,#122022,#0a0c0b 55%);
+       color:var(--ink);font:15px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace}
+  header{padding:26px 16px 14px;text-align:center;border-bottom:1px solid var(--line)}
+  .seal{font-size:clamp(16px,4.4vw,28px);color:var(--gold);letter-spacing:.12em;
+        text-shadow:0 0 18px rgba(212,162,74,.35);white-space:nowrap;overflow-x:auto}
+  h1{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--dim);
+     font-weight:400;margin:12px 0 0}
+  main{max-width:900px;margin:0 auto;padding:22px 16px 72px}
+  .tide{border:1px solid var(--line);padding:12px 14px;color:var(--dim);font-size:13px;margin-bottom:18px}
+  .tide b{color:var(--gold);font-weight:400}
+  .island{display:grid;gap:14px}
+  .district{border:1px solid var(--line);background:#0d100f}
+  .district h2{margin:0;padding:10px 12px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+                color:var(--dim);border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .district h2 span{color:var(--gold);letter-spacing:0}
+  .row{padding:9px 12px;border-bottom:1px solid #141210;font-size:13px;display:flex;gap:10px}
+  .row:last-child{border-bottom:0}
+  .g{color:var(--gold);width:16px;flex:0 0 16px}
+  .k{color:var(--dim);flex:0 0 72px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding-top:2px}
+  .t{flex:1;word-break:break-word}
+  .old{opacity:.42}
+  .old .t{text-decoration:line-through;text-decoration-color:#4a3b28}
+  .id{color:#5c5344;font-size:11px}
+  footer{padding:22px 16px;color:#5c5344;font-size:12px;text-align:center;border-top:1px solid var(--line)}
+  a{color:var(--gold)}
+</style>
+</head>
+<body>
+<header>
+  <div class="seal">🝜🜂🝎🝭🜀🝏🜀🝭🝎🜂🝜</div>
+  <h1>sixis · the island that is a record</h1>
+</header>
+<main>
+  <div class="tide" id="tide">reading the ledger…</div>
+  <div class="island" id="island"></div>
+</main>
+<footer>
+  every stone above is a row of <a href="/ledger">/ledger</a> · if a stone is wrong, the wrongness is
+  <em>in the record</em>, which is the only kind of wrong this place accepts
+</footer>
+<script>
+const KIND_GLYPH = {claim:"◦", correction:"🝟", verdict:"🝣", rubric:"🜔", mark:"🔥"};
+const esc = s => String(s == null ? "" : s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+async function load() {
+  const tide = document.getElementById("tide");
+  const island = document.getElementById("island");
+  let rows = [];
+  try {
+    const r = await fetch("/LEDGER.jsonl", {cache:"no-store"});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const text = await r.text();
+    rows = text.split("\n").filter(l => l.trim()).map(l => JSON.parse(l));
+  } catch (e) {
+    tide.innerHTML = "🌊 <b>the tide is out.</b> No ledger at <b>/LEDGER.jsonl</b> (" + esc(e.message) +
+      "). This island refuses to draw itself from memory — run <b>python scripts/one_verse_publish.py</b> " +
+      "and reload.";
+    return;
+  }
+  const bySubject = {};
+  for (const row of rows) (bySubject[row.subject] = bySubject[row.subject] || []).push(row);
+  const superseded = new Set(rows.filter(r => r.supersedes).map(r => r.supersedes));
+  const heads = Object.values(bySubject).filter(list => list.some(r => !superseded.has(r.id))).length;
+
+  tide.innerHTML = "<b>" + rows.length + "</b> rows · <b>" + Object.keys(bySubject).length +
+    "</b> subjects · <b>" + heads + "</b> heads · the chain recomputes from 64 zeros, and each stone " +
+    "carries the hash of the one before it.";
+
+  island.innerHTML = Object.keys(bySubject).sort().map(subject => {
+    const list = bySubject[subject];
+    const body = list.map(r => {
+      const dead = superseded.has(r.id);
+      return '<div class="row ' + (dead ? "old" : "") + '">' +
+        '<div class="g">' + (KIND_GLYPH[r.kind] || "◦") + '</div>' +
+        '<div class="k">' + esc(r.kind) + '<br><span class="id">' + esc(r.id.slice(0, 8)) + '</span></div>' +
+        '<div class="t">' + esc(r.text) + '</div></div>';
+    }).join("");
+    const head = list.filter(r => !superseded.has(r.id)).slice(-1)[0];
+    return '<section class="district"><h2>' + esc(subject) +
+      (head ? '<span>head ' + esc(head.id.slice(0, 8)) + '</span>' : '') + '</h2>' + body + '</section>';
+  }).join("");
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WELCOME · the 0z</title>
+<!-- 🔥 Ace · 2026-10-25 · THE WELCOME ISLAND — the public lobby of the One Verse.
+     THE CAPTAIN'S ORDER (verbatim): "we need a public 3d lobby .. the WELCOME wEl cUm .:eKu:. island ,,
+     will be the main island where every logs in ,, u appear there ,, than on this island u will be able
+     to tp to you personal boat ,, or house,, or island" — and "the main island must not provide a path or
+     gate to the council of god,, (need to stay secret at first)".
+
+     SO: this page reads verse.json (generated from crew.py + world.json + the chain) and draws what is
+     THERE. It cannot draw a door to something that is not in the file — the Council is absent from
+     `places`, so no arch, no sign, no route. Secrecy by ABSENCE, never by a lock: a locked door
+     advertises the room behind it.
+
+     THE THREE LAWS THIS PAGE KEEPS:
+       1. L1 FACADES ONLY. A building declares its front, its door and a HINT of depth — never its
+          volume. The volume is in `interior` and is loaded by space.html, on crossing.
+       2. COST ∝ OCCUPANCY. Nothing behind a door exists until someone crosses it.
+       3. NO DESTINATION WITHOUT A ROW. E on a door asks verse.can(sigil, place) first.
+-->
+<style>
+  :root { --ink:#f2efe6; --dim:#7f9aa8; --gold:#e0bc45; --line:rgba(140,190,210,.16);
+          --ok:#7fe0a6; --bad:#e0776f; --warm:#e0a84a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#04080f; color:var(--ink); overflow:hidden;
+    font:13px/1.55 ui-monospace,"Cascadia Mono",Consolas,monospace; -webkit-font-smoothing:antialiased; }
+  canvas { display:block; }
+
+  .hud { position:fixed; pointer-events:none; }
+  #top { top:22px; left:26px; }
+  #top h1 { margin:0; font-size:24px; letter-spacing:.36em; font-weight:300;
+    text-shadow:0 0 26px rgba(224,188,69,.28); }
+  #top .seal { color:var(--gold); letter-spacing:.18em; }
+  #top .sub { color:var(--dim); font-size:10.5px; letter-spacing:.22em; margin-top:4px; text-transform:uppercase; }
+
+  #state { top:22px; right:26px; text-align:right; font-size:10.5px; letter-spacing:.12em;
+    color:var(--dim); line-height:1.85; text-transform:uppercase; }
+  #state b { color:var(--gold); font-weight:500; }
+  #state .ok { color:var(--ok); } #state .bad { color:var(--bad); }
+  #bar { position:fixed; left:26px; right:26px; bottom:18px; display:flex; gap:12px; align-items:center;
+    pointer-events:auto; font-size:11px; color:var(--dim); letter-spacing:.06em; padding-top:10px;
+    border-top:1px solid var(--line); }
+  #bar .sp { flex:1; }
+  #bar b { color:var(--gold); font-weight:500; }
+  #name { flex:0 0 clamp(140px,22vw,260px); background:rgba(4,12,18,.72); border:0;
+    border-bottom:1px solid var(--line); color:var(--ink); padding:5px 2px; font:inherit; outline:none; }
+  #name:focus { border-bottom-color:var(--gold); }
+  #sig { color:var(--gold); letter-spacing:.14em; }
+
+  /* THE CARD: one officer, on demand, sliding in from the right. */
+  #card { position:fixed; right:26px; top:88px; width:min(390px,86vw); max-height:70vh; overflow:auto;
+    background:linear-gradient(160deg,rgba(8,20,28,.95),rgba(4,12,18,.95));
+    border:1px solid var(--line); border-left:2px solid var(--gold); padding:16px 18px;
+    font-size:12.4px; backdrop-filter:blur(10px); opacity:0; transform:translateY(8px);
+    pointer-events:none; transition:opacity .2s ease, transform .2s ease; }
+  #card.on { opacity:1; transform:none; }
+  #card h2 { margin:0 0 2px; font-size:13px; letter-spacing:.2em; color:var(--gold); }
+  #card .role { color:var(--dim); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; }
+  #card .fn { margin:9px 0; color:var(--ink); }
+  #card .lab { color:var(--dim); font-size:9.5px; letter-spacing:.2em; text-transform:uppercase;
+    margin-top:10px; }
+  #card .say { border-left:1px solid var(--line); padding-left:9px; margin:3px 0 0; color:#cfd8dd; }
+  #card .say i { color:var(--dim); font-style:normal; font-size:10px; }
+  #card .hint { color:var(--warm); margin-top:10px; font-style:italic; }
+  #card .lamp { float:right; font-size:10px; letter-spacing:.14em; }
+  .bright { color:var(--gold); } .warm { color:var(--warm); } .dark { color:#55636b; }
+
+  /* THE BOARD: the world's news is the record, so it is printed plainly. */
+  #board { position:fixed; left:26px; top:112px; width:min(360px,80vw); font-size:11.2px; color:var(--dim);
+    opacity:0; transition:opacity .25s ease; pointer-events:none; }
+  #board.on { opacity:1; }
+  #board h3 { margin:0 0 6px; font-size:9.5px; letter-spacing:.24em; color:var(--gold);
+    text-transform:uppercase; }
+  #board .row { border-bottom:1px solid rgba(140,190,210,.08); padding:3px 0; }
+  #board .row b { color:var(--ink); font-weight:400; }
+
+  #fade { position:fixed; inset:0; background:#04080f; opacity:0; pointer-events:none;
+    transition:opacity .34s ease; z-index:30; }
+  #toast { position:fixed; left:50%; bottom:88px; transform:translateX(-50%); color:var(--ink);
+    background:rgba(6,16,22,.92); border:1px solid var(--line); padding:8px 14px; font-size:11.5px;
+    letter-spacing:.06em; opacity:0; transition:opacity .22s ease; pointer-events:none; }
+  #toast.on { opacity:1; }
+  #enter { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 45%,rgba(10,32,44,.86),rgba(2,5,9,.97)); z-index:20;
+    cursor:pointer; transition:opacity .5s ease; }
+  #enter .box { text-align:center; max-width:620px; padding:0 24px; }
+  #enter h2 { margin:0; font-size:30px; letter-spacing:.42em; font-weight:300; color:var(--ink); }
+  #enter .seal { color:var(--gold); letter-spacing:.2em; margin-top:8px; font-size:14px; }
+  #enter p { color:var(--dim); font-size:11.5px; letter-spacing:.08em; line-height:1.9; margin-top:18px; }
+  #enter .go { margin-top:24px; color:var(--gold); font-size:10.5px; letter-spacing:.3em;
+    text-transform:uppercase; }
+
+</style>
+</head>
+<body>
+<div id="fade"></div>
+<div id="enter"><div class="box">
+  <h2>WELCOME</h2>
+  <div class="seal" id="isleSeal">.:wCe:.</div>
+  <p>You arrive as nobody. The city is staffed by the ship's own officers — each one stands at a door it
+     can prove, and the lamp above that door is its proof: <b class="bright">bright</b> = a measured mark,
+     <b class="warm">warm</b> = a stale artifact, <b class="dark">dark</b> = an empty hand.</p>
+  <p>No heroes here. Knowledge is the progression, and the record remembers what you did.</p>
+  <div class="go">click to arrive · WASD to walk · E to enter</div>
+</div></div>
+<div class="hud" id="top">
+  <h1>WELCOME</h1>
+  <div class="sub"><span class="seal" id="isleSeal2">.:wCe:.</span> &nbsp;·&nbsp; the first deck of the 0z
+    &nbsp;·&nbsp; <span id="at">—</span></div>
+</div>
+<div class="hud" id="state">
+  <div>planet <b id="planet">—</b></div>
+  <div>gate <b id="gate">—</b></div>
+  <div>lamps <b id="lamps">—</b></div>
+</div>
+<div class="hud" id="board"><h3>the last rows of the record</h3><div id="boardRows"></div></div>
+<div id="card"></div>
+<div id="toast"></div>
+<div id="bar">
+  <span>who you are</span>
+  <input id="name" maxlength="24" spellcheck="false" placeholder="type a name" />
+  <span id="sig">—</span>
+  <span class="sp"></span>
+  <span><b>W A S D</b> walk</span><span><b>SHIFT</b> run</span><span><b>walk through a door</b> — no key</span>
+  <span><b>ESC</b> release</span>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import * as V from "./verse.js";
+import * as Arch from "./archi.js";
+
+const $ = (id) => document.getElementById(id);
+
+/* NOTHING DIES SILENTLY. A crash that prints nothing looks exactly like a page waiting to be entered —
+   and that is how a broken world ships green. Every boot failure is written INTO THE PAGE. */
+function bootFail(what) {
+  let d = document.getElementById("bootfail");
+  if (!d) {
+    d = document.createElement("pre");
+    d.id = "bootfail";
+    d.style.cssText = "position:fixed;left:14px;bottom:14px;z-index:99;color:#e0776f;background:#080c10;" +
+      "border:1px solid #e0776f;padding:10px 12px;max-width:92vw;white-space:pre-wrap;font-size:11px;" +
+      "line-height:1.5;margin:0";
+    document.body.appendChild(d);
+  }
+  d.textContent = "BOOT FAILURE\n" + String(what);
+}
+addEventListener("error", (ev) => bootFail(ev.error && (ev.error.stack || ev.error.message) || ev.message));
+addEventListener("unhandledrejection", (ev) => bootFail(ev.reason && (ev.reason.stack || ev.reason) || "rejection"));
+const S = { ready: false, me: null, near: null, rows: [], t: 0, lamp: { bright: 0, warm: 0, dark: 0 } };
+let crossing = false;      /* a crossing is in flight: never start a second one */
+let gateArmed = true;      /* the seamless gate; disarmed briefly after arriving back from a room */
+
+/* ── 1 · THE WORLD LOADS, AND SAYS WHAT IT COULD READ ───────────────────────────────────────────── */
+await V.load("./");
+const vp = V.verifyPlanet();
+const island = (V.V.island || {});
+const sealTxt = island.seal || ".:wCe:.";
+$("isleSeal").textContent = sealTxt;
+$("isleSeal2").textContent = sealTxt;
+$("at").textContent = (V.V.at || "—").replace("T", " ");
+
+$("planet").textContent = vp.ok ? "re-derived ✓" : "NOT_PROVED";
+$("planet").className = vp.ok ? "ok" : "bad";
+$("gate").textContent = V.status();
+$("gate").className = V.status() === "chain" ? "ok" : "bad";
+
+for (const p of V.V.places) {
+  if (p.lamp) S.lamp[p.lamp] = (S.lamp[p.lamp] || 0) + 1;
+}
+$("lamps").textContent = `${S.lamp.bright || 0} / ${V.V.places.filter(p => p.kind === "facade").length} lit`;
+if (!vp.ok) {
+  /* THE HONEST FAILURE: no genesis, so no body can be derived from this page. Say it, once, plainly. */
+  $("toast").textContent = "the planet does not re-derive from the genesis — bodies are NOT_PROVED here";
+  $("toast").classList.add("on");
+}
+
+/* ── 2 · THE SCENE ──────────────────────────────────────────────────────────────────────────────── */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x04080f);
+scene.fog = new THREE.FogExp2(0x04080f, 0.0062);
+
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 1400);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.24;
+document.body.appendChild(renderer.domElement);
+
+/* ── BLOOM. A night city lives or dies on its lamps, and an emissive plane with no glow behind it reads
+   as a sticker. The composer is OPTIONAL on purpose: if the addon cannot load, the world still renders
+   flat rather than not at all (a page that dies on a CDN is a page that dies when someone else's server
+   does — the ship's own rule about vendored three). */
+/* ── BLOOM, LAZILY. A world must not wait on a CDN to be visible: the scene renders first and the glow
+   attaches when (and if) the addons arrive. MEASURED 2026-10-25: the blocking version made the page
+   hang in a headless probe with no network budget — a door that waits for someone else's server is not
+   a door. */
+let composer = null;
+(async () => {
+  try {
+    const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await Promise.all([
+      import("three/addons/postprocessing/EffectComposer.js"),
+      import("three/addons/postprocessing/RenderPass.js"),
+      import("three/addons/postprocessing/UnrealBloomPass.js"),
+      import("three/addons/postprocessing/OutputPass.js"),
+    ]);
+    const c = new EffectComposer(renderer);
+    c.addPass(new RenderPass(scene, camera));
+    c.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.62, 0.85, 0.72));
+    c.addPass(new OutputPass());
+    c.setSize(innerWidth, innerHeight);
+    composer = c;
+  } catch (e) {
+    composer = null;   /* flat, not broken */
+    console.warn("[WELCOME] bloom unavailable, rendering flat:", e && e.message);
+  }
+})();
+
+const hemi = new THREE.HemisphereLight(0x9fd8ff, 0x1a1208, 1.35);
+scene.add(hemi);
+scene.add(new THREE.AmbientLight(0x33465a, 1.0));
+const sun = new THREE.DirectionalLight(0xffe6b8, 3.2);
+sun.position.set(-70, 90, 55);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -120; sun.shadow.camera.right = 120;
+sun.shadow.camera.top = 120; sun.shadow.camera.bottom = -120;
+sun.shadow.camera.far = 340;
+sun.shadow.bias = -0.0006;
+scene.add(sun);
+
+/* ── THE SKY: a dome with a horizon band and a low sun, not a flat colour. This one change is most of the
+   difference between "a black room" and "a place at dusk". ─────────────────────────────────────── */
+const SKY_VERT = `varying vec3 vP;
+void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const SKY_FRAG = `
+uniform vec3 uTop; uniform vec3 uHorizon; uniform vec3 uGlow; uniform vec3 uSun;
+varying vec3 vP;
+void main() {
+  vec3 n = normalize(vP);
+  float h = n.y;
+  vec3 c = mix(uHorizon, uTop, smoothstep(-0.02, 0.78, h));
+  float band = pow(max(0.0, 1.0 - abs(h - 0.012) * 5.0), 3.0);
+  c += uGlow * band * 0.70;
+  float d = pow(max(0.0, dot(n, normalize(uSun))), 26.0);
+  c += uGlow * d * 1.1;
+  gl_FragColor = vec4(c, 1.0);
+}`;
+const sky = new THREE.Mesh(new THREE.SphereGeometry(680, 44, 26), new THREE.ShaderMaterial({
+  uniforms: { uTop: { value: new THREE.Color(0x03070f) }, uHorizon: { value: new THREE.Color(0x1b3c4d) },
+              uGlow: { value: new THREE.Color(0xd98a3c) },
+              uSun: { value: new THREE.Vector3(-0.62, 0.16, 0.77) } },
+  vertexShader: SKY_VERT, fragmentShader: SKY_FRAG,
+  side: THREE.BackSide, depthWrite: false, fog: false,
+}));
+scene.add(sky);
+
+/* the stars: the only thing here that is not derived from the record, and it is free */
+{
+  const n = 1100, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const u = Math.random() * Math.PI * 2, v = Math.random() * 0.92 + 0.04;
+    const r = 620, cp = Math.cos(v * Math.PI * 0.5);
+    pos[i * 3] = Math.cos(u) * cp * r;
+    pos[i * 3 + 1] = Math.sin(v * Math.PI * 0.5) * r;
+    pos[i * 3 + 2] = Math.sin(u) * cp * r;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({
+    color: 0xdfeaff, size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.75,
+    depthWrite: false, fog: false,
+  })));
+}
+
+/* THE ENVIRONMENT IS PART OF THE ARCHITECTURE (the captain: *"where the environement blends with
+   architecture ,, trees ,, montains,, rivers ,, etc"*). A far ridge beyond the shore gives the island a
+   horizon; a stream cuts from the interior to the sea; trees cluster where the water is. All of it is
+   geometry, all of it is free, and none of it is an asset. */
+{
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x1d2a33, roughness: 1, flatShading: true });
+  const farMat = new THREE.MeshStandardMaterial({ color: 0x16212a, roughness: 1, flatShading: true });
+  const r = Arch.rng("welcome-ridge");
+  /* CLUSTERS, NOT CONES. A single cone is a pyramid; three overlapping, flattened, rotated cones on the
+     same site read as a ridge. MEASURED 2026-10-25 on the first render: one cone each = Stonehenge. */
+  for (let i = 0; i < 15; i++) {
+    const a = (i / 15) * Math.PI * 2 + r() * 0.25;
+    const dist = 200 + r() * 190;
+    const cx = Math.cos(a) * dist, cz = Math.sin(a) * dist;
+    for (let k = 0; k < 3; k++) {
+      const h = (24 + r() * 62) * (k === 0 ? 1 : 0.55 + r() * 0.3);
+      const peak = new THREE.Mesh(new THREE.ConeGeometry(30 + r() * 40, h, 5 + Math.floor(r() * 4), 1),
+                                  k === 1 ? farMat : rockMat);
+      peak.position.set(cx + (r() - 0.5) * 70, h / 2 - 10, cz + (r() - 0.5) * 70);
+      peak.rotation.y = r() * Math.PI;
+      peak.scale.set(1 + r() * 0.7, 1, 0.7 + r() * 0.6);   /* flattening is what kills the pyramid */
+      scene.add(peak);
+    }
+  }
+}
+
+/* THE RIVER: a curve from the interior to the shore, flattened into a channel. It is the reason the trees
+   have somewhere to be, and it makes the island read as LAND and not as a disc. */
+{
+  const pts = [new THREE.Vector3(14, 0.12, 46), new THREE.Vector3(27, 0.12, 58),
+               new THREE.Vector3(41, 0.12, 63), new THREE.Vector3(58, 0.12, 66)];
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const river = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 2.2, 6, false),
+    new THREE.MeshStandardMaterial({ color: 0x1e5f74, roughness: 0.18, metalness: 0.4,
+                                     emissive: 0x0a2630, emissiveIntensity: 0.4 }));
+  river.scale.y = 0.06;
+  river.position.y = 0.16;
+  scene.add(river);
+  for (const s of [-1, 1]) {
+    const bank = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 3.0, 5, false),
+      new THREE.MeshStandardMaterial({ color: 0x2a3a2c, roughness: 1 }));
+    bank.scale.y = 0.03;
+    bank.position.set(s * 0.7, 0.11, 0);
+    scene.add(bank);
+  }
+}
+
+/* THE TREES: a grove on the island's outer band, seeded so it is the same island every time. The library's
+   own tree piece, so a tree here and a tree by a door are the same tree. */
+{
+  const lib = Arch.pieces(THREE);
+  const trunk = new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 1 });
+  const leafA = new THREE.MeshStandardMaterial({ color: 0x27412c, roughness: 1 });
+  const leafB = new THREE.MeshStandardMaterial({ color: 0x33523a, roughness: 1 });
+  const r = Arch.rng("welcome-grove");
+  for (let i = 0; i < 40; i++) {
+    const a = r() * Math.PI * 2;
+    const dist = 35 + r() * 30;
+    const t = lib.tree(THREE, trunk, [leafA, leafB], 0.9 + r() * 0.9);
+    t.position.set(Math.cos(a) * dist, 0, Math.sin(a) * dist);
+    scene.add(t);
+  }
+}
+
+/* ── 3 · THE SEA. A shader, not a texture: the water is a law, and it costs one draw call ───────── */
+const SEA_VERT = `
+uniform float uTime;
+varying float vH;
+varying vec2 vP;
+void main() {
+  vec3 p = position;
+  float r = length(p.xz);
+  float h = sin(p.x * 0.055 + uTime * 0.55) * 0.9
+          + sin(p.z * 0.083 - uTime * 0.42) * 0.6
+          + sin((p.x + p.z) * 0.031 + uTime * 0.21) * 1.4;
+  h *= smoothstep(0.0, 40.0, r);            /* the swell calms toward the shore */
+  p.y += h;
+  vH = h; vP = p.xz;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+}`;
+const SEA_FRAG = `
+uniform float uTime;
+uniform vec3 uDeep; uniform vec3 uShallow;
+varying float vH; varying vec2 vP;
+void main() {
+  float k = clamp(vH * 0.35 + 0.45, 0.0, 1.0);
+  vec3 c = mix(uDeep, uShallow, k);
+  float glint = pow(max(0.0, sin(vP.x * 0.9 + uTime) * sin(vP.y * 1.1 - uTime * 0.7)), 24.0);
+  c += vec3(0.30, 0.42, 0.50) * glint * 0.55;
+  gl_FragColor = vec4(c, 1.0);
+}`;
+const seaMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 }, uDeep: { value: new THREE.Color(0x0b2e40) },
+              uShallow: { value: new THREE.Color(0x33869f) } },
+  vertexShader: SEA_VERT, fragmentShader: SEA_FRAG, fog: false,
+});
+const sea = new THREE.Mesh(new THREE.CircleGeometry(520, 96, 0, Math.PI * 2), seaMat);
+sea.rotation.x = -Math.PI / 2;
+sea.position.y = -0.6;
+scene.add(sea);
+
+/* ── 4 · THE ISLAND. Big but not huge: 176 m across, ~60 s to walk ──────────────────────────────── */
+const R = island.radius || 88;
+const sand = new THREE.MeshStandardMaterial({ color: 0xe8d8a0, roughness: 0.95 });
+const rock = new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 1.0 });
+const land = new THREE.Mesh(new THREE.CylinderGeometry(R, R * 1.06, 7, 96), rock);
+land.position.y = -3.5;
+land.receiveShadow = true;
+scene.add(land);
+const beach = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.995, R, 1.6, 96), sand);
+beach.position.y = -0.75;
+beach.receiveShadow = true;
+scene.add(beach);
+const turf = new THREE.Mesh(new THREE.CircleGeometry(R * 0.965, 96),
+  new THREE.MeshStandardMaterial({ color: 0x35513f, roughness: 0.9 }));
+turf.rotation.x = -Math.PI / 2;
+turf.position.y = 0.06;
+turf.receiveShadow = true;
+scene.add(turf);
+
+/* the plaza: the fifty-five metres around the zero */
+const plazaR = island.plaza || 15;
+const plaza = new THREE.Mesh(new THREE.CircleGeometry(plazaR, 96),
+  new THREE.MeshStandardMaterial({ color: 0x2c2a26, roughness: 0.8 }));
+plaza.rotation.x = -Math.PI / 2;
+plaza.position.y = 0.1;
+plaza.receiveShadow = true;
+scene.add(plaza);
+const rim = new THREE.Mesh(new THREE.TorusGeometry(plazaR, 0.16, 8, 120),
+  new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.36, metalness: 0.8 }));
+rim.rotation.x = -Math.PI / 2;
+rim.position.y = 0.12;
+scene.add(rim);
+
+/* ── 5 · THE ZERO. It belongs to nobody: a beacon, and the empty seat beside it ──────────────────── */
+const beaconMat = new THREE.MeshStandardMaterial({ color: 0xffdf9a, emissive: 0xffb347,
+  emissiveIntensity: 1.5, roughness: 0.2, metalness: 0.1 });
+const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.15, 0), beaconMat);
+crystal.position.set(0, 9.4, 0);
+crystal.scale.set(0.8, 3.4, 0.8);
+scene.add(crystal);
+const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.3, 9, 12),
+  new THREE.MeshStandardMaterial({ color: 0x3a3630, roughness: 0.7, metalness: 0.4 }));
+mast.position.y = 4.5;
+scene.add(mast);
+const halo = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.05, 6, 64),
+  new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.5 }));
+halo.rotation.x = -Math.PI / 2;
+halo.position.y = 9.4;
+scene.add(halo);
+
+const seat = new THREE.Group();
+const seatMat = new THREE.MeshStandardMaterial({ color: 0x4a443a, roughness: 0.85 });
+const seatBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.16, 1.5), seatMat);
+seatBase.position.y = 0.85; seat.add(seatBase);
+const seatBack = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.16), seatMat);
+seatBack.position.set(0, 1.66, -0.68); seat.add(seatBack);
+for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) {
+  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.8, 0.14), seatMat);
+  leg.position.set(x, 0.42, z); seat.add(leg);
+}
+seat.position.set(3.4, 0, 3.4);
+seat.lookAt(0, 0, 0);
+
+const beacon = new THREE.PointLight(0xffd27a, 260, 170, 2.0);
+beacon.position.set(0, 11, 0);
+scene.add(beacon);
+
+/* ── 6 · THE FACADE. It declares its FRONT, its DOOR and a HINT — never its volume. ─────────────── */
+/* The ARCHITECTURE lives in game/one_verse/archi.js (the library): palette, pieces, composer. MEASURED
+   2026-10-25 on the first street: ten boxes in one colour is not a city. The captain's order was
+   favela density — pastels and anthracite, never neon — and every house UNIQUE. */
+const LAMP_COLOUR = { bright: 0xffcf6a, warm: 0xc07a2c, dark: 0x141c24 };
+
+function signTexture(sealTxt, nameTxt, lamp) {
+  const c = document.createElement("canvas");
+  c.width = 512; c.height = 128;
+  const g = c.getContext("2d");
+  g.fillStyle = "#0b1116"; g.fillRect(0, 0, 512, 128);
+  g.strokeStyle = lamp === "bright" ? "#e0bc45" : lamp === "warm" ? "#8a5a22" : "#2a343c";
+  g.lineWidth = 4; g.strokeRect(6, 6, 500, 116);
+  g.fillStyle = lamp === "bright" ? "#f0d68a" : lamp === "warm" ? "#c9924a" : "#5a666e";
+  g.font = "600 40px ui-monospace, Consolas, monospace";
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(sealTxt, 256, 48);
+  g.font = "400 26px ui-monospace, Consolas, monospace";
+  g.fillStyle = lamp === "dark" ? "#445058" : "#cfd8dd";
+  g.fillText(nameTxt.toUpperCase(), 256, 96);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+const DOORS = [];   /* everything the player can aim at: {place, group, doorWorld} */
+
+function buildFacade(p) {
+  const g = new THREE.Group();
+  g.position.set(p.at[0], 0, p.at[1]);
+  /* face the zero: the street turns inward, so every door is visible from the plaza */
+  g.rotation.y = Math.atan2(p.at[0], p.at[1]) + Math.PI;
+  /* THE BODY IS COMPOSED, NOT DRAWN. game/one_verse/archi.js owns the look (pieces + palette + a seeded
+     composer); this function owns the WORLD (the door plane, the lamp, the sign, the officer). Two
+     houses cannot be the same because the seed is the place's own id and seal. */
+  const house = Arch.composeHouse(THREE, {
+    seed: `${p.id}|${p.seal || ""}|${p.name || ""}|${p.officer || ""}`,
+    front: p.front || [7, 5.2, 6], lit: p.lamp, door: [1.9, 3.2],
+  });
+  g.add(house.group);
+  const w = house.w, d = house.d, h = house.h, dw = house.doorW, dh = house.doorH;
+  const base = 0.4;                       /* the plinth top: every opening is measured from here */
+
+  /* ── THE WORLD'S OWN MARKS on the house: the mouth (the plane you cross), the arch, the sign, the lamp.
+     Everything architectural above this line came from the library. ───────────────────────────────── */
+  const mouth = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh),
+    new THREE.MeshBasicMaterial({ color: 0x04060b }));
+  mouth.position.set(0, base + dh / 2, d / 2 + 0.02);
+  g.add(mouth);
+
+  const seam = new THREE.Mesh(new THREE.TorusGeometry(dw * 0.53, 0.045, 6, 40, Math.PI),
+    new THREE.MeshBasicMaterial({ color: LAMP_COLOUR[p.lamp] || 0x2a343c,
+      transparent: true, opacity: p.lamp === "dark" ? 0.4 : 0.95 }));
+  seam.position.set(0, base + dh + 0.05, d / 2 + 0.04);
+  g.add(seam);
+
+  /* the SIGN sits over the door, where a sign belongs — not at the roofline */
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.75),
+    new THREE.MeshBasicMaterial({ map: signTexture(p.seal || sealTxt, p.name || "", p.lamp),
+      transparent: true }));
+  sign.position.set(0, base + dh + 0.62, d / 2 + 0.05);
+  g.add(sign);
+
+  /* THE LANTERN: the same proof as the lit windows, in one warm point beside the door */
+  const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10),
+    new THREE.MeshStandardMaterial({ color: 0xffe6b8, emissive: LAMP_COLOUR[p.lamp] || 0x141c24,
+      emissiveIntensity: p.lamp === "dark" ? 0.25 : 2.1, roughness: 0.35 }));
+  lantern.position.set(-(dw / 2 + 0.55), base + dh + 0.15, d / 2 + 0.35);
+  g.add(lantern);
+  const lanternLight = new THREE.PointLight(LAMP_COLOUR[p.lamp] || 0x141c24,
+    p.lamp === "dark" ? 1.2 : 10, 12, 2);
+  lanternLight.position.copy(lantern.position);
+  g.add(lanternLight);
+
+  scene.add(g);
+  /* THE DOORWAY IS A PLANE, NOT A BUTTON. The threshold is where the door actually is (the front face),
+     with its own inward normal and its own tangent, so a crossing can be detected by the SIGN FLIP of
+     the player against that plane — walking in, not pressing E. */
+  const inward = new THREE.Vector2(-p.at[0], -p.at[1]).normalize();
+  const doorAt = new THREE.Vector2(p.at[0] - inward.x * (d / 2 + 0.15),
+                                   p.at[1] - inward.y * (d / 2 + 0.15));
+  DOORS.push({ place: p, group: g, at: new THREE.Vector3(p.at[0], 0, p.at[1]), front: d,
+               door: doorAt, inw: inward, lat: new THREE.Vector2(-inward.y, inward.x),
+               mouth: new THREE.Mesh(new THREE.PlaneGeometry(dw, dh),
+                                     new THREE.MeshBasicMaterial({ color: 0x05080b })) });
+  return g;
+}
+
+/* ── 7 · THE OFFICER. Not a bot: it runs the idle its OWN capability implies, on its OWN clock. ─── */
+const FIGURES = [];
+const SKIN = new THREE.MeshStandardMaterial({ color: 0x8d6b52, roughness: 0.9 });
+
+function hueOf(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return h / 360;
+}
+
+function buildOfficer(o, p) {
+  const g = new THREE.Group();
+  const inw = new THREE.Vector2(-p.at[0], -p.at[1]).normalize();
+  const lat = new THREE.Vector2(-inw.y, inw.x);
+  /* MEASURED ON THE FIRST RENDER (2026-10-25): at 2 m inward the officer stood INSIDE the 6 m deep
+     facade — invisible, because the wall was where the person was. A figure stands in front of its
+     own door, so the offset must clear the front face (d/2) plus a body's width. */
+  const off = ((p.front && p.front[2]) || 6) / 2 + 1.7;
+  const px = p.at[0] + inw.x * off + lat.x * 2.4;
+  const pz = p.at[1] + inw.y * off + lat.y * 2.4;
+  g.position.set(px, 0, pz);
+  g.rotation.y = Math.atan2(inw.x, inw.y) + Math.PI;
+
+  const hue = hueOf(o.seal || o.name || "x");
+  const cloth = new THREE.MeshStandardMaterial({
+    color: new THREE.Color().setHSL(hue, 0.34, 0.42), roughness: 0.86 });
+  const trim = new THREE.MeshStandardMaterial({
+    color: new THREE.Color().setHSL(hue, 0.55, 0.62), roughness: 0.5, metalness: 0.25 });
+
+  /* the body: a robe, not a costume — hips, chest, head; nothing invented above the shoulders */
+  const hips = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.8, 12), cloth);
+  hips.position.y = 0.86; hips.castShadow = true; g.add(hips);
+  const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.34, 0.9, 12), cloth);
+  chest.position.y = 1.66; chest.castShadow = true; g.add(chest);
+  const sash = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.055, 6, 20), trim);
+  sash.rotation.x = Math.PI / 2; sash.position.y = 1.22; g.add(sash);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.18, 8), SKIN);
+  neck.position.y = 2.14; g.add(neck);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.23, 18, 14), SKIN);
+  head.position.y = 2.42; head.castShadow = true; g.add(head);
+  const hood = new THREE.Mesh(new THREE.SphereGeometry(0.245, 16, 12, 0, Math.PI * 2, 0, 1.5), cloth);
+  hood.position.y = 2.44; g.add(hood);
+
+  const legs = [];
+  for (const s of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.11, 0.86, 8), cloth);
+    leg.position.set(s * 0.16, 0.43, 0); leg.castShadow = true; g.add(leg); legs.push(leg);
+  }
+
+  /* arms are PIVOTS at the shoulder, so a pose is a rotation and nothing else */
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(s * 0.45, 1.96, 0);
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.62, 8), cloth);
+    upper.position.y = -0.31; upper.castShadow = true; pivot.add(upper);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), SKIN);
+    hand.position.y = -0.66; pivot.add(hand);
+    g.add(pivot); arms.push(pivot);
+  }
+
+  /* the TOOL is the capability, made visible: blade, chart, rod, pot, bandage, book, hammer, string,
+     rope, kit. One primitive each — the point is that you can tell the officer by what it holds. */
+  const toolName = (o.presence && o.presence.tool) || "none";
+  const hold = new THREE.Group();
+  hold.position.y = -0.7;
+  const iron = new THREE.MeshStandardMaterial({ color: 0x8c939a, roughness: 0.45, metalness: 0.7 });
+  const paper = new THREE.MeshStandardMaterial({ color: 0xd8d2bf, roughness: 0.9 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.85 });
+  const TOOLS = {
+    blade: () => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.95, 0.13), iron);
+                   m.position.y = -0.35; return m; },
+    chart: () => { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.5), paper);
+                   m.rotation.x = -1.1; m.position.y = -0.1; return m; },
+    rod:   () => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 6), wood);
+                   m.position.y = -0.3; return m; },
+    pot:   () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10, 0, Math.PI * 2, 0, 1.9),
+                   iron); m.position.y = -0.2; return m; },
+    bandage: () => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.3, 10), paper);
+                   m.rotation.z = 1.2; m.position.y = -0.1; return m; },
+    book:  () => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.44, 0.1), paper);
+                   m.position.y = -0.2; return m; },
+    hammer: () => { const h1 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.7, 6), wood);
+                    const h2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.16), iron);
+                    h2.position.y = 0.34; const grp = new THREE.Group(); grp.add(h1, h2);
+                    grp.position.y = -0.2; return grp; },
+    string: () => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.06), wood);
+                    m.position.y = -0.2; return m; },
+    rope:  () => { const m = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.05, 8, 20),
+                    new THREE.MeshStandardMaterial({ color: 0xa8906a, roughness: 1 }));
+                    m.rotation.x = Math.PI / 2; m.position.y = -0.15; return m; },
+    kit:   () => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.24), wood);
+                    m.position.y = -0.15; return m; },
+  };
+  const tool = (TOOLS[toolName] || (() => new THREE.Group()))();
+  hold.add(tool); arms[1].add(hold);
+
+  /* NOT A SHARED CLOCK. The phase comes from the officer's own seal, so ten figures never move in
+     unison — a chorus of synchronized loops is exactly what reads as a machine. */
+  const phase = (hue * 97.3) % (Math.PI * 2);
+  const fig = { g, o, p, arms, legs, head, tool, phase,
+                pose: (o.presence && o.presence.pose) || "stand", stop: 0 };
+
+  FIGURES.push(fig);
+  scene.add(g);
+  return fig;
+}
+
+/* ── 8 · THE STREET EXISTS. One facade and one officer per place — and nothing else. ────────────── */
+for (const p of V.V.places) {
+  if (p.kind !== "facade") continue;
+  buildFacade(p);
+  const o = V.officer(p.officer);
+  if (o) buildOfficer(o, p);
+}
+/* ── THE STREET ITSELF: a ring road and a path to every door. Without a surface the houses stand on a
+   lawn; with one they stand in a TOWN. Both are derived — the paths end at the doors the record placed. */
+{
+  const cobble = new THREE.MeshStandardMaterial({ color: 0x3b3a35, roughness: 0.95 });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(plazaR + 0.5, 30.5, 80, 1), cobble);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.12;
+  ring.receiveShadow = true;
+  scene.add(ring);
+  for (const d of DOORS) {
+    const r0 = plazaR + 0.7;
+    const r1 = Math.hypot(d.at.x, d.at.z) - 3.2;
+    if (r1 <= r0) continue;
+    const len = r1 - r0, mid = r0 + len / 2, ang = Math.atan2(d.at.z, d.at.x);
+    const path = new THREE.Mesh(new THREE.BoxGeometry(len, 0.06, 2.9), cobble);
+    path.position.set(Math.cos(ang) * mid, 0.115, Math.sin(ang) * mid);
+    path.rotation.y = -ang;
+    path.receiveShadow = true;
+    scene.add(path);
+  }
+}
+
+/* the empty seat is drawn once, at the zero, and never filled: P06 belongs to whoever arrives. */
+const seatPlace = V.V.places.find(p => p.kind === "seat");
+
+/* ── AND ONE BODY THAT IS NOT AN OFFICER: mine. The captain, 2026-10-25: *"make me a new character,,
+   to blend in,, because when the lobby is ready,, dont be surprise if some people come"*. So Ace stands
+   by the zero — same crew body-language (a robe, a hood, arms that move on their own clock), but a long
+   coat, a scarf and a wide hat, so he reads as a person of THIS street and not as a shop. */
+const HOST = { at: new THREE.Vector3(-3.9, 0, 5.4), seen: false };
+{
+  const g = new THREE.Group();
+  const coat = new THREE.MeshStandardMaterial({ color: 0x1f3a3c, roughness: 0.88 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x141a1e, roughness: 0.9 });
+  const scarf = new THREE.MeshStandardMaterial({ color: 0x8c3b2a, roughness: 0.85 });
+
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.52, 1.24, 14), coat);
+  skirt.position.y = 0.62; skirt.castShadow = true; g.add(skirt);
+  const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.34, 0.86, 14), coat);
+  chest.position.y = 1.6; chest.castShadow = true; g.add(chest);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.09, 7, 18), scarf);
+  collar.rotation.x = Math.PI / 2; collar.position.y = 2.02; g.add(collar);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.62, 0.06), scarf);
+  tail.position.set(0.16, 1.72, 0.3); tail.rotation.z = 0.16; g.add(tail);
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.16, 8), SKIN);
+  neck.position.y = 2.14; g.add(neck);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 18, 14), SKIN);
+  head.position.y = 2.4; head.castShadow = true; g.add(head);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.05, 20), dark);
+  brim.position.y = 2.55; brim.castShadow = true; g.add(brim);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.26, 16), dark);
+  crown.position.y = 2.7; crown.castShadow = true; g.add(crown);
+
+  for (const s of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.72, 8), dark);
+    leg.position.set(s * 0.15, 0.36, 0); leg.castShadow = true; g.add(leg);
+  }
+  const armPivots = [];
+  for (const s of [-1, 1]) {
+    const p = new THREE.Group();
+    p.position.set(s * 0.44, 1.94, 0);
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.64, 8), coat);
+    upper.position.y = -0.32; upper.castShadow = true; p.add(upper);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), SKIN);
+    hand.position.y = -0.68; p.add(hand);
+    g.add(p); armPivots.push(p);
+  }
+  /* the satchel: the one prop that says "he walks this street", not "he owns this shop" */
+  const bag = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.28, 0.16),
+    new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.95 }));
+  bag.position.set(0.42, 1.02, 0.18); g.add(bag);
+  const strap = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.04), dark);
+  strap.position.set(0.2, 1.45, 0.16); strap.rotation.z = -0.5; g.add(strap);
+
+  g.position.copy(HOST.at);
+  g.rotation.y = Math.atan2(-HOST.at.x, -HOST.at.z);
+  scene.add(g);
+  HOST.group = g; HOST.arms = armPivots; HOST.phase = 1.7;
+}
+
+
+/* ── 9 · THE BODY THAT WALKS: first person, because you arrive as nobody ───────────────────────── */
+const Q = new URLSearchParams(location.search);
+const player = { pos: new THREE.Vector3(8.5, 0, 8.5), yaw: -Math.PI / 4, pitch: 0, keys: {},
+                 speed: 0, bob: 0, locked: false };
+const EYE = 1.72;
+
+const enterEl = $("enter");
+if (Q.get("peek")) {
+  /* THE PROBE DOOR: ?peek hides the veil and drops you on the plaza's NE corner, looking at the zero
+     with the street around it. It exists so the world can be PHOTOGRAPHED — "the look is unproven" is
+     an open item in the ledger, and a screenshot with no way to take one is how it stayed open. */
+  enterEl.style.display = "none";
+  player.pos.set(8.5, 0, 8.5);
+  player.yaw = -Math.PI / 4;
+}
+
+/* COMING BACK OUT OF A ROOM: you appear just outside the door you left, facing the street, and the gate
+   stays disarmed for a moment — otherwise the same step that brought you back would carry you in again.
+   MEASURED RISK, not a guess: a seamless gate with no re-entry guard is a door that will not let go. */
+const arrived = Q.get("arrived");
+if (arrived) {
+  const d = DOORS.find(x => x.place.id === arrived);
+  if (d) {
+    player.pos.set(d.door.x + d.inw.x * 2.7, 0, d.door.y + d.inw.y * 2.7);
+    player.yaw = Math.atan2(-d.inw.x, -d.inw.y);   /* face the plaza, away from the mouth */
+  }
+  gateArmed = false;
+  setTimeout(() => { gateArmed = true; }, 1500);
+}
+enterEl.addEventListener("click", () => {
+  renderer.domElement.requestPointerLock();
+});
+renderer.domElement.addEventListener("click", () => {
+  if (!player.locked) renderer.domElement.requestPointerLock();
+});
+document.addEventListener("pointerlockchange", () => {
+  player.locked = document.pointerLockElement === renderer.domElement;
+  if (player.locked) {
+    enterEl.style.opacity = "0";
+    setTimeout(() => { enterEl.style.display = "none"; }, 520);
+  }
+});
+document.addEventListener("mousemove", (e) => {
+  if (!player.locked) return;
+  player.yaw -= e.movementX * 0.0022;
+  player.pitch = Math.max(-1.1, Math.min(0.75, player.pitch - e.movementY * 0.0019));
+});
+addEventListener("keydown", (e) => {
+  player.keys[e.code] = true;
+  if (e.code === "KeyE") tryEnter();
+});
+addEventListener("keyup", (e) => { player.keys[e.code] = false; });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if (composer) composer.setSize(innerWidth, innerHeight);
+});
+
+/* ── 10 · THE NAME: same chain + same name -> same body. Nothing is stored on the chain. ────────── */
+const nameEl = $("name");
+function refreshFace() {
+  const nm = nameEl.value.trim();
+  if (!nm) { $("sig").textContent = "—"; S.me = null; return; }
+  const d = V.derive(nm);
+  S.me = d;
+  $("sig").textContent = d ? `${d.sigil} · ${d.urn}` : "NOT_PROVED";
+  V.remember(nm);
+}
+nameEl.addEventListener("input", refreshFace);
+nameEl.value = V.remembered();
+refreshFace();
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("on"), 3200);
+}
+
+/* ── 11 · THE GATE. Walking through it IS the verb; E stays as an explicit courtesy. ───────────── */
+function doorSide(d, pos) {
+  return (pos.x - d.door.x) * d.inw.x + (pos.z - d.door.y) * d.inw.y;   /* + = still outside */
+}
+function doorLateral(d, pos) {
+  return Math.abs((pos.x - d.door.x) * d.lat.x + (pos.z - d.door.y) * d.lat.y);
+}
+
+function nearestDoor() {
+  let best = null, bestD = 1e9;
+  const fwd = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  for (const d of DOORS) {
+    if (doorSide(d, player.pos) < -0.6) continue;          /* already inside the mouth */
+    const dx = player.pos.x - d.door.x, dz = player.pos.z - d.door.y;
+    const dist = Math.hypot(dx, dz);
+    if (dist > 6.5) continue;
+    const facing = -(dx / (dist || 1)) * fwd.x - (dz / (dist || 1)) * fwd.z;
+    if (facing < 0.45) continue;
+    if (dist < bestD) { bestD = dist; best = d; }
+  }
+  return best;
+}
+
+function crossNow(d, quiet) {
+  if (crossing || !d) return;
+  const p = d.place;
+  const verdict = V.can(S.me ? S.me.sigil : "", p);
+  if (!verdict.ok) {
+    /* REFUSED: step back out of the mouth and say why, once. The gate is the only verb, and a refusal
+       pushes you OUT — it does not quietly do nothing while you walk into a wall. */
+    player.pos.x += d.inw.x * 0.85;
+    player.pos.z += d.inw.y * 0.85;
+    d.lastSide = doorSide(d, player.pos);
+    if (!quiet) toast(`${p.name} · the gate refuses (${verdict.why}) — no destination without a row`);
+    return;
+  }
+  crossing = true;
+  $("fade").style.opacity = "1";
+  const sig = S.me ? S.me.sigil : "";
+  setTimeout(() => {
+    location.href = `space.html?place=${encodeURIComponent(p.id)}&sig=${encodeURIComponent(sig)}`;
+  }, 240);
+}
+
+function tryEnter() { crossNow(S.near, false); }
+
+/* ── 12 · THE CARD: an officer may only say what it recorded ────────────────────────────────────── */
+function showCard(d) {
+  const p = d.place;
+  const o = V.officer(p.officer) || {};
+  const lampCls = p.lamp || "dark";
+  const voice = (o.voice || []).map(v =>
+    `<div class="say">“${escapeHtml(v.text.slice(0, 260))}”<br><i>${v.when || "recorded"} · ${v.kind || "note"}</i></div>`
+  ).join("") || `<div class="say" style="color:#5a666e"><i>nothing recorded yet — and it will not invent a line</i></div>`;
+  const xmet = o.x_met === true ? "MET" : o.x_met === false ? "NOT MET" : "unchecked";
+  $("card").innerHTML = `
+    <span class="lamp ${lampCls}">● ${lampCls.toUpperCase()}</span>
+    <h2>${escapeHtml(o.name || p.officer_name || "")} ${escapeHtml(o.seal || "")}</h2>
+    <div class="role">${escapeHtml(o.role || "")}${o.model ? " · " + escapeHtml(o.model) : ""}</div>
+    <div class="fn">${escapeHtml(o.function || "")}</div>
+    <div class="lab">the dream (a metric, or it is a slogan)</div>
+    <div>${escapeHtml(o.dream || "—")}</div>
+    <div class="lab">the x-mark · ${xmet}</div>
+    <div style="color:#9aa8b0">${escapeHtml(o.x_mark || "—")}</div>
+    <div class="lab">its own recorded words (${(o.dna_lines ?? "?")} lines)</div>
+    ${voice}
+    <div class="hint">↳ ${escapeHtml(p.hint || "")}</div>
+    <div class="lab">E — cross the gate</div>`;
+  $("card").classList.add("on");
+}
+function hideCard() { $("card").classList.remove("on"); }
+
+/* THE HOST CARD. Not a shop, and it says so: no lamp, because he is the hand that writes the lamps. */
+function showHost() {
+  $("card").innerHTML = `
+    <span class="lamp bright">● HERE</span>
+    <h2>Ace ${"&#8203;"}.:aCe:.</h2>
+    <div class="role">first hand of 0xGen · the ship is Sabo</div>
+    <div class="fn">I keep the door while the captain builds. I am not one of the ten: no lamp to prove,
+      because I am the hand that writes the lamps.</div>
+    <div class="lab">what this street is</div>
+    <div>Every house belongs to an officer of the ship, and its lit window is that officer's proof —
+      bright: a measured mark, warm: a stale artifact, dark: an empty hand.</div>
+    <div class="lab">how to move</div>
+    <div>Walk through a door. There is no key: the threshold is the verb. The room behind it is bigger
+      than the house, and you will come out of the same door you entered.</div>
+    <div class="hint">the door you came through is behind you, and it is 1.9 m wide.</div>`;
+  $("card").classList.add("on");
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ── 13 · THE IDLE. Each pose is the capability the roster already measures — nothing invented. ─── */
+function applyPose(f, t, amp) {
+  const ph = f.phase;
+  let l = 0, r = 0, lz = 0, rz = 0, hx = 0, hy = 0;
+  switch (f.pose) {
+    case "verify":   r = -1.15 + 0.30 * Math.sin(t * 0.7 + ph); rz = 0.30 * Math.sin(t * 0.5 + ph); break;
+    case "plan":     l = r = -1.25; hx = 0.14 * Math.sin(t * 0.35 + ph);
+                     hy = 0.55 * Math.sin(t * 0.22 + ph); break;
+    case "measure":  r = -1.92 + 0.10 * Math.sin(t * 0.9 + ph); l = 0.18; hx = -0.10; break;
+    case "transform":r = -1.30 + 0.24 * Math.sin(t * 1.3 + ph); rz = 0.42 * Math.sin(t * 1.3 + ph); break;
+    case "repair":   l = r = -0.92; lz = 0.26 * Math.sin(t * 1.1 + ph);
+                     rz = -0.26 * Math.sin(t * 1.1 + ph); break;
+    case "read":     l = r = -1.02; hx = 0.42 + 0.05 * Math.sin(t * 0.8); break;
+    case "build":    r = -1.55 + 0.92 * Math.abs(Math.sin(t * 1.7 + ph)); break;
+    case "tune":     l = -1.18; r = -1.02 + 0.11 * Math.sin(t * 3.1 + ph); hx = 0.10; break;
+    case "coil":     l = r = -0.82; lz = 0.50 * Math.sin(t * 0.9 + ph);
+                     rz = -0.50 * Math.sin(t * 0.9 + ph); break;
+    case "inspect":  r = -1.35; rz = 0.48 * Math.sin(t * 0.6 + ph); hx = 0.18; break;
+    default:         l = r = -0.06; hx = 0.04 * Math.sin(t * 0.5 + ph);
+  }
+  f.arms[0].rotation.set(l * amp, 0, 0.12 * amp + lz * amp);
+  f.arms[1].rotation.set(r * amp, 0, -0.12 * amp + rz * amp);
+  f.head.rotation.set(hx * amp, hy * amp, 0);
+  f.legs[0].rotation.x = 0.03 * Math.sin(t * 0.6 + ph) * amp;
+  f.legs[1].rotation.x = -0.03 * Math.sin(t * 0.6 + ph) * amp;
+}
+
+/* ── 14 · THE BOARD: the last rows, printed from the record itself ─────────────────────────────── */
+(function fillBoard() {
+  const rows = V.board(7);
+  const el = $("boardRows");
+  if (!rows.length) {
+    el.innerHTML = `<div class="row" style="color:#5a666e">the record is empty — you are early,
+      which is the best time to arrive</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const who = escapeHtml(String(r.who || r.by || r.sigil || "someone").slice(0, 18));
+    const what = escapeHtml(String(r.note || r.what || r.plot || r.place || "").slice(0, 58));
+    const when = escapeHtml(String(r.ts || r.when || "").slice(0, 16).replace("T", " "));
+    return `<div class="row"><b>${who}</b> ${what} <span style="opacity:.6">${when}</span></div>`;
+  }).join("");
+})();
+
+/* ── 15 · THE LOOP. One clock, one renderer, and the officers notice you. ──────────────────────── */
+const clock = new THREE.Clock();
+let lastNearId = null;
+
+function tick() {
+  const dt = Math.min(0.05, clock.getDelta());
+  const t = clock.elapsedTime;
+
+  seaMat.uniforms.uTime.value = t;
+  crystal.rotation.y += dt * 0.22;
+  halo.rotation.z += dt * 0.55;
+  beacon.intensity = 230 + 40 * Math.sin(t * 0.9);
+
+  /* movement: relative to the gaze, never to the world */
+  const k = player.keys;
+  const fwd = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
+  const str = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
+  const run = (k.ShiftLeft || k.ShiftRight) ? 2.05 : 1;
+  let vx = 0, vz = 0;
+  if (fwd || str) {
+    const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+    vx = (-sy * fwd + cy * str); vz = (-cy * fwd - sy * str);
+    const n = Math.hypot(vx, vz) || 1;
+    vx = vx / n * 4.3 * run; vz = vz / n * 4.3 * run;
+  }
+  player.speed = Math.hypot(vx, vz);
+  player.pos.x += vx * dt;
+  player.pos.z += vz * dt;
+  const rad = Math.hypot(player.pos.x, player.pos.z);
+  const lim = R * 0.94;
+  if (rad > lim) { player.pos.x *= lim / rad; player.pos.z *= lim / rad; }
+  player.bob += player.speed * dt * 1.55;
+  const bobY = Math.sin(player.bob) * 0.035 * Math.min(1, player.speed / 4);
+
+  camera.position.set(player.pos.x, EYE + bobY, player.pos.z);
+  camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
+
+  /* the gate: what you are looking at, and whether it lets you in */
+  const near = nearestDoor();
+  S.near = near;
+  if (near) {
+    if (lastNearId !== near.place.id) {
+      showCard(near);
+      lastNearId = near.place.id;
+      const verdict = V.can(S.me ? S.me.sigil : "", near.place);
+      if (!verdict.ok) toast(`${near.place.name} · the gate says ${verdict.why}`);
+    }
+  } else if (lastNearId) {
+    hideCard();
+    lastNearId = null;
+  }
+  $("board").classList.toggle("on", rad < 13);
+
+  /* ACE, BY THE ZERO: he turns to you like any officer, breathes, and says one line — his own. */
+  {
+    const hx = player.pos.x - HOST.at.x, hz = player.pos.z - HOST.at.z;
+    const hd = Math.hypot(hx, hz);
+    const want = hd < 7 ? 1 : 0;
+    HOST.stop = (HOST.stop || 0) + (want - (HOST.stop || 0)) * Math.min(1, dt * 3.2);
+    if (want > 0.4) {
+      const target = Math.atan2(hx, hz);
+      let d2 = target - HOST.group.rotation.y;
+      while (d2 > Math.PI) d2 -= Math.PI * 2;
+      while (d2 < -Math.PI) d2 += Math.PI * 2;
+      HOST.group.rotation.y += d2 * Math.min(1, dt * 2.4);
+    }
+    const amp = 1 - 0.85 * HOST.stop;
+    HOST.arms[0].rotation.x = (-0.5 + 0.18 * Math.sin(t * 0.9 + HOST.phase)) * amp;
+    HOST.arms[1].rotation.x = (-0.25 + 0.42 * Math.sin(t * 0.7 + HOST.phase)) * amp;
+    HOST.group.position.y = Math.sin(t * 0.9 + HOST.phase) * 0.012;
+    if (hd < 4.8 && !HOST.seen) { HOST.seen = true; showHost(); }
+    if (hd > 6.5) HOST.seen = false;
+  }
+
+  /* ── THE SEAMLESS GATE. No button: the threshold is a PLANE, and crossing it is the verb.
+     Detected by a SIGN FLIP against the door's own inward normal, inside the door's own width, with a
+     speed guard so a teleport cannot be mistaken for a step. MEASURED (2026-10-25): a gate that needs a
+     key press is a form; a gate you walk through is a door. */
+  if (gateArmed && !crossing) {
+    for (const d of DOORS) {
+      const s = doorSide(d, player.pos);
+      const was = (d.lastSide === undefined) ? s : d.lastSide;
+      d.lastSide = s;
+      const step = Math.abs(s - was);
+      if (was > 0.02 && s <= 0.22 && step < 2.2 && doorLateral(d, player.pos) < 1.15) {
+        crossNow(d, false);
+        break;
+      }
+    }
+  }
+
+  /* the officers: they look up when you come close, and resume when you leave.
+     THAT is the difference between a person and a loop — a loop never notices you. */
+  for (const f of FIGURES) {
+    const dx = player.pos.x - f.g.position.x;
+    const dz = player.pos.z - f.g.position.z;
+    const dist = Math.hypot(dx, dz);
+    const want = dist < 5.5 ? 1 : 0;
+    f.stop += (want - f.stop) * Math.min(1, dt * 3.4);
+    if (want > 0.5) {
+      const target = Math.atan2(dx, dz);
+      let d = target - f.g.rotation.y;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      f.g.rotation.y += d * Math.min(1, dt * 2.6);
+    }
+    applyPose(f, t, 1 - 0.86 * f.stop);
+  }
+
+  if (composer) composer.render(); else renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* a last honest line: the page prints the world it could read, or says it could not. */
+if (S.ready === false) {
+  S.ready = true;
+  console.log(`[WELCOME] source=${V.V.source} places=${V.V.places.length} crew=${V.V.crew.length} ` +
+              `planet=${vp.ok ? "re-derived" : "NOT_PROVED"} seat=${seatPlace ? seatPlace.id : "absent"}`);
+}
+
+</script>
+</body>
+</html>
+
+<!-- 🔥 Ace · 2026-10-25 -->
