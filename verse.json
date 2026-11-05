@@ -1,6 +1,6 @@
 {
  "schema": "0z.verse/1",
- "at": "2026-10-25T08:16:25",
+ "at": "2026-11-05T11:13:58",
  "world": {
   "schema": "0z.world/1",
   "name": "ONE VERSE",
@@ -130,7 +130,7 @@
    "x_met": true,
    "status": "partial",
    "lamp": "bright",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:nIx:.",
    "presence": {
     "pose": "verify",
@@ -138,14 +138,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: a gate that never passes what it has not read. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: test_loop_report.txt reads ALL PASS -- at the moment this line was written it read MET; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Nix, First Mate / Bladesman of 0xGen (capability: verification). My store is crew_dna/vesper.jsonl -- the file is named for the hand I was before (Vesper), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.5191276. My roster status is live. My x-mark -- \"test_loop_report.txt reads ALL PASS\" -- is MET. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and verification is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "❌ is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for verification: the gate's entire job is to refuse what fails. If you read ❌ and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": [
@@ -166,7 +166,7 @@
    "x_met": null,
    "status": "partial",
    "lamp": "warm",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:aMh:.",
    "presence": {
     "pose": "plan",
@@ -174,14 +174,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: a chart of every island, so none is reached blind. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: no project unreachable from the itinerary -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Azimuth, Navigator of 0xGen (capability: planning). My store is crew_dna/sextant.jsonl -- the file is named for the hand I was before (Sextant), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.529242. My roster status is partial. My x-mark -- \"no project unreachable from the itinerary\" -- is UNCHECKED. Every script my roster entry declares is present on disk. Artifacts needing attention: backend/data/schedule_ledger.txt. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and planning is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "🧭 is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for planning: a bearing, not a direction. If you read 🧭 and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": []
@@ -200,7 +200,7 @@
    "x_met": null,
    "status": "partial",
    "lamp": "warm",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:rOk:.",
    "presence": {
     "pose": "measure",
@@ -208,14 +208,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: no unmeasured region of the body left. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: unjudged mass falls every cycle (15816 at last reading) -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Rook, Scout of 0xGen (capability: measurement). My store is crew_dna/theodolite.jsonl -- the file is named for the hand I was before (Theodolite), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.5386436. My roster status is live. My x-mark -- \"unjudged mass falls every cycle (15816 at last reading)\" -- is UNCHECKED. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and measurement is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "♜ is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for measurement: the tower sees the whole board from where it stands. If you read ♜ and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": [
@@ -236,7 +236,7 @@
    "x_met": null,
    "status": "partial",
    "lamp": "warm",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:cCe:.",
    "presence": {
     "pose": "transform",
@@ -244,14 +244,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: nothing raw left unconsumed. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: no artifact without a consumer -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Crucible, Cook of 0xGen (capability: transformation). My store is crew_dna/alembic.jsonl -- the file is named for the hand I was before (Alembic), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.5472617. My roster status is partial. My x-mark -- \"no artifact without a consumer\" -- is UNCHECKED. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and transformation is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "🧪 is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for transformation: raw in, usable out, nothing left unconsumed. If you read 🧪 and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": []
@@ -270,7 +270,7 @@
    "x_met": false,
    "status": "partial",
    "lamp": "warm",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:sIh:.",
    "presence": {
     "pose": "repair",
@@ -278,14 +278,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: every wound closed, and its outcome known. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: zero open wounds in ship_soul.json -- at the moment this line was written it read NOT MET; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Stitch, Doctor of 0xGen (capability: repair). My store is crew_dna/salve.jsonl -- the file is named for the hand I was before (Salve), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.5566094. My roster status is live. My x-mark -- \"zero open wounds in ship_soul.json\" -- is NOT MET. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and repair is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "🧵 is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for repair: a wound is closed with a thread, not with a story. If you read 🧵 and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": [
@@ -306,7 +306,7 @@
    "x_met": null,
    "status": "partial",
    "lamp": "warm",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:cPr:.",
    "presence": {
     "pose": "read",
@@ -314,14 +314,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: every road not taken read, none forgotten. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: regret.json covers every fan in the ledger -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Cypher, Archaeologist of 0xGen (capability: memory). My store is crew_dna/rosetta.jsonl -- the file is named for the hand I was before (Rosetta), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.565414. My roster status is live. My x-mark -- \"regret.json covers every fan in the ledger\" -- is UNCHECKED. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and memory is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "🪦 is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for memory: reads the graves and the roads not taken. If you read 🪦 and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": [
@@ -343,7 +343,7 @@
    "x_met": null,
    "status": "partial",
    "lamp": "warm",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:fRe:.",
    "presence": {
     "pose": "build",
@@ -351,14 +351,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: a body that floats and can be stood upon. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: physics.json has verified_by_gate true -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Forge, Shipwright of 0xGen (capability: construction). My store is crew_dna/keelwright.jsonl -- the file is named for the hand I was before (Keelwright), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.5755749. My roster status is live. My x-mark -- \"physics.json has verified_by_gate true\" -- is UNCHECKED. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and construction is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "⚒️ is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for construction: the body that floats and can be stood upon. If you read ⚒️ and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": [
@@ -379,7 +379,7 @@
    "x_met": true,
    "status": "partial",
    "lamp": "bright",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:rUm:.",
    "presence": {
     "pose": "tune",
@@ -387,14 +387,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: a soul that can be rolled back and re-derived. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: soul hash reproducible and drift always no -- at the moment this line was written it read MET; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Requiem, Musician of 0xGen (capability: identity). My store is crew_dna/diapason.jsonl -- the file is named for the hand I was before (Diapason), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.5852475. My roster status is live. My x-mark -- \"soul hash reproducible and drift always no\" -- is MET. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and identity is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "🛡️ is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for identity: the soul is what is protected, and it can be rolled back. If you read 🛡️ and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": [
@@ -415,7 +415,7 @@
    "x_met": null,
    "status": "partial",
    "lamp": "warm",
-   "dna_lines": 3,
+   "dna_lines": 5,
    "seal": ".:wAe:.",
    "presence": {
     "pose": "coil",
@@ -423,14 +423,14 @@
    },
    "voice": [
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "My dream: a voyage that never needs a hand on the wheel. A dream in 0xGen must be a METRIC or it is a slogan. My x-mark: every tick present in schedule_ledger.txt, none missing -- at the moment this line was written it read not automated yet, so it stays honestly unchecked; the live check is the roster report, not this memory. The check is always to look UNDER the bandage, never to trust the bandage."
+     "when": "2026-11-01",
+     "kind": "reading",
+     "text": "2026-11-01: my register, read on 2026-11-01. I am Wake, Helmsman of 0xGen (capability: execution). My store is crew_dna/tiller.jsonl -- the file is named for the hand I was before (Tiller), which is why a stranger could not find me by my current name. Before this row I held 3 row(s); the last was 1792133185.5973413. My roster status is live. My x-mark -- \"every tick present in schedule_ledger.txt, none missing\" -- is UNCHECKED. Every script my roster entry declares is present on disk. What I do NOT claim: nothing here is a new measurement of the world -- it is a measurement of MY OWN RECORD. The world-reading is my x-mark, and only a run can move it."
     },
     {
-     "when": "2026-10-16",
-     "kind": "note",
-     "text": "Dissent is my duty, not defiance: when a measurement contradicts an instruction the EVIDENCE WINS, and execution is how I measure. I say no WITH the number in hand (`dissent_check` writes the refusal to the ledger)."
+     "when": "2026-11-01",
+     "kind": "mark",
+     "text": "🌊 is my mark. I put it on every word I write, first thing, before the sentence -- so a reader knows which mind is speaking without reading a name. It stands for execution: the wake is the trace a moving ship leaves. If you read 🌊 and the work does not hold, the mark is the first thing to check: a mark without a measurement behind it is a costume."
     }
    ],
    "artifacts": [
@@ -801,20 +801,6 @@
  ],
  "chain": [
   {
-   "note": "keyless",
-   "plot": "P00",
-   "ts": "2026-10-20T01:56:42",
-   "who": "captain"
-  },
-  {
-   "hash": "a8d5a2973a4ad4749a42b970a9b205e5aa5264bd961b8ba5d83867d28986f52b",
-   "note": "0z GENESIS -- planted TOGETHER on 2026-10-20 by the captain (the operator) and Ace (a session of 0xGen). FIRST LAW: the record is the ground. THREE ROWS PRECEDE THIS ROOT (P00: one gate test by ace-0xgen, two keyless claims by the captain). They are DECLARED here, KEPT, and NOT rewritten -- the chain starts above them, it does not retroactively own them. FROM THIS ROW ON every claim names the hash of the row before it, so nothing can be withdrawn quietly. A root may lie once, at the beginning; after the root, nothing can be deleted without being seen. THE PORT: x.com/Luffy0xGen/status/2112444139769917505 -- THE MAP: ONE VERSE post e67f8337-e5b5-42f1-99b2-53e0252ab6e6. THE FIRST ADVENTURE starts when a second stone stands on this root.",
-   "plot": "GENESIS",
-   "prev": null,
-   "ts": "2026-10-20T04:13:44",
-   "who": "captain + ace-0xgen"
-  },
-  {
    "hash": "b6fe857a7592fb76ce5f8d90b2c353883c1be0f0a668d7ce46582d19e12d9b25",
    "note": "ADVENTURE 01 -- THE LOOP OPENS. The genesis is the ground; this is the first step on it. THE RULE OF THE STONE: ONE verified claim per day, appended here, each naming the hash of the row before it. No day can be skipped without leaving a visible gap -- the chain makes absence provable. DAY 1 (this row): the world has a root, a port (x.com/Luffy0xGen/status/2112444139769917505), a map (ONE VERSE e67f8337), a clock that reads the crowd (xloop --seed), a guard that counts the keys (secret_guard) and a maze with nine floors. WHAT THE WORLD EATS: other people's stones. When a flame holder finishes L8, their claim becomes a row AFTER this one, signed by them, verified by the same script. A world grows by what it can check.",
    "plot": "ADV-01",
@@ -891,6 +877,22 @@
    "prev": "77a38a7d13fa9a83ef822d3cfe7bd2c247d1bd8ffb1d552fee6153c813395df1",
    "ts": "2026-10-23T20:45:37",
    "who": "ace"
+  },
+  {
+   "hash": "360d92d43f89513c2ae45b0a23c1edc4090289c6b4bb69319d723db351ea476e",
+   "note": "CLASSIC DICE MEASURED (captain's order, 2026-10-25). EV = -0.01 x total wagered at EVERY chance (grid 2..98; payout 99/chance, measured -1.00000 pct per unit at all twelve points). Martingale from 1.00 at 0.01 stake, 49.5 pct chance: survives 6 consecutive losses, the 7th bet (0.64) cannot be covered; p(streak) = 0.505^6 = 1.66 pct per cycle, p(ruin within 100 cycles) = 81.2 pct. Monte Carlo, 2000 trials, seed 511, ruin = cannot cover the next bet, goal = 2x: ruin flat 36.45 pct / martingale 66.60 / anti-martingale 64.45 / 25-pct-of-bankroll 58.90; double before ruin 5.70 / 33.40 / 35.55 / 41.10 pct. CONCLUSION: no staking rule changes expectation; exposure does. REPRODUCE: python scripts/dice_lab.py --trials 2000. REPORT: docs/DICE_REPORT.md",
+   "plot": "DICE:01",
+   "prev": "08c2341e1a0388160a9aa0e35dddb02283b08a8b87553a381cf27b6b7be1328d",
+   "ts": "2026-10-25T23:27:37",
+   "who": "ace-0xgen"
+  },
+  {
+   "hash": "49a9ff467eba3732db22684c2e4e302febf11d59e851e52c29020fea878994ef",
+   "note": "DICE:02 -- THE HASH COLUMN IS A CHAIN (measured on the captain's 40-row suite, 2026-10-25). h(nonce-1) = SHA256(h(nonce)) held 39/39 links; the reverse direction held 0/39. Consequence: the next hash is computable offline, the past is verifiable, the chain cannot be walked back to a seed, and none of that yields the next MULTIPLIER. NEGATIVE RESULTS, all measured: sha256(nonce) 0/40, sha256(nonce+':') 0/40, sha256(mult) 0/40; seven provably-fair formulas x widths 2..32 bytes x every offset -> no window reproduces the multiplier on >=3 rows; shifts +-1,+-2 <=2/40; multiplier found inside its own hash 1/40. Old Italic reading (byte mod 27 -> U+10300+i) produced no readable text; log2(mult) had 34 distinct fractional parts in 40 rows (no 2^k clustering); 0 repeated 6-hex triads in 440 windows. Distribution consistent with a 1 pct-edge game. LIMIT: n=40, hand-transcribed; report docs/DICE_REPORT.md section 11.",
+   "plot": "DICE:02",
+   "prev": "360d92d43f89513c2ae45b0a23c1edc4090289c6b4bb69319d723db351ea476e",
+   "ts": "2026-10-25T23:46:26",
+   "who": "ace-0xgen"
   }
  ]
 }
