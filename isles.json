@@ -1,0 +1,119 @@
+{
+ "schema": "0z.isles/1",
+ "at": "2026-11-05T21:19:11",
+ "keeper_source": "verse.json crew",
+ "fragments": 3,
+ "isles": [
+  {
+   "index": 0,
+   "name": "the bell",
+   "seal": ".:tBl:.",
+   "bearing": 141,
+   "distance": 223,
+   "at": {
+    "x": 140.3384472041138,
+    "z": 199.30354940490446
+   },
+   "r": 24.87,
+   "peaks": 2,
+   "height": 11.93,
+   "resource": "fresh water",
+   "keeper": "Requiem",
+   "secret": {
+    "kind": "letter",
+    "at": 0,
+    "value": "m",
+    "where": "first"
+   },
+   "seed_hash": 3264763557
+  },
+  {
+   "index": 1,
+   "name": "the ninth fathom",
+   "seal": ".:tTm:.",
+   "bearing": 336,
+   "distance": 124,
+   "at": {
+    "x": -50.43534374139922,
+    "z": -87.27963674768252
+   },
+   "r": 12.97,
+   "peaks": 2,
+   "height": 19.24,
+   "resource": "iron",
+   "keeper": "Stitch",
+   "secret": {
+    "kind": "letter",
+    "at": 1,
+    "value": "O",
+    "where": "middle"
+   },
+   "seed_hash": 168536814
+  },
+  {
+   "index": 2,
+   "name": "the cold chair",
+   "seal": ".:tLr:.",
+   "bearing": 306,
+   "distance": 136,
+   "at": {
+    "x": -110.02631123499287,
+    "z": -53.93879431177632
+   },
+   "r": 21.83,
+   "peaks": 3,
+   "height": 14.32,
+   "resource": "fire",
+   "keeper": "Crucible",
+   "secret": {
+    "kind": "letter",
+    "at": 2,
+    "value": "l",
+    "where": "last"
+   },
+   "seed_hash": 3122857483
+  },
+  {
+   "index": 3,
+   "name": "the salt garden",
+   "seal": ".:tTn:.",
+   "bearing": 324,
+   "distance": 157,
+   "at": {
+    "x": -92.28228460991832,
+    "z": -101.01566811686673
+   },
+   "r": 17.04,
+   "peaks": 1,
+   "height": 10.94,
+   "resource": "fire",
+   "keeper": "Azimuth",
+   "secret": {
+    "kind": "rule",
+    "text": "the first mark is written small"
+   },
+   "seed_hash": 2989220621
+  },
+  {
+   "index": 4,
+   "name": "the wreck of the twelfth",
+   "seal": ".:tFh:.",
+   "bearing": 257,
+   "distance": 214,
+   "at": {
+    "x": -208.51519386404033,
+    "z": 74.13952562958715
+   },
+   "r": 10.09,
+   "peaks": 3,
+   "height": 17.94,
+   "resource": "iron",
+   "keeper": "Nix",
+   "secret": {
+    "kind": "rule",
+    "text": "the middle is a capital, always"
+   },
+   "seed_hash": 591668650
+  }
+ ]
+}

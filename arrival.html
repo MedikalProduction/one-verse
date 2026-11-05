@@ -89,6 +89,12 @@
     letter-spacing:.18em;opacity:.45;transition:opacity .3s ease;cursor:pointer;user-select:none}
   #mic b{color:#e8d9a6;font-weight:600}
   #mic.hot{opacity:1;color:#ffd889;text-shadow:0 0 12px rgba(255,216,137,.55)}
+  /* 🔥 THE CHART — Azimuth's dream, drawn from what you have SEEN and nothing else. North up, because a
+     bearing you cannot trust is a rumour. One accent: gold. A seen island is a mark; a VISITED one is a
+     ring with its seal, because standing somewhere is the only proof that it exists. */
+  #chart{position:fixed;right:16px;bottom:16px;width:176px;height:176px;opacity:.62;
+    pointer-events:none;transition:opacity .6s ease}
+  #chart.live{opacity:.8}
 </style>
 </head>
 <body>
@@ -118,6 +124,7 @@
 <div id="see"></div>
 <div id="say"></div>
 <div id="mic"><b>M</b> SPEAK &nbsp;·&nbsp; <b>T</b> MUTE ME</div>
+<canvas id="chart" width="352" height="352"></canvas>
 <script type="module">
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 /* 🔥 THE HULL COMES FROM THE ATELIER, not from taste: `derive(name)` gives a real boat (millimetres,
@@ -1220,6 +1227,109 @@ for (let i = 0; i < WAKE_N; i++) {
 }
 let wakeTimer = 0, wakeIdx = 0;
 
+/* ══ 🔥 THE ISLES AND THE CHART — Azimuth wanted "a chart of every island, so none is reached blind".
+   So the islands are DERIVED (game/one_verse/isles.mjs, the same FNV/mulberry32 law as the hull) and the
+   chart is drawn from what you have SEEN: nothing is on it that you did not look at. That is the whole
+   difference between a map and a menu -- a menu knows everything in advance.
+
+   THE FIVE COASTS carry three letters and two rules: the name of the twentieth, the one who went home.
+   The pieces never ship as an answer, and the seal is derived, so anyone who assembles them arrives at
+   the same name. A fair mystery, not a hidden one.                                                */
+let keepers = [];
+try {
+  const v = await (await fetch("./verse.json", { cache: "no-store" })).json();
+  keepers = (v.crew || []).map((c) => c.name);
+} catch (err) { /* no roster, no keepers: the isles still exist, they simply have nobody */ }
+
+const ISLES = (await import("./isles.mjs"));
+const COASTS = ISLES.deriveIsles(keepers).isles;
+
+const rockFar = new THREE.MeshBasicMaterial({ color: 0x0d1820, fog: true });
+const shoreGold = new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0.42, fog: true });
+for (const isle of COASTS) {
+  const p = ISLES.isleAt(isle, 26);
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.ConeGeometry(isle.r, isle.height, 9), rockFar);
+  base.position.y = isle.height * 0.5 - 1.2;
+  base.rotation.y = isle.bearing * 0.017;
+  g.add(base);
+  for (let k = 1; k < isle.peaks; k++) {                       // the crowns: a coast that is not one cone
+    const c = new THREE.Mesh(new THREE.ConeGeometry(isle.r * (0.36 + 0.1 * k), isle.height * 0.5, 7), rockFar);
+    c.position.set(Math.cos(k * 2.1) * isle.r * 0.45, isle.height * 0.52, Math.sin(k * 2.1) * isle.r * 0.45);
+    g.add(c);
+  }
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(isle.r * 1.03, 0.06, 6, 56), shoreGold);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.05;
+  g.add(ring);
+  if (isle.resource === "fire") {                              // one emissive chip, no extra light: the fire
+    const chip = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffd889, fog: true }));
+    chip.position.set(0, isle.height * 0.94, 0);
+    g.add(chip);
+  }
+  g.position.set(p.x, 0, p.z);
+  g.userData.isle = isle;
+  scene.add(g);
+  isle.group = g;
+}
+
+/* ── THE CHART — what you have seen, and only that. Persisted as two small sets, never as a picture:
+   a chart redrawn from data can be corrected; a screenshot of a chart cannot.                      */
+const chartEl = document.getElementById("chart");
+const chartCx = chartEl ? chartEl.getContext("2d") : null;
+const seenSet = new Set(JSON.parse((() => { try { return localStorage.getItem("one_verse.chart") || "[]"; }
+                                            catch (err) { return "[]"; } })()));
+const visitSet = new Set(JSON.parse((() => { try { return localStorage.getItem("one_verse.visited") || "[]"; }
+                                             catch (err) { return "[]"; } })()));
+function saveChart() {
+  try {
+    localStorage.setItem("one_verse.chart", JSON.stringify([...seenSet]));
+    localStorage.setItem("one_verse.visited", JSON.stringify([...visitSet]));
+  } catch (err) { /* private mode: the chart forgets, which is honest */ }
+}
+const SIGHT = 150;                                             // metres: how far an eye reaches in this light
+let chartTick = 0;
+
+function drawChart(heading) {
+  if (!chartCx) return;
+  const W = chartEl.width, R = W / 2 - 16;
+  chartCx.clearRect(0, 0, W, W);
+  chartCx.save();
+  chartCx.translate(W / 2, W / 2);
+  chartCx.strokeStyle = "rgba(201,162,39,.26)";
+  chartCx.lineWidth = 1;
+  for (const k of [0.34, 0.67, 1]) { chartCx.beginPath(); chartCx.arc(0, 0, R * k, 0, Math.PI * 2); chartCx.stroke(); }
+  chartCx.strokeStyle = "rgba(201,162,39,.55)";
+  chartCx.beginPath(); chartCx.arc(0, 0, R, 0, Math.PI * 2); chartCx.stroke();
+  /* the needle: where your bow points. A chart you are not on is a decoration. */
+  const hx = Math.sin(heading * Math.PI / 180) * R * 0.18;
+  const hy = -Math.cos(heading * Math.PI / 180) * R * 0.18;
+  chartCx.strokeStyle = "rgba(232,217,166,.95)";
+  chartCx.beginPath(); chartCx.moveTo(0, 0); chartCx.lineTo(hx, hy); chartCx.stroke();
+  chartCx.fillStyle = "rgba(232,217,166,.95)";
+  chartCx.beginPath(); chartCx.arc(0, 0, 3, 0, Math.PI * 2); chartCx.fill();
+
+  chartCx.font = "13px ui-monospace, Consolas, monospace";
+  chartCx.textAlign = "center";
+  for (const isle of COASTS) {
+    if (!seenSet.has(isle.index)) continue;                    // unseen stays unseen: the chart is a memory
+    const rr = R * Math.min(1, isle.distance / 200);
+    const x = Math.sin(isle.bearing * Math.PI / 180) * rr;
+    const y = -Math.cos(isle.bearing * Math.PI / 180) * rr;
+    const visited = visitSet.has(isle.index);
+    chartCx.fillStyle = visited ? "#c9a227" : "rgba(159,208,224,.85)";
+    chartCx.beginPath(); chartCx.arc(x, y, visited ? 5 : 3, 0, Math.PI * 2); chartCx.fill();
+    if (visited) {
+      chartCx.strokeStyle = "rgba(201,162,39,.75)";
+      chartCx.beginPath(); chartCx.arc(x, y, 9, 0, Math.PI * 2); chartCx.stroke();
+      chartCx.fillStyle = "rgba(232,217,166,.85)";
+      chartCx.fillText(isle.seal, x, y - 14);
+    }
+  }
+  chartCx.restore();
+}
+
 /* SHE LIES OFF YOUR STARBOARD BOW AT A BEARING, NOT AT A COORDINATE -- MEASURED 2026-11-05: the first
    placement put her 61° off the nose, i.e. OUTSIDE a 43° half-frame, so she existed and you could not see
    her. A boat you cannot see is a database row. Bearing 24°, distance scaled to her own length.        */
@@ -1413,6 +1523,19 @@ function sense() {
                     aboard ? ("yours · " + boatLen.toFixed(1) + " m · " + boatSpeed.toFixed(1) + " m/s")
                            : ("\"" + BOAT_NAME + "\""));
   else if (hullErr) at("boat", 0, 0, "no hull: " + hullErr.slice(0, 40));
+
+  /* THE NEAREST COAST. It appears in the panel whether or not it is on the chart yet: the eyes come first,
+     the map is a memory of them. */
+  let nearest = null;
+  for (const isle of COASTS) {
+    const d = Math.hypot(ox - isle.group.position.x, oz - isle.group.position.z);
+    if (!nearest || d < nearest.d) nearest = { isle: isle, d: d };
+  }
+  if (nearest) {
+    at(nearest.isle.seal, nearest.isle.group.position.x, nearest.isle.group.position.z,
+       nearest.isle.resource + " · " + nearest.isle.keeper
+       + (visitSet.has(nearest.isle.index) ? " · landed" : ""));
+  }
 
   const eyeY = aceEye ? ace.position.y + 1.95 : 1.7 + swellY(ox, oz, t);
   const head = "🔥 " + (aceEye ? ".:" + AGENT + ":." : "you") + " SEE  t=" + t.toFixed(1) + " s\n"
@@ -1742,6 +1865,21 @@ function frame() {
       /* YOUR FEET ARE THE DECK. The camera maths above needs nothing new: `pos` IS her, at 1.7 m. */
       pos.set(boat.position.x, 0, boat.position.z);
     }
+  }
+
+  /* ── 🔥 THE SIGHTING. An island enters the chart when you can SEE it; it becomes a gold ring when you
+     have been there. Distance only -- no cone of vision: a sailor sees a mountain behind him too.      */
+  for (const isle of COASTS) {
+    const dI = Math.hypot(pos.x - isle.group.position.x, pos.z - isle.group.position.z);
+    if (dI < SIGHT && !seenSet.has(isle.index)) { seenSet.add(isle.index); saveChart(); }
+    if (dI < isle.r + 12 && !visitSet.has(isle.index)) {
+      visitSet.add(isle.index);
+      saveChart();
+      speak("Landfall: " + isle.name + ". " + isle.resource + ", kept by " + isle.keeper + ".");
+    }
+  }
+  if (++chartTick % 3 === 0) {
+    drawChart(((Math.atan2(fwd.x, -fwd.z) * 180 / Math.PI) + 360) % 360);
   }
   /* LAME swings and settles: the only animation the hand needs, and it drains to zero so the blade
      returns to point-down on its own -- the carrying rule, enforced by physics-free arithmetic. */
