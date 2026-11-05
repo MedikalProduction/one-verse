@@ -1197,16 +1197,39 @@ if (hullData && hullData.spec && hullData.spec.sections) {
    again puts you back on the water. Nothing here is a claim of naval architecture: the hull's float and
    its warnings live in boat.mjs (`verdict()`), and this page does not repeat them as if it had measured
    them. What this page owns is the honest part: she rides the swell you can see.                    */
+/* ── 🔥 THE WIND, AND HER WAKE ────────────────────────────────────────────────────────────────────
+   A boat that slides is a cursor with a sail drawn on it. Three things make her ANSWER the sea, and
+   none of them is a physics claim: WIND (a slow vector, two sines), HEEL (she leans away from it, by
+   speed x the angle she lies to it -- clamped, so a gust cannot put her rail under, because this page
+   has no stability model and will not pretend to one), and WAKE (foam dropped at the stern that ages
+   and spreads on the same swell). The wind is never drawn as an arrow in the sky: it is felt in the
+   heel and heard in the rigging, which is how a sailor knows it.                              */
+const WIND = { dir: 2.10, spd: 3.2 };
+let   heelNow = 0;
+
+const WAKE_N = 24;
+const wake = [];
+for (let i = 0; i < WAKE_N; i++) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
+    color: 0xa8c0c8, transparent: true, opacity: 0, depthWrite: false, fog: true
+  }));
+  m.rotation.x = -Math.PI / 2;
+  m.visible = false;
+  scene.add(m);
+  wake.push({ m: m, age: 1e9 });
+}
+let wakeTimer = 0, wakeIdx = 0;
+
 /* SHE LIES OFF YOUR STARBOARD BOW AT A BEARING, NOT AT A COORDINATE -- MEASURED 2026-11-05: the first
    placement put her 61° off the nose, i.e. OUTSIDE a 43° half-frame, so she existed and you could not see
-   her. A boat you cannot see is a database row. Bearing 31°, distance scaled to her own length.        */
+   her. A boat you cannot see is a database row. Bearing 24°, distance scaled to her own length.        */
 const B_DIST = Math.max(26, boatLen * 2.4);
 const B_BEAR = 0.42;                                                    // radians to starboard
 const BOAT_HOME = new THREE.Vector3(Math.sin(B_BEAR) * B_DIST, 0, 26 - Math.cos(B_BEAR) * B_DIST);
 boat.position.copy(BOAT_HOME);
 let boatHead  = Math.PI;             // heading, radians: the bow points toward the gate as you arrive
 let boatSpeed = 0;
-let aboard    = false;
+let aboard    = Q.has("aboard") && boatReady;   /* `?aboard` = she is already under way, for a photograph */
 boat.rotation.y = boatHead + Math.PI;
 
 addEventListener("keydown", e => {
@@ -1387,7 +1410,8 @@ function sense() {
   at("table", 0, TABLE.z, "dix-neuf places");
   at("island", ISLE.x, ISLE.z, shoreSolved ? "the fire has its name" : "the fire waits for it");
   if (boatReady) at("boat", boat.position.x, boat.position.z,
-                    aboard ? ("yours, under your feet · " + boatLen.toFixed(1) + " m") : ("\"" + BOAT_NAME + "\""));
+                    aboard ? ("yours · " + boatLen.toFixed(1) + " m · " + boatSpeed.toFixed(1) + " m/s")
+                           : ("\"" + BOAT_NAME + "\""));
   else if (hullErr) at("boat", 0, 0, "no hull: " + hullErr.slice(0, 40));
 
   const eyeY = aceEye ? ace.position.y + 1.95 : 1.7 + swellY(ox, oz, t);
@@ -1411,7 +1435,11 @@ function sense() {
   const ear   = "ear       " + (audio ? Math.round(audio.lp.frequency.value) + " Hz lowpass — the cutoff IS the swell"
                                    : "closed · press any key to open the sea") + "\n";
   const freq  = "freq      0.90 · 0.62 · 1.70 rad/s   (three sines: what 'vibration' actually is)\n";
-  return head + L.join("\n") + "\n" + touch + ear + freq + dawn + light + gl;
+  const wind  = "wind      " + WIND.spd.toFixed(1) + " m/s from b"
+              + String(Math.round(((WIND.dir * 180 / Math.PI) % 360 + 360) % 360)).padStart(3, "0")
+              + " · heel " + (heelNow * 180 / Math.PI).toFixed(1) + "°"
+              + (boatReady ? " · wake " + wake.filter(w => w.m.visible).length : "") + "\n";
+  return head + L.join("\n") + "\n" + touch + ear + freq + wind + dawn + light + gl;
 }
 
 addEventListener("keydown", e => {
@@ -1598,9 +1626,15 @@ function startSea() {
   const lp  = ac.createBiquadFilter(); lp.type = "lowpass";  lp.frequency.value = 600; lp.Q.value = 0.7;
   const g   = ac.createGain(); g.gain.value = 0.0;
   src.connect(hp).connect(lp).connect(g).connect(ac.destination);
+  /* 🔥 THE RIGGING. Same noise, a second path: a bandpass at 700 Hz whose GAIN follows the boat's speed.
+     At rest the wind is silent; under way it rises in the air around you. Nothing is added to the file --
+     the sound of going fast is the sound of the sea being pulled past the shrouds.                  */
+  const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 700; bp.Q.value = 0.6;
+  const wg = ac.createGain(); wg.gain.value = 0.0;
+  src.connect(bp).connect(wg).connect(ac.destination);
   src.start();
   g.gain.setTargetAtTime(0.20, ac.currentTime, 2.8);   // fade in: never a pop
-  audio = { ac: ac, lp: lp };
+  audio = { ac: ac, lp: lp, wind: wg };
 }
 addEventListener("pointerdown", startSea, { once: true });
 addEventListener("keydown",     startSea, { once: true });
@@ -1648,7 +1682,8 @@ function frame() {
      frame is a cursor with a sail drawn on it.                                                    */
   if (boatReady) {
     const steer = (keys["a"] ? 1 : 0) - (keys["d"] ? 1 : 0);
-    const sheet = (keys["w"] ? 1 : 0) - (keys["s"] ? 1 : 0);
+    let sheet   = (keys["w"] ? 1 : 0) - (keys["s"] ? 1 : 0);
+    if (!sheet && Q.has("sheet")) sheet = 1;          /* 🔥 `?sheet=1` holds the sheet for a photograph */
     if (aboard) {
       boatHead += steer * 0.85 * dt;
       const want = sheet > 0 ? 3.4 : sheet < 0 ? -1.0 : 0;
@@ -1661,6 +1696,11 @@ function frame() {
     boat.rotation.y  = boatHead + Math.PI;                     // the mesh's bow is +z, the heading is -z
     boat.position.y  = swellY(boat.position.x, boat.position.z, tW);
 
+    /* THE WIND MOVES, SLOWLY. Two sines, so it veers and backs like weather and not like a random walk;
+       it is the only thing on the water that changes while you are standing still.                   */
+    WIND.spd = 3.2 + 1.6 * Math.sin(tW * 0.21);
+    WIND.dir = 2.10 + 0.45 * Math.sin(tW * 0.07);
+
     const fz   = Math.max(1.4, boatLen * 0.4);
     const bowY = swellY(boat.position.x - Math.sin(boatHead) * fz, boat.position.z - Math.cos(boatHead) * fz, tW);
     const stnY = swellY(boat.position.x + Math.sin(boatHead) * fz, boat.position.z + Math.cos(boatHead) * fz, tW);
@@ -1668,7 +1708,35 @@ function frame() {
     const portY = swellY(boat.position.x - px, boat.position.z - pz, tW);
     const stbdY = swellY(boat.position.x + px, boat.position.z + pz, tW);
     boatBody.rotation.x = Math.atan2(bowY - stnY, fz * 2) * 0.8;   // either end lifts, the hull follows
-    boatBody.rotation.z = Math.atan2(portY - stbdY, 2.2) * 1.2;    // lean with the water, never through it
+    /* HER LEAN IS THE WIND'S ANSWER: speed x how far she lies off it. Clamped -- there is no stability
+       model here, so a gust may not be allowed to put her rail under on the strength of a formula.  */
+    const windRel = Math.sin(WIND.dir - boatHead);
+    heelNow   = Math.max(-0.30, Math.min(0.30, boatSpeed * 0.062 * windRel * (WIND.spd / 3.2)));
+    boatBody.rotation.z = Math.atan2(portY - stbdY, 2.2) * 1.2 + heelNow;
+
+    /* THE WAKE: foam dropped at the stern, aged and spread on the same swell. A wake is a MEMORY of the
+       track -- it is the only thing in the world that says where you have been, so it is worth 24 quads. */
+    wakeTimer += dt;
+    if (Math.abs(boatSpeed) > 0.25 && wakeTimer > 0.15) {
+      wakeTimer = 0;
+      wakeIdx = (wakeIdx + 1) % WAKE_N;
+      const w = wake[wakeIdx];
+      w.age = 0;
+      w.m.visible = true;
+      w.m.position.set(boat.position.x + Math.sin(boatHead) * boatLen * 0.45, 0.05,
+                       boat.position.z + Math.cos(boatHead) * boatLen * 0.45);
+    }
+    for (const w of wake) {
+      if (!w.m.visible) continue;
+      w.age += dt;
+      if (w.age > 4.4) { w.m.visible = false; continue; }
+      const k = w.age / 4.4;
+      w.m.material.opacity = 0.40 * (1 - k) * (1 - k);
+      w.m.scale.setScalar(0.9 + k * 3.4);
+      w.m.position.y = swellY(w.m.position.x, w.m.position.z, tW) + 0.05;
+    }
+    /* AND YOU HEAR IT: the bandpass gain is the speed. Silence at rest, air under way. */
+    if (audio && audio.wind) audio.wind.gain.value = Math.min(0.13, Math.abs(boatSpeed) * 0.032);
 
     if (aboard) {
       /* YOUR FEET ARE THE DECK. The camera maths above needs nothing new: `pos` IS her, at 1.7 m. */
