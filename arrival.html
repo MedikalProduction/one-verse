@@ -429,6 +429,41 @@ const CLEAR_NIGHT = new THREE.Color(NIGHT),   CLEAR_DAWN = new THREE.Color(0x2b6
    was still black cones, and the world read as night at noon. These two colours are the fix: the same unlit
    stone, but its colour is LERPED by the dawn in the frame loop, so it brightens WITH the sky. */
 const ROCK_NIGHT_C = new THREE.Color(0x0d1820), ROCK_DAY_C = new THREE.Color(0x46545a);
+
+/* ══ 🔥 THE SUN IS NOT ONLY LIGHT ═════════════════════════════════════════════════════════════════
+   THE CAPTAIN (2026-11-05): "the sun is not only light.. its frequencies.. and energy, and vibe also".
+   So the sun stops being a sprite with a chosen colour and becomes an OBJECT with three MEASURED
+   properties. Nothing below is taste:
+
+     TEMPERATURE  T = 2000 K at the rise -> 5800 K at noon. Its colour is COMPUTED from T by
+                  kelvinToRGB (Tanner Helland's blackbody approximation, named so nobody thinks it is a
+                  rendering decision). A red sun at dawn is then not art direction: it is 2000 K.
+     FREQUENCY    Wien's displacement law: peak = 2 898 000 / T nanometres. 5800 K -> 500 nm (green-blue),
+                  2000 K -> 1449 nm (deep infrared). A NUMBER THE CAPTAIN CAN CHECK.
+     ENERGY       the irradiance that actually reaches the world. It is routed (in the frame loop) into the
+                  island's fire, the embers, the wind and the wake -- the sun must MAKE things, not light
+                  them. VIBE is not a metaphor either: a drone whose pitch follows the sun (55 Hz *(1+2v)),
+                  because a morning you can hear is a morning you believe.                          */
+function kelvinToRGB(K) {
+  const t = Math.max(10, K) / 100;
+  let r, g, b;
+  if (t <= 66) {
+    r = 255;
+    g = 99.4708025861 * Math.log(t) - 161.1195681661;
+  } else {
+    r = 329.698727446 * Math.pow(t - 60, -0.1332047592);
+    g = 288.1221695283 * Math.pow(t - 60, -0.0755148492);
+  }
+  if (t >= 66) b = 255;
+  else if (t <= 19) b = 0;
+  else b = 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+  const c = (x) => Math.max(0, Math.min(255, x)) / 255;
+  return new THREE.Color(c(r), c(g), c(b));
+}
+const sunTempK  = (v) => 2000 + 3800 * Math.max(0, Math.min(1, v));   // 2000 K rise -> 5800 K noon
+const sunPeakNm = (K) => 2898000 / Math.max(1, K);                     // Wien
+const SUN_STATE = { K: 2000, nm: 1449, energy: 0, vibe: 55 };          // read by the perception panel
+const SUN_SCRATCH = new THREE.Color();
 const SCRATCH     = new THREE.Color();
 
 window.setDawn = (v = 1) => {
@@ -454,6 +489,22 @@ window.setDawn = (v = 1) => {
   WAVE.uSea.value.copy(SEA_NIGHT).lerp(SEA_DAWN, v);
   WAVE.uGold.value.copy(GOLD_NIGHT).lerp(GOLD_DAWN, v);
   WAVE.uDawn.value = v;                                     // the water reads the same number as the sky
+  /* 🔥 THE SPECTRUM, NOT THE MOOD. The disc, its light and its halos take their colour from the BLACKBODY
+     TEMPERATURE of this v -- 2000 K at the rise, 5800 K at noon -- so the sun turns from ember to white
+     because it is hotter, not because someone chose "warm". And the sea's gold is pushed toward that same
+     colour, so the water and the sun cannot be two different mornings.                              */
+  const K = sunTempK(v);
+  SUN_STATE.K = K;
+  SUN_STATE.nm = sunPeakNm(K);
+  SUN_STATE.energy = 3.4 * v;
+  SUN_STATE.vibe = 55 * (1 + 2 * v);
+  SUN_SCRATCH.copy(kelvinToRGB(K));
+  sun.material.color.copy(SUN_SCRATCH);
+  sunrise.color.copy(SUN_SCRATCH);
+  sunHalo.material.color.copy(SUN_SCRATCH).lerp(new THREE.Color(0xff7a2e), 0.35);
+  sunHalo2.material.color.copy(SUN_SCRATCH).lerp(new THREE.Color(0xff5a1a), 0.55);
+  for (let i = 0; i < RAYS.length; i++) RAYS[i].material.color.copy(SUN_SCRATCH);
+  WAVE.uGold.value.copy(GOLD_NIGHT).lerp(GOLD_DAWN, v).lerp(SUN_SCRATCH, 0.30 * v);
   scene.fog.color.copy(FOG_NIGHT).lerp(FOG_DAWN, v);
   renderer.setClearColor(SCRATCH.copy(CLEAR_NIGHT).lerp(CLEAR_DAWN, v), 1);
   return 'dawn=' + v.toFixed(2);
@@ -1671,7 +1722,10 @@ function sense() {
               + String(Math.round(((WIND.dir * 180 / Math.PI) % 360 + 360) % 360)).padStart(3, "0")
               + " · heel " + (heelNow * 180 / Math.PI).toFixed(1) + "°"
               + (boatReady ? " · wake " + wake.filter(w => w.m.visible).length : "") + "\n";
-  return head + L.join("\n") + "\n" + touch + ear + freq + wind + dawn + light + gl;
+  /* 🔥 THE SUN, AS A MEASUREMENT: temperature, peak wavelength (Wien), energy, and the pitch you hear. */
+  const sunLine = "sun       " + Math.round(SUN_STATE.K) + " K · peak " + Math.round(SUN_STATE.nm)
+                + " nm · energy " + SUN_STATE.energy.toFixed(2) + " · vibe " + Math.round(SUN_STATE.vibe) + " Hz\n";
+  return head + L.join("\n") + "\n" + touch + ear + freq + wind + sunLine + dawn + light + gl;
 }
 
 addEventListener("keydown", e => {
@@ -1864,9 +1918,19 @@ function startSea() {
   const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 700; bp.Q.value = 0.6;
   const wg = ac.createGain(); wg.gain.value = 0.0;
   src.connect(bp).connect(wg).connect(ac.destination);
+  /* 🔥 THE SUN'S VIBE. A sine whose pitch is the sun's temperature curve (55 Hz at night, 165 Hz at noon),
+     very quiet, under the sea. A morning you can HEAR is a morning you believe -- and it costs one
+     oscillator, not a soundtrack. Inaudible when the page is muted (T).                              */
+  const osc = ac.createOscillator();
+  const og  = ac.createGain();
+  osc.type = "sine";
+  osc.frequency.value = 55;
+  og.gain.value = 0.018;
+  osc.connect(og).connect(ac.destination);
+  osc.start();
   src.start();
   g.gain.setTargetAtTime(0.20, ac.currentTime, 2.8);   // fade in: never a pop
-  audio = { ac: ac, lp: lp, wind: wg };
+  audio = { ac: ac, lp: lp, wind: wg, vibe: osc };
 }
 addEventListener("pointerdown", startSea, { once: true });
 addEventListener("keydown",     startSea, { once: true });
@@ -1930,8 +1994,14 @@ function frame() {
 
     /* THE WIND MOVES, SLOWLY. Two sines, so it veers and backs like weather and not like a random walk;
        it is the only thing on the water that changes while you are standing still.                   */
-    WIND.spd = 3.2 + 1.6 * Math.sin(tW * 0.21);
+    /* THE WIND IS THERMAL. The sun does not only shine: it lifts air. MEASURED in the model as a term, not
+       claimed as meteorology -- and the ship feels it, because heel and speed both read WIND. */
+    WIND.spd = 3.2 + 1.6 * Math.sin(tW * 0.21) + 2.4 * dawnV;
     WIND.dir = 2.10 + 0.45 * Math.sin(tW * 0.07);
+
+    /* AND THE VIBE IS AUDIBLE: a drone whose pitch IS the sun's temperature curve. You hear the morning. */
+    if (audio && audio.vibe) audio.vibe.frequency.value = SUN_STATE.vibe;
+    if (typeof embers !== "undefined") embers.material.opacity = 0.55 + 0.40 * dawnV;
 
     const fz   = Math.max(1.4, boatLen * 0.4);
     const bowY = swellY(boat.position.x - Math.sin(boatHead) * fz, boat.position.z - Math.cos(boatHead) * fz, tW);
@@ -2007,7 +2077,8 @@ function frame() {
   /* THE ISLAND AND THE SHORE: it heaves with the same swell the shader draws, its fire breathes, and the
      gate appears ONLY inside 30 m -- a challenge visible from across the water is not a challenge. */
   isle.position.y = swellY(ISLE.x, ISLE.z, tW) - 0.6;
-  fire.intensity = (shoreSolved ? 70 : 20) + Math.sin(tW * 2.2) * (shoreSolved ? 12 : 6);
+  fire.intensity = ((shoreSolved ? 70 : 20) + Math.sin(tW * 2.2) * (shoreSolved ? 12 : 6))
+                 * (0.55 + 0.85 * dawnV);      // 🔥 THE SUN FEEDS THE FIRE: energy, not decoration
   const dIsle = Math.hypot(pos.x - ISLE.x, pos.z - ISLE.z);
   /* 🔥 LE QUIZ EST MORT (2026-11-05). The captain: "is it a quiz ??" — it was, and it had no business
      being one. A shore that makes you GUESS its name before it will burn is a form, and a form is the
