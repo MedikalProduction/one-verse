@@ -125,6 +125,27 @@
 <div id="say"></div>
 <div id="mic"><b>M</b> SPEAK &nbsp;·&nbsp; <b>T</b> MUTE ME</div>
 <canvas id="chart" width="352" height="352"></canvas>
+<script>
+/* 🔥 UNE PAGE NOIRE DOIT DIRE POURQUOI. MEASURED 2026-11-05: a temporal dead zone in the light rig left the
+   captain with an empty screen and no message -- he said "je vois rien", and he was right: nothing rendered
+   and nothing explained. From now on any uncaught error writes itself into the bottom bar. A silent failure
+   is worse than a loud one, because it steals the time you need to fix it. */
+window.addEventListener("error", function (e) {
+  var w = document.getElementById("w");
+  if (!w) return;
+  var where = String(e.filename || "").split("/").pop();
+  w.innerHTML = "⚠ ERREUR : " + (e.message || "inconnue") + (where ? " &nbsp;·&nbsp; " + where + ":" + e.lineno : "");
+  w.style.opacity = "1";
+  w.style.color = "#ff8a3d";
+});
+window.addEventListener("unhandledrejection", function (e) {
+  var w = document.getElementById("w");
+  if (!w) return;
+  w.innerHTML = "⚠ PROMESSE ROMPUE : " + ((e.reason && e.reason.message) || e.reason);
+  w.style.opacity = "1";
+  w.style.color = "#ff8a3d";
+});
+</script>
 <script type="module">
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 /* 🔥 THE HULL COMES FROM THE ATELIER, not from taste: `derive(name)` gives a real boat (millimetres,
@@ -324,6 +345,23 @@ function glow(radius, hex, alpha, core = false) {
   s.scale.set(radius * 2, radius * 2, 1);
   return s;
 }
+
+/* 🔥 THE LIGHT RIG — AND IT MUST BE DECLARED BEFORE setDawn() USES IT.
+   MEASURED 2026-11-05: adding the day rig inside setDawn while declaring the lights 400 lines LATER made
+   the page BLACK -- `Cannot access 'skyLight' before initialization`, at the moment `setDawn(0.55)` runs at
+   boot. `node --check` cannot see this (it is execution order, not syntax), and the captain saw "je vois
+   rien". So the rig lives HERE, above the dawn that commands it:
+     moonlight  the moon's rim (0.55 at night)
+     moonFill   the ambient that lifts pure black (fades as day arrives)
+     skyLight   THE SKY ITSELF -- a hemisphere light is what makes three.js read as DAY, and without it a
+                "sun 2.40" morning still looked like midnight on the captain's screen.                   */
+const moonlight = new THREE.DirectionalLight(0x9fc0d8, 0.55);
+moonlight.position.set(-210, 60, -820);          // the moon's own place, so the light and the disc agree
+scene.add(moonlight);
+const moonFill = new THREE.AmbientLight(0x1a2a36, 0.55);
+scene.add(moonFill);
+const skyLight = new THREE.HemisphereLight(0xcfe4ff, 0x1b3a44, 0.0);
+scene.add(skyLight);
 
 const sky = new THREE.Group();
 const moon  = glow(30, 0xf2ecdc, 1.00, true); moon.position.set(-210, 46, -820);
@@ -845,24 +883,9 @@ scene.add(hullRing);
 const lampSelf = new THREE.PointLight(0xc9a227, 7, 14, 2);
 scene.add(lampSelf);
 
-/* 🔥 THE MOON'S EDGE — MEASURED 2026-10-24: the scene had NO directional light except the sunrise (whose
-   intensity is 0 until dawn), so for the first six seconds every MeshStandardMaterial in the world was lit
-   only by two point lights and the captain's own body came out black. A night needs a MOON, not a sun:
-   one cool directional, low, from the far side of the water -- enough for a rim, never enough to be day. */
-const moonlight = new THREE.DirectionalLight(0x9fc0d8, 0.55);
-moonlight.position.set(-210, 60, -820);          // the moon's own place, so the light and the disc agree
-scene.add(moonlight);
-const moonFill = new THREE.AmbientLight(0x1a2a36, 0.55);   // lifts the shadow off pure black, no more
-scene.add(moonFill);
-
-/* 🔥 THE DAY RIG. MEASURED 2026-11-05, from the captain's own screenshots: `dawn 1.00 · sun 2.40` and the
-   world STILL dark. Why: one directional light and one 0.55 ambient is a MOON, not a morning -- there was
-   no sky light at all, so every surface facing away from the sun stayed at midnight. A hemisphere light is
-   what makes a scene read as DAY in three.js: sky above, ground below, and it ramps with the dawn.
-   THE RULE: day is not "the same light, stronger". Day is a DIFFERENT light -- broad, blue from above,
-   warm from the sun -- and the night rig must STEP BACK as it arrives.                              */
-const skyLight = new THREE.HemisphereLight(0xcfe4ff, 0x1b3a44, 0.0);
-scene.add(skyLight);
+/* (The moon's rim and the sky light used to be declared HERE -- 400 lines below the `setDawn(0.55)` that
+   commands them. That is a temporal dead zone, and it cost the captain a black screen. They now live above,
+   next to the scene they light: see "THE LIGHT RIG" at the top of the sky. Nothing is declared here.) */
 
 const lamp = new THREE.PointLight(GOLD, 26, 90, 2.0);
 lamp.position.set(0, 7.0, -30);
