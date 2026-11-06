@@ -26,9 +26,19 @@ export function hiddenName(seed) {
   return s;
 }
 
-/* THE SEAL LAW, the same one scripts/seal_gate.py measures: first low, the MIDDLE high, last low. */
+/* THE SEAL LAW, the same one scripts/seal_gate.py measures: first low, the MIDDLE high, last low.
+   🔥 MEASURED 2026-11-05, twice, from the captain's own hand (`.:oWé:.` then "les accents sont très
+   importants pour les variations et les subtilités"):
+   (1) this function used an ASCII test, so `é` was DROPPED -- "owé" -> "ow" -> seal EMPTY, while Python
+       returned .:oWé:. THE SAME NAME HAD TWO SEALS.
+   (2) even fixed to letters, a DECOMPOSED accent ("e" + U+0301) is a LETTER plus a COMBINING MARK, so the
+       mark was still dropped and /rosé/ written two ways gave two seals. An accent is a DIMENSION OF
+       VARIATION, not decoration: "rose" and "rosé" are two different things in this world.
+   THE LAW NOW: normalise to NFC (one spelling of a name), then keep every LETTER, NUMBER and MARK of any
+   script, walking CODE POINTS rather than UTF-16 units. Python does the same thing with unicodedata,
+   and scripts/seal_parity.py proves the two agree -- not on one name, on the awkward ones.          */
 export function sealOf(name) {
-  const keep = String(name).split("").filter((c) => /[a-z0-9]/i.test(c));
+  const keep = [...String(name).normalize("NFC")].filter((c) => /[\p{L}\p{N}\p{M}]/u.test(c));
   if (keep.length < 3) return "";
   const mid = Math.floor((keep.length - 1) / 2);
   return ".:" + keep[0].toLowerCase() + keep[mid].toUpperCase() + keep[keep.length - 1].toLowerCase() + ":.";

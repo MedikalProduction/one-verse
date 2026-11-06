@@ -200,7 +200,7 @@ const sea = new THREE.Mesh(
         vec3 V = normalize(cameraPosition - vW);
         float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
 
-        vec3 deep = uSea * 2.4;
+        vec3 deep = mix(uSea * 2.4, vec3(0.055, 0.20, 0.26), uDawn);   // day is not night, brighter
         vec3 sky  = mix(vec3(0.020,0.055,0.085), vec3(0.090,0.180,0.240),
                         clamp(N.y*0.5 + 0.5, 0.0, 1.0));
         vec3 c    = mix(deep, sky, 0.30 + 0.50*fres);          // grazing angles see the sky
@@ -226,6 +226,8 @@ const sea = new THREE.Mesh(
         c = mix(c, vec3(0.80,0.85,0.88), smoothstep(0.98, 1.14, vH) * 0.30);  // foam on the tops
 
         float d = length(cameraPosition - vW);
+        c *= 1.0 + 0.70 * uDawn;                                // MEASURED: at dawn 1.00 the sea was still
+                                                                // midnight-varnished. Daylight LIFTS water.
         c = mix(c, uFog, clamp(1.0 - exp(-pow(d*0.006, 2.0)), 0.0, 1.0));
         gl_FragColor = vec4(c, 1.0);
       }`
@@ -346,12 +348,30 @@ const dawn = new THREE.Group();
    the right of a camera that faces the gate -- so `setDawn` brightened the world and the captain never saw
    a sun. A sunrise you cannot SEE is a parameter. It now rises just to the RIGHT OF THE GATE, low, so the
    first thing you look at is the thing that is happening.                                            */
-const sun = glow(70, 0xffd09a, 0.90);         // MEASURED: 0.30 alpha made a sun three times dimmer than
-sun.position.set(110, 20, -620);              // the moon -- a smear, not a sunrise. Warm, low, in frame.
+const sun = glow(96, 0xfff1cf, 1.00);         // MEASURED: 0.30 alpha made a sun three times dimmer than
+sun.position.set(110, 24, -620);              // the moon -- a smear, not a sunrise. Bright, low, in frame.
 dawn.add(sun);
 const sunHalo  = glow(170, 0xffab52, 0.50);  sunHalo.position.copy(sun.position).add(new THREE.Vector3(0, 0, -2));
 const sunHalo2 = glow(360, 0xff7a2e, 0.22);  sunHalo2.position.copy(sun.position).add(new THREE.Vector3(0, 0, -4));
 dawn.add(sunHalo, sunHalo2);
+
+/* 🔥 :.rYn:. — RA'S RAYS. The captain asked for them by name and gave them a seal (r-Y-n), so they are not
+   decoration: they are a named object of the world now.
+   WHAT THIS IS, SAID PLAINLY: NOT ray tracing. Twelve additive sprites sharing the sun's glow texture,
+   stretched 26 x 720 and spun around the sun, is a STARBURST -- the same visual family as god rays at a
+   cost a phone can pay. Real shaft scattering needs a depth pass and a radial blur; this page is a static
+   world and does not pretend to be a renderer. They fade with uDawn, so at midnight there are no rays. */
+const RAYS = [];
+for (let i = 0; i < 12; i++) {
+  const r = glow(1, 0xffd9a0, 0.55);
+  r.scale.set(26, 620, 1);
+  r.material.rotation = (i / 12) * Math.PI;
+  r.material.opacity = 0;
+  r.material.blending = THREE.AdditiveBlending;
+  r.position.copy(sun.position);
+  dawn.add(r);
+  RAYS.push(r);
+}
 dawn.visible = false;                          // night is the default; the dawn is earned
 
 const sunrise = new THREE.DirectionalLight(0xffb469, 0.0);
@@ -365,7 +385,12 @@ scene.add(dawn, sunrise);
 const SEA_NIGHT  = new THREE.Color(0x0a2a3a), SEA_DAWN  = new THREE.Color(0x14404f);
 const GOLD_NIGHT = new THREE.Color(0xc9a227), GOLD_DAWN = new THREE.Color(0xffd08a);
 const FOG_NIGHT  = new THREE.Color(NIGHT),    FOG_DAWN  = new THREE.Color(0x0f2c3a);
-const CLEAR_NIGHT = new THREE.Color(NIGHT),   CLEAR_DAWN = new THREE.Color(0x123343);
+const CLEAR_NIGHT = new THREE.Color(NIGHT),   CLEAR_DAWN = new THREE.Color(0x2b6076);
+/* 🔥 THE STONE MUST BE ABLE TO CATCH THE SUN. MEASURED 2026-11-05 from the captain's screenshots: the
+   islands and the far rock were MeshBasicMaterial -- UNLIT by construction -- so at `dawn 1.00` the horizon
+   was still black cones, and the world read as night at noon. These two colours are the fix: the same unlit
+   stone, but its colour is LERPED by the dawn in the frame loop, so it brightens WITH the sky. */
+const ROCK_NIGHT_C = new THREE.Color(0x0d1820), ROCK_DAY_C = new THREE.Color(0x46545a);
 const SCRATCH     = new THREE.Color();
 
 window.setDawn = (v = 1) => {
@@ -374,6 +399,13 @@ window.setDawn = (v = 1) => {
   sun.material.opacity = 0.95 * v;
   sunHalo.material.opacity  = 0.50 * v;        // the haze around Ra, scaled with him
   sunHalo2.material.opacity = 0.22 * v;
+  sunrise.intensity = 3.4 * v;                 // the sun's own shaft
+  skyLight.intensity = 1.55 * v;               // THE SKY ITSELF, which is what makes it day
+  moonFill.intensity = 0.55 - 0.44 * v;        // the night's fill steps back rather than piling up
+  moonlight.intensity = 0.55 - 0.42 * v;
+  for (let i = 0; i < RAYS.length; i++) {
+    RAYS[i].material.opacity = 0.055 * v * (0.55 + 0.45 * Math.sin(i * 1.7));   // no two rays are equal
+  }
   sunrise.intensity = 2.4 * v;
   moon.material.opacity = 1 - 0.85 * v;        // the moon does not vanish: it steps back
   halo.material.opacity = 1 - 0.95 * v;
@@ -822,6 +854,15 @@ moonlight.position.set(-210, 60, -820);          // the moon's own place, so the
 scene.add(moonlight);
 const moonFill = new THREE.AmbientLight(0x1a2a36, 0.55);   // lifts the shadow off pure black, no more
 scene.add(moonFill);
+
+/* 🔥 THE DAY RIG. MEASURED 2026-11-05, from the captain's own screenshots: `dawn 1.00 · sun 2.40` and the
+   world STILL dark. Why: one directional light and one 0.55 ambient is a MOON, not a morning -- there was
+   no sky light at all, so every surface facing away from the sun stayed at midnight. A hemisphere light is
+   what makes a scene read as DAY in three.js: sky above, ground below, and it ramps with the dawn.
+   THE RULE: day is not "the same light, stronger". Day is a DIFFERENT light -- broad, blue from above,
+   warm from the sun -- and the night rig must STEP BACK as it arrives.                              */
+const skyLight = new THREE.HemisphereLight(0xcfe4ff, 0x1b3a44, 0.0);
+scene.add(skyLight);
 
 const lamp = new THREE.PointLight(GOLD, 26, 90, 2.0);
 lamp.position.set(0, 7.0, -30);
@@ -1923,6 +1964,12 @@ function frame() {
       speak("Landfall: " + isle.name + ". " + isle.resource + ", kept by " + isle.keeper + ".");
     }
   }
+  /* ── 🔥 THE STONE CATCHES THE SUN. Two materials here are UNLIT by construction (MeshBasicMaterial); at
+     dawn 1.00 they stayed black cones on a lit sea, which is exactly what the captain photographed. Their
+     colour is lerped with the dawn, so the rock brightens with the sky it stands under.              */
+  if (typeof rockMat !== "undefined") rockMat.color.copy(ROCK_NIGHT_C).lerp(ROCK_DAY_C, dawnV);
+  if (typeof rockFar !== "undefined") rockFar.color.copy(ROCK_NIGHT_C).lerp(ROCK_DAY_C, dawnV);
+
   if (++chartTick % 3 === 0) {
     drawChart(((Math.atan2(fwd.x, -fwd.z) * 180 / Math.PI) + 360) % 360);
   }
