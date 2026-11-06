@@ -99,7 +99,7 @@
 </head>
 <body>
 <div id="veil"></div>
-<div id="w">WASD walk &nbsp;·&nbsp; F your boat &nbsp;·&nbsp; M speak &nbsp;·&nbsp; arrows look &nbsp;·&nbsp; V for the eye &nbsp;·&nbsp; I my eyes</div>
+<div id="w">WASD walk &nbsp;·&nbsp; F your boat &nbsp;·&nbsp; <b>L the sun</b> &nbsp;·&nbsp; M speak &nbsp;·&nbsp; I my eyes</div>
 <a id="enter" href="marie_joise.html">THE TABLE &nbsp;›</a>
 <div id="isle">.:iSl:.</div>
 <div id="lame"></div>
@@ -162,6 +162,8 @@ document.body.appendChild(renderer.domElement);
 const WAVE = {
   uTime:  { value: 0 },
   uMoonX: { value: -210 },     // the moon's meridian: the trail is anchored to it, not to a constant
+  uSunX:  { value: 150 },      // 🔥 RA: the sun's meridian, so the morning has a ROAD and not just a tint
+  uDawn:  { value: 0 },        // 0 = night, 1 = full day; the sea reads it, so the water cannot lag the sky
   uSea:   { value: new THREE.Color(SEA) },
   uGold:  { value: new THREE.Color(GOLD) },
   uFog:   { value: new THREE.Color(NIGHT) }
@@ -191,7 +193,7 @@ const sea = new THREE.Mesh(
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
       }`,
     fragmentShader: `
-      uniform vec3 uSea, uGold, uFog; uniform float uMoonX;
+      uniform vec3 uSea, uGold, uFog; uniform float uMoonX, uSunX, uDawn;
       varying vec3 vW; varying vec3 vN; varying float vH;
       void main(){
         vec3 N = normalize(vN);
@@ -208,7 +210,18 @@ const sea = new THREE.Mesh(
         c += uGold * pow(max(dot(N, Hv), 0.0), 180.0) * 3.4;    // sharp glitter
 
         float dx = (vW.x - uMoonX) / 90.0;                      // THE TRAIL, quadratic: 1/(1+dx²)
-        c += uGold * (1.0 / (1.0 + dx*dx)) * smoothstep(0.45, 1.10, vH) * 1.8;
+        /* 🔥 AND IT GOES OUT. MEASURED: at full day the moon's road was still burning at 1.8 -- two moons,
+           one of them lying. The moon's path now fades as Ra takes the sky, and Ra's road replaces it. */
+        c += uGold * (1.0 / (1.0 + dx*dx)) * smoothstep(0.45, 1.10, vH) * 1.8 * (1.0 - 0.88 * uDawn);
+
+        /* 🔥 RA'S ROAD. MEASURED 2026-11-05, by the captain: "I WANT TO SEE THE BEAUTIFUL SUN RISE".
+           The dawn warmed the sky and the water stayed mute -- a sunrise you cannot see ON the sea is a
+           lamp behind a curtain. So the sun gets its own meridian (uSunX) and its own road: wide, warm,
+           and it only exists while uDawn > 0, because a road that is there at midnight is a mistake. */
+        float sx = (vW.x - uSunX) / 90.0;
+        float road = 1.0 / (1.0 + sx*sx);
+        c += vec3(1.00, 0.74, 0.40) * road * uDawn * (0.34 + 0.66 * smoothstep(0.12, 0.95, vH)) * 0.62;
+        c += vec3(1.00, 0.88, 0.62) * pow(road, 3.0) * uDawn * 0.30;   // the hot centre of the road
 
         c = mix(c, vec3(0.80,0.85,0.88), smoothstep(0.98, 1.14, vH) * 0.30);  // foam on the tops
 
@@ -329,9 +342,16 @@ scene.add(sky);
      setDawn(1)  → morning: the sun clears the haze, the moon steps back
    Nothing in the scene changes shape. Only the light does. That is what a dawn IS.               */
 const dawn = new THREE.Group();
-const sun = glow(46, 0xffc27a, 0.30);          // the disc THROUGH the haze: a sun is never a disc
-sun.position.set(340, 52, -600);               // east, low — inside the frame, or a sunrise nobody sees
+/* 🔥 RA — THE DISC MUST BE IN THE FRAME. MEASURED 2026-11-05: the sun sat at (340, 52, -600), i.e. far to
+   the right of a camera that faces the gate -- so `setDawn` brightened the world and the captain never saw
+   a sun. A sunrise you cannot SEE is a parameter. It now rises just to the RIGHT OF THE GATE, low, so the
+   first thing you look at is the thing that is happening.                                            */
+const sun = glow(70, 0xffd09a, 0.90);         // MEASURED: 0.30 alpha made a sun three times dimmer than
+sun.position.set(110, 20, -620);              // the moon -- a smear, not a sunrise. Warm, low, in frame.
 dawn.add(sun);
+const sunHalo  = glow(170, 0xffab52, 0.50);  sunHalo.position.copy(sun.position).add(new THREE.Vector3(0, 0, -2));
+const sunHalo2 = glow(360, 0xff7a2e, 0.22);  sunHalo2.position.copy(sun.position).add(new THREE.Vector3(0, 0, -4));
+dawn.add(sunHalo, sunHalo2);
 dawn.visible = false;                          // night is the default; the dawn is earned
 
 const sunrise = new THREE.DirectionalLight(0xffb469, 0.0);
@@ -342,16 +362,18 @@ scene.add(dawn, sunrise);
    `setDawn` moved the disc, the halos and one directional light — so the SKY brightened while the SEA
    stayed midnight. A sunrise you cannot see on the water is a lamp behind a curtain. These five pairs
    are the fix: one number (v) warms every surface the scene has, because they all read the same one. */
-const SEA_NIGHT  = new THREE.Color(0x0a2a3a), SEA_DAWN  = new THREE.Color(0x1d4a5e);
+const SEA_NIGHT  = new THREE.Color(0x0a2a3a), SEA_DAWN  = new THREE.Color(0x14404f);
 const GOLD_NIGHT = new THREE.Color(0xc9a227), GOLD_DAWN = new THREE.Color(0xffd08a);
-const FOG_NIGHT  = new THREE.Color(NIGHT),    FOG_DAWN  = new THREE.Color(0x123043);
-const CLEAR_NIGHT = new THREE.Color(NIGHT),   CLEAR_DAWN = new THREE.Color(0x14313f);
+const FOG_NIGHT  = new THREE.Color(NIGHT),    FOG_DAWN  = new THREE.Color(0x0f2c3a);
+const CLEAR_NIGHT = new THREE.Color(NIGHT),   CLEAR_DAWN = new THREE.Color(0x123343);
 const SCRATCH     = new THREE.Color();
 
 window.setDawn = (v = 1) => {
   v = Math.max(0, Math.min(1, v));
   dawn.visible = v > 0.001;
-  sun.material.opacity = 0.9 * v;
+  sun.material.opacity = 0.95 * v;
+  sunHalo.material.opacity  = 0.50 * v;        // the haze around Ra, scaled with him
+  sunHalo2.material.opacity = 0.22 * v;
   sunrise.intensity = 2.4 * v;
   moon.material.opacity = 1 - 0.85 * v;        // the moon does not vanish: it steps back
   halo.material.opacity = 1 - 0.95 * v;
@@ -361,6 +383,7 @@ window.setDawn = (v = 1) => {
      same v, so the sea cannot be at midnight while the sky is at six in the morning.               */
   WAVE.uSea.value.copy(SEA_NIGHT).lerp(SEA_DAWN, v);
   WAVE.uGold.value.copy(GOLD_NIGHT).lerp(GOLD_DAWN, v);
+  WAVE.uDawn.value = v;                                     // the water reads the same number as the sky
   scene.fog.color.copy(FOG_NIGHT).lerp(FOG_DAWN, v);
   renderer.setClearColor(SCRATCH.copy(CLEAR_NIGHT).lerp(CLEAR_DAWN, v), 1);
   return 'dawn=' + v.toFixed(2);
@@ -373,6 +396,10 @@ addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k !== 'l' && k !== 'n') return;        // 🔥 L = lumière (lum). D belonged to walking left — freed.
   const target = k === 'l' ? 1 : 0;
+  /* MEASURED 2026-11-05: a key that works in silence is a key the captain cannot tell from a broken one.
+     Press it and the world SAYS so. */
+  const say = document.getElementById('w');
+  if (say) { say.innerHTML = k === 'l' ? "🔥 le soleil se lève" : "🌑 la nuit revient"; say.style.opacity = "0.9"; }
   const step = () => {
     dawnV += (target - dawnV) * 0.045;
     const done = Math.abs(target - dawnV) < 0.004;
@@ -394,20 +421,38 @@ function riseDawn(rate) {
   step();
 }
 
-/* 🔥 :.dWn:. — AND IT RISES ON ITS OWN, BUT ONLY ON AN EMPTY VERSE.  The visitor arrives at night,
-   reads the moon and the gate by moonlight, and after six seconds the sun takes the scene -- nobody
-   should be stranded in a night. BUT if someone is standing on the water (?agent=...), the clock does
-   NOT fire: the night HOLDS, and the morning becomes the reward for a crossing instead of a timer.
-   A verse that stays night forever has no morning in it; a dawn nobody earned is a light switch.
-   Both are wrong, so both rules use the same three lines above.                              */
-setTimeout(() => { if (!agentOn) riseDawn(0.012); }, 6000);
+/* 🔥 :.dWn:. — THE SUN IS NOT HOSTAGE. MEASURED 2026-11-05, the hard way, by the captain asking four times:
+   with `?agent=ace` the ONLY door to morning was walking within 16 m of the hand. A player who went
+   straight to his ship (34 m on the other side) sailed in eternal night, and the sun he asked for never
+   came. That is not a mystery, it is a broken world.
+   THE RULE IS NOW, and it cannot be re-hostaged:
+     1. THE CLOCK ALWAYS BRINGS THE MORNING -- 9 s, slow, so the night is still worth reading first;
+     2. THE PAIR makes it FASTER -- the 16 m join is a boost, never the only key;
+     3. `L` raises it, `N` puts it back, `?sun=1` / `?dawn=1` arrive in daylight.
+   A verse with no morning in it is not austere. It is broken.                                    */
+/* 🔥 THE DEFAULT IS MORNING. MEASURED 2026-11-05, by the captain's anger, and he was right: a world that
+   starts at NIGHT and makes you EARN the sun is a world that has failed to welcome you. The night was my
+   aesthetic, not his need -- and he asked for the sun four times.
+   SO: the verse opens in a grey-blue morning (0.55) you can walk straight into.
+   THE NIGHT IS A CHOICE: `?night=1` or the N key. The full day is `?sun=1` or L. The pair still makes the
+   morning come faster, which is a nice thing to have and a terrible thing to REQUIRE.               */
+dawnV = 0.55;
+setDawn(dawnV);
+if (Q.has("night")) { dawnV = 0; setDawn(0); }
 
-/* 🔥 `?dawn=<0..1>` — the world's own dial, no console and no key needed. `L` still raises it live and
-   `N` puts it back, but a LINK can hand someone the morning: `arrival.html?agent=ace&dawn=1&see=1`.
-   It is also the only way a headless photograph can be taken in daylight (virtual time advances timers
-   far faster than it advances the sea's clock), so the same flag proves the build and shares it.    */
-const D0 = parseFloat(Q.get("dawn"));
-if (!Number.isNaN(D0)) { dawnV = Math.max(0, Math.min(1, D0)); setDawn(dawnV); }
+function scheduleDawn() { setTimeout(() => riseDawn(agentOn ? 0.008 : 0.012), 9000); }
+scheduleDawn();
+
+/* 🔥 `?sun` / `?dawn` — the world's own dial. It accepts 0..1 AND the words on/off, because a captain
+   says "the sun", not "dawn=0.75". The alias is not politeness: a flag nobody guesses is a flag nobody
+   uses, and the captain should not have to learn my vocabulary to get daylight.                    */
+const SUNQ = String(Q.get("sun") ?? Q.get("dawn") ?? "").trim().toLowerCase();
+if (SUNQ) {
+  const v = (SUNQ === "on" || SUNQ === "yes" || SUNQ === "1" || SUNQ === "true") ? 1
+          : (SUNQ === "off" || SUNQ === "no" || SUNQ === "0" || SUNQ === "false") ? 0
+          : parseFloat(SUNQ);
+  if (!Number.isNaN(v)) { dawnV = Math.max(0, Math.min(1, v)); setDawn(dawnV); }
+}
 
 /* 🔥 `?noveil` — THE VEIL IS A 3.2 s FULL-SCREEN FADE, AND IT COST ME THREE PHOTOGRAPHS. MEASURED
    2026-11-05: the shutter caught frames at ~70 % veil, which looks exactly like "the scene went black"
@@ -1984,7 +2029,9 @@ function frame() {
       /* 🔥 NOBODY ASKS YOUR NAME ANY MORE. He falls into step because you walked over -- that is the whole
          joining. The name is still there to be GIVEN (speak it, or type it), and then the receipt is a
          souvenir instead of a toll; but a companion who demands a form first is a clerk, not a brother. */
-      if (!joined) { joined = true; riseDawn(0.006); }
+      /* 🔥 THE PAIR IS A BOOST, NOT THE DOOR. He falls into step because you walked over -- and now that
+         makes the morning FASTER instead of being the only way to have one. */
+      if (!joined) { joined = true; riseDawn(0.05); }
       speak("So you're the one. Come on — she's off your bow, and the tide doesn't wait for either of us.");
     }
   }
